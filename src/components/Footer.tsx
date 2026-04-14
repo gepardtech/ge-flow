@@ -1,46 +1,72 @@
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ArrowRight } from "lucide-react";
 
 const Footer = () => (
-  <footer className="bg-foreground text-background py-16">
+  <footer className="border-t border-border bg-background py-16">
     <div className="container mx-auto px-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        {/* Brand */}
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-hero-gradient flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">G</span>
-            </div>
-            <span className="font-bold text-xl">GeFlow</span>
+            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" className="text-primary">
+              <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+              <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
+            </svg>
+            <span className="font-bold text-lg text-primary">GeFlow</span>
           </div>
-          <p className="text-background/60 text-sm leading-relaxed">
-            The modern business operating system for pharmacies, retail stores, and warehouses.
+          <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+            GeFlow is a modern business operating system designed to manage inventory, sales, and profit tracking in real time.
           </p>
-        </div>
-        <div>
-          <h4 className="font-semibold mb-4 text-sm">Product</h4>
-          <div className="flex flex-col gap-2">
-            <Link to="/features" className="text-background/60 text-sm hover:text-background transition-colors">Features</Link>
-            <Link to="/pricing" className="text-background/60 text-sm hover:text-background transition-colors">Pricing</Link>
-            <Link to="/how-it-works" className="text-background/60 text-sm hover:text-background transition-colors">How It Works</Link>
+          <div className="flex gap-3">
+            {["f", "📷", "📌", "✉"].map((icon, i) => (
+              <span key={i} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                {icon}
+              </span>
+            ))}
           </div>
         </div>
+
+        {/* Quick Links */}
         <div>
-          <h4 className="font-semibold mb-4 text-sm">Company</h4>
-          <div className="flex flex-col gap-2">
-            <Link to="/contact" className="text-background/60 text-sm hover:text-background transition-colors">Contact</Link>
-            <span className="text-background/60 text-sm">Privacy Policy</span>
-            <span className="text-background/60 text-sm">Terms of Service</span>
+          <h4 className="font-bold text-sm mb-4">Quick Links</h4>
+          <div className="flex flex-col gap-2.5">
+            <Link to="/" className="text-muted-foreground text-sm hover:text-primary transition-colors">Home</Link>
+            <Link to="/how-it-works" className="text-muted-foreground text-sm hover:text-primary transition-colors">How It Works</Link>
+            <Link to="/features" className="text-muted-foreground text-sm hover:text-primary transition-colors">Features</Link>
+            <Link to="/pricing" className="text-muted-foreground text-sm hover:text-primary transition-colors">Pricing</Link>
+            <Link to="/contact" className="text-muted-foreground text-sm hover:text-primary transition-colors">Contact</Link>
           </div>
         </div>
+
+        {/* Legal */}
         <div>
-          <h4 className="font-semibold mb-4 text-sm">Get Started</h4>
-          <div className="flex flex-col gap-2">
-            <Link to="/signup" className="text-background/60 text-sm hover:text-background transition-colors">Create Account</Link>
-            <Link to="/login" className="text-background/60 text-sm hover:text-background transition-colors">Sign In</Link>
+          <h4 className="font-bold text-sm mb-4">Legal</h4>
+          <div className="flex flex-col gap-2.5">
+            <span className="text-muted-foreground text-sm">About</span>
+            <span className="text-muted-foreground text-sm">Privacy Policy</span>
+            <span className="text-muted-foreground text-sm">Refund Policy</span>
+            <span className="text-muted-foreground text-sm">Terms of Service</span>
+            <span className="text-muted-foreground text-sm">Disclaimer</span>
+          </div>
+        </div>
+
+        {/* Newsletter */}
+        <div>
+          <h4 className="font-bold text-sm mb-4">Newsletter</h4>
+          <p className="text-muted-foreground text-sm mb-3">Get our latest news and updates right in your inbox.</p>
+          <div className="flex gap-2">
+            <Input placeholder="Enter your email" className="text-sm h-9" />
+            <Button size="sm" className="h-9 px-3">
+              <ArrowRight size={16} />
+            </Button>
           </div>
         </div>
       </div>
-      <div className="border-t border-background/10 mt-12 pt-8 text-center text-background/40 text-sm">
-        © {new Date().getFullYear()} GeFlow. All rights reserved.
+
+      <div className="border-t border-border pt-6 text-center text-muted-foreground text-sm">
+        © {new Date().getFullYear()} GeFlow. All rights reserved. Powered by Gesariz Tech.
       </div>
     </div>
   </footer>
