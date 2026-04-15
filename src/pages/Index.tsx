@@ -1,161 +1,265 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import CTASection from "@/components/CTASection";
 import heroLaptop from "@/assets/hero-laptop.jpg";
+import aboutOffice from "@/assets/about-office.jpg";
 import {
   Package, ShoppingCart, TrendingUp, BarChart3, Users, Layers,
-  ArrowRight, Check, Clipboard, Truck, Activity
+  ArrowRight, Check, Clipboard, Truck, Activity, Monitor, Smartphone, Expand
 } from "lucide-react";
 
 const workflowSteps = [
-  { icon: Clipboard, title: "Initialize Workspace", desc: "Create your business profile and define your architecture instantly." },
-  { icon: Package, title: "Add Inventory", desc: "Import products with price, stock, SKU and categories." },
-  { icon: ShoppingCart, title: "Start Sales", desc: "Fast billing with automatic stock deduction." },
+  { icon: Clipboard, title: "Create Business Workspace", desc: "System initializes your business environment instantly." },
+  { icon: Package, title: "Add Products & Inventory", desc: "Add items with stock, price, SKU." },
+  { icon: ShoppingCart, title: "Start Sales (POS System)", desc: "Fast billing with automatic stock deduction." },
   { icon: Truck, title: "Manage Purchases", desc: "Stock increases automatically from suppliers." },
-  { icon: Activity, title: "Track Performance", desc: "Profit, reports, and analytics in real time." },
+  { icon: Activity, title: "Track Business Performance", desc: "Profit, reports, and analytics in real time." },
 ];
 
 const features = [
-  { icon: Package, title: "Inventory Engine", desc: "Real-time stock tracking with SKU management and ledger history." },
-  { icon: ShoppingCart, title: "Fast POS", desc: "Optimized billing for high-traffic stores with barcode support." },
-  { icon: TrendingUp, title: "Profit Analytics", desc: "Live margin and profit calculations with expense tracking." },
-  { icon: BarChart3, title: "Smart Reports", desc: "Sales, stock, and financial reports with exportable data." },
-  { icon: Users, title: "User Management", desc: "Role-based access control with multi-user support." },
-  { icon: Layers, title: "Multi-Branch", desc: "Manage multiple store locations from a single dashboard." },
+  { icon: Package, title: "Inventory Management", desc: "Real-time stock tracking with SKU system and stock ledger history." },
+  { icon: ShoppingCart, title: "POS System", desc: "Fast billing engine with barcode support and instant invoice generation." },
+  { icon: TrendingUp, title: "Finance System", desc: "Profit tracking, expense management, and financial summaries." },
+  { icon: BarChart3, title: "Reports & Analytics", desc: "Sales reports, stock reports, and profit analytics." },
+  { icon: Users, title: "User Management", desc: "Role-based access control with multi-user system." },
 ];
 
-const Index = () => (
-  <Layout>
-    {/* Hero Section */}
-    <section className="py-16 md:py-24">
-      <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold leading-tight mb-6">
-              Manage your entire business in one{" "}
-              <span className="text-primary">intelligent</span> system
-            </h1>
-            <p className="text-muted-foreground text-lg mb-4 leading-relaxed max-w-md">
-              Inventory, sales, purchases, and profit — all in real time.
-              Designed for pharmacies, retail stores & warehouses.
-            </p>
-            <div className="flex flex-wrap gap-3 mt-8">
-              <Button size="lg" asChild className="gap-2 px-6">
-                <Link to="/signup">Get Started Free <ArrowRight size={16} /></Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="px-6">
-                <Link to="/features">View Demo</Link>
-              </Button>
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="rounded-2xl overflow-hidden shadow-2xl border border-border/50">
-              <img src={heroLaptop} alt="GeFlow Dashboard" width={800} height={600} className="w-full h-auto" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+const freePlanFeatures = ["100 items limit", "Basic POS", "Single user", "Real time Profit"];
+const standardMonthlyFeatures = ["1000 items limit", "Full POS & Returns", "Multi user support", "Financial summaries", "Supplier Portal"];
+const standardYearlyFeatures = ["1000 items limit", "Full POS & Returns", "Multi user support", "Financial summaries", "Supplier Portal"];
+const premiumMonthlyFeatures = ["Unlimited items", "Everything in Standard", "Batch & expiry tracking", "Advanced analytics", "Multi-branch support", "Priority support"];
+const premiumYearlyFeatures = ["Unlimited items", "Everything in Standard", "Batch & expiry tracking", "Advanced analytics", "Multi-branch support", "Priority support"];
 
-    {/* Subtle divider */}
-    <div className="container mx-auto px-4">
-      <div className="border-t border-border" />
-    </div>
+const Index = () => {
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
-    {/* Workflow Section */}
-    <section className="section-padding">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Workflow built for speed</h2>
-          <p className="text-muted-foreground">Scale your business in 3 simple steps with our automated architecture.</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-          {workflowSteps.map((step, i) => (
-            <div key={step.title} className="text-center group">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                <step.icon className="h-5 w-5 text-primary" />
+  return (
+    <Layout>
+      {/* Hero Section */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-display font-bold leading-tight mb-6">
+                Manage your entire business in one{" "}
+                <span className="text-primary">intelligent</span> system
+              </h1>
+              <p className="text-muted-foreground text-lg mb-2 leading-relaxed max-w-md">
+                Inventory, sales, purchases, and profit — all in real time.
+              </p>
+              <p className="text-muted-foreground text-sm mb-8">
+                Built for pharmacies, retail stores & warehouses.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button size="lg" asChild className="gap-2 px-6">
+                  <Link to="/signup">Get Started Free <ArrowRight size={16} /></Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="px-6">
+                  <Link to="/features">View Demo</Link>
+                </Button>
               </div>
-              <h3 className="font-semibold text-sm mb-1">{step.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
-              {i < workflowSteps.length - 1 && (
-                <div className="hidden md:block absolute" />
+            </div>
+            <div className="flex justify-center">
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-border/50">
+                <img src={heroLaptop} alt="GeFlow Dashboard" width={800} height={600} className="w-full h-auto" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="container mx-auto px-4"><div className="border-t border-border" /></div>
+
+      {/* How It Works */}
+      <section className="section-padding">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Workflow built for speed</h2>
+            <p className="text-muted-foreground">Scale your business in 5 simple steps with our automated architecture.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+            {workflowSteps.map((step, i) => (
+              <div key={step.title} className="text-center group">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
+                  <step.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1">{step.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="section-padding bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Powerful Features</h2>
+            <p className="text-muted-foreground">Everything you need to run your modern retail, grouped for clarity.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {features.map((f) => (
+              <div key={f.title} className="glass-card p-6 hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                  <f.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="section-padding">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+            <div className="rounded-2xl overflow-hidden shadow-lg border border-border/50">
+              <img src={aboutOffice} alt="GeFlow business dashboard" width={800} height={600} loading="lazy" className="w-full h-auto" />
+            </div>
+            <div>
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">What is GeFlow?</h2>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                GeFlow is a modern business operating system designed to manage inventory, sales, purchases, and profit tracking in real time.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-6">
+                It replaces manual systems like Excel and registers with a fully digital and automated solution.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  { icon: Activity, text: "Real-time business control" },
+                  { icon: Smartphone, text: "Multi-device access" },
+                  { icon: Expand, text: "Scalable for all business sizes" },
+                ].map((item) => (
+                  <li key={item.text} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="section-padding bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Choose your GeFlow Plan</h2>
+            <p className="text-muted-foreground mb-6">Simple, transparent pricing for every business stage.</p>
+
+            {/* Toggle */}
+            <div className="inline-flex items-center bg-card border border-border rounded-full p-1 gap-1">
+              <button
+                onClick={() => setBillingPeriod("monthly")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "monthly"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingPeriod("yearly")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "yearly"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Free Plan */}
+            <div className="glass-card p-7 flex flex-col">
+              <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-3">FOREVER FREE</span>
+              <h3 className="text-xl font-bold mb-1">Free</h3>
+              <p className="text-sm text-muted-foreground mb-4">Always free</p>
+              <p className="text-4xl font-bold mb-1">$0</p>
+              <p className="text-xs text-muted-foreground mb-6">No card needed</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {freePlanFeatures.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/signup">Get Started</Link>
+              </Button>
+            </div>
+
+            {/* Standard Plan */}
+            <div className={`glass-card p-7 flex flex-col relative ${billingPeriod === "monthly" ? "border-primary/40 shadow-lg" : ""}`}>
+              {billingPeriod === "monthly" && (
+                <span className="inline-block text-xs font-semibold text-primary-foreground bg-primary px-3 py-1 rounded-full self-start mb-3">MOST POPULAR</span>
               )}
+              {billingPeriod === "yearly" && <div className="mb-3" />}
+              <h3 className="text-xl font-bold mb-1">Standard</h3>
+              <p className="text-sm text-muted-foreground mb-4">For growing retailers</p>
+              <p className="text-4xl font-bold text-primary mb-1">
+                ${billingPeriod === "monthly" ? "4.99" : "14.99"}
+              </p>
+              <p className="text-xs text-muted-foreground mb-6">
+                per {billingPeriod === "monthly" ? "month" : "year"}
+              </p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {(billingPeriod === "monthly" ? standardMonthlyFeatures : standardYearlyFeatures).map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button className="w-full" asChild>
+                <Link to="/signup">Choose Plan</Link>
+              </Button>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
 
-    {/* Features Section */}
-    <section className="section-padding bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Powerful Features</h2>
-          <p className="text-muted-foreground">Everything you need to run your modern retail, grouped for clarity.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {features.map((f) => (
-            <div key={f.title} className="glass-card p-6 hover:shadow-md transition-shadow">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                <f.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-1">{f.title}</h3>
-              <p className="text-sm text-muted-foreground">{f.desc}</p>
+            {/* Premium Plan */}
+            <div className={`glass-card p-7 flex flex-col relative ${billingPeriod === "yearly" ? "border-primary/40 shadow-lg" : ""}`}>
+              {billingPeriod === "yearly" && (
+                <span className="inline-block text-xs font-semibold text-primary-foreground bg-accent px-3 py-1 rounded-full self-start mb-3">20% OFF</span>
+              )}
+              {billingPeriod === "monthly" && <div className="mb-3" />}
+              <h3 className="text-xl font-bold mb-1">Premium</h3>
+              <p className="text-sm text-muted-foreground mb-4">For advanced operations</p>
+              <p className="text-4xl font-bold mb-1">
+                <span className={billingPeriod === "yearly" ? "text-primary" : ""}>
+                  ${billingPeriod === "monthly" ? "9.99" : "24.99"}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground mb-6">
+                per {billingPeriod === "monthly" ? "month" : "year"}
+              </p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {(billingPeriod === "monthly" ? premiumMonthlyFeatures : premiumYearlyFeatures).map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button variant={billingPeriod === "yearly" ? "default" : "outline"} className="w-full" asChild>
+                <Link to="/signup">Choose Plan</Link>
+              </Button>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    {/* Pricing Section */}
-    <section className="section-padding">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-display font-bold mb-3">Choose your GeFlow Plan</h2>
-          <p className="text-muted-foreground">Simple, transparent pricing for every business stage.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          {/* Free Plan */}
-          <div className="glass-card p-8">
-            <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">FOREVER FREE</span>
-            <h3 className="text-xl font-bold mb-1">Free</h3>
-            <p className="text-sm text-muted-foreground mb-4">Perfect for startups.</p>
-            <p className="text-4xl font-bold mb-6">$0</p>
-            <ul className="space-y-3 mb-8">
-              {["100 items limit", "Basic POS", "Single user", "Real time Profit"].map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" className="w-full" asChild>
-              <Link to="/signup">Get Started</Link>
-            </Button>
-          </div>
-
-          {/* Standard Plan */}
-          <div className="glass-card p-8 border-primary/40 shadow-lg">
-            <h3 className="text-xl font-bold mb-1">Standard</h3>
-            <p className="text-sm text-muted-foreground mb-4">For growing retailers.</p>
-            <p className="text-4xl font-bold text-primary mb-6">$4.99</p>
-            <ul className="space-y-3 mb-8">
-              {["1000 items limit", "Full POS & Returns", "Multi user support", "Financial summaries", "Supplier Portal"].map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button className="w-full" asChild>
-              <Link to="/signup">Choose Plan</Link>
-            </Button>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <CTASection />
-  </Layout>
-);
+      <CTASection />
+    </Layout>
+  );
+};
 
 export default Index;
