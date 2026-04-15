@@ -1,95 +1,111 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { Check } from "lucide-react";
 
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    desc: "Perfect for getting started",
-    features: ["Basic inventory", "Simple POS", "Single user", "Limited reports"],
-    popular: false,
-  },
-  {
-    name: "Standard",
-    price: "$4.99",
-    period: "/month",
-    desc: "For growing businesses",
-    features: ["Full POS system", "Supplier management", "Basic reports", "Multi-user access", "Email support"],
-    popular: false,
-  },
-  {
-    name: "Premium",
-    price: "$9.99",
-    period: "/month",
-    desc: "For advanced operations",
-    features: ["Batch & expiry tracking", "Advanced analytics", "Multi-branch support", "Profit engine", "Automation features", "Priority support"],
-    popular: true,
-  },
-  {
-    name: "Lifetime",
-    price: "$199",
-    period: "one-time",
-    desc: "Limited offer — full access forever",
-    features: ["Everything in Premium", "Lifetime updates", "Dedicated support", "Early access to AI features"],
-    popular: false,
-  },
-];
+const freePlanFeatures = ["100 items limit", "Basic POS", "Single user", "Real time Profit"];
+const standardFeatures = ["1000 items limit", "Full POS & Returns", "Multi user support", "Financial summaries", "Supplier Portal"];
+const premiumFeatures = ["Unlimited items", "Everything in Standard", "Batch & expiry tracking", "Advanced analytics", "Multi-branch support", "Priority support"];
+const lifetimeFeatures = ["Everything in Premium", "Lifetime updates", "Dedicated support", "Early access to AI features"];
 
-const Pricing = () => (
-  <Layout>
-    <section className="section-padding">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <p className="text-primary font-semibold text-sm mb-2">Pricing</p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, transparent pricing</h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">Start free and scale as your business grows. No hidden fees.</p>
-        </div>
+const Pricing = () => {
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-2xl p-6 flex flex-col ${
-                plan.popular
-                  ? "bg-hero-gradient text-primary-foreground ring-2 ring-primary shadow-xl scale-105"
-                  : "glass-card"
-              }`}
-            >
-              {plan.popular && (
-                <span className="text-xs font-semibold bg-primary-foreground/20 self-start px-3 py-1 rounded-full mb-3">
-                  Most Popular
-                </span>
-              )}
-              <h3 className="text-xl font-bold">{plan.name}</h3>
-              <div className="mt-2 mb-1">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className={`text-sm ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}> {plan.period}</span>
-              </div>
-              <p className={`text-sm mb-6 ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{plan.desc}</p>
-              <ul className="space-y-2 mb-8 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className={`h-4 w-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-primary-foreground" : "text-accent"}`} />
-                    <span className={plan.popular ? "text-primary-foreground/90" : ""}>{f}</span>
-                  </li>
+  return (
+    <Layout>
+      <section className="section-padding">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <p className="text-primary font-semibold text-sm mb-2">Pricing</p>
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">Simple, transparent pricing</h1>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-8">Start free and scale as your business grows. No hidden fees.</p>
+
+            <div className="inline-flex items-center bg-card border border-border rounded-full p-1 gap-1">
+              <button
+                onClick={() => setBillingPeriod("monthly")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "monthly" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >Monthly</button>
+              <button
+                onClick={() => setBillingPeriod("yearly")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "yearly" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >Yearly</button>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {/* Free */}
+            <div className="glass-card p-7 flex flex-col">
+              <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-3">FOREVER FREE</span>
+              <h3 className="text-xl font-bold mb-1">Free</h3>
+              <p className="text-sm text-muted-foreground mb-4">Always free</p>
+              <p className="text-4xl font-bold mb-1">$0</p>
+              <p className="text-xs text-muted-foreground mb-6">No card needed</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {freePlanFeatures.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground"><Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}</li>
                 ))}
               </ul>
-              <Button
-                variant={plan.popular ? "hero-outline" : "default"}
-                className="w-full"
-                asChild
-              >
-                <Link to="/signup">Get Started</Link>
-              </Button>
+              <Button variant="outline" className="w-full" asChild><Link to="/signup">Get Started</Link></Button>
             </div>
-          ))}
+
+            {/* Standard */}
+            <div className={`glass-card p-7 flex flex-col ${billingPeriod === "monthly" ? "border-primary/40 shadow-lg" : ""}`}>
+              {billingPeriod === "monthly" ? (
+                <span className="inline-block text-xs font-semibold text-primary-foreground bg-primary px-3 py-1 rounded-full self-start mb-3">MOST POPULAR</span>
+              ) : <div className="mb-3" />}
+              <h3 className="text-xl font-bold mb-1">Standard</h3>
+              <p className="text-sm text-muted-foreground mb-4">For growing retailers</p>
+              <p className="text-4xl font-bold text-primary mb-1">${billingPeriod === "monthly" ? "4.99" : "14.99"}</p>
+              <p className="text-xs text-muted-foreground mb-6">per {billingPeriod === "monthly" ? "month" : "year"}</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {standardFeatures.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground"><Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}</li>
+                ))}
+              </ul>
+              <Button className="w-full" asChild><Link to="/signup">Choose Plan</Link></Button>
+            </div>
+
+            {/* Premium */}
+            <div className={`glass-card p-7 flex flex-col ${billingPeriod === "yearly" ? "border-primary/40 shadow-lg" : ""}`}>
+              {billingPeriod === "yearly" ? (
+                <span className="inline-block text-xs font-semibold text-primary-foreground bg-accent px-3 py-1 rounded-full self-start mb-3">20% OFF</span>
+              ) : <div className="mb-3" />}
+              <h3 className="text-xl font-bold mb-1">Premium</h3>
+              <p className="text-sm text-muted-foreground mb-4">For advanced operations</p>
+              <p className="text-4xl font-bold mb-1"><span className={billingPeriod === "yearly" ? "text-primary" : ""}>${billingPeriod === "monthly" ? "9.99" : "24.99"}</span></p>
+              <p className="text-xs text-muted-foreground mb-6">per {billingPeriod === "monthly" ? "month" : "year"}</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {premiumFeatures.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground"><Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}</li>
+                ))}
+              </ul>
+              <Button variant={billingPeriod === "yearly" ? "default" : "outline"} className="w-full" asChild><Link to="/signup">Choose Plan</Link></Button>
+            </div>
+
+            {/* Lifetime */}
+            <div className="glass-card p-7 flex flex-col">
+              <div className="mb-3" />
+              <h3 className="text-xl font-bold mb-1">Lifetime</h3>
+              <p className="text-sm text-muted-foreground mb-4">Limited offer</p>
+              <p className="text-4xl font-bold mb-1">$199</p>
+              <p className="text-xs text-muted-foreground mb-6">one-time payment</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {lifetimeFeatures.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground"><Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}</li>
+                ))}
+              </ul>
+              <Button variant="outline" className="w-full" asChild><Link to="/signup">Get Started</Link></Button>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  </Layout>
-);
+      </section>
+    </Layout>
+  );
+};
 
 export default Pricing;
