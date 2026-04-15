@@ -31,7 +31,8 @@ const Navbar = () => {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/80 backdrop-blur-xl shadow-sm border-b border-border/50" : "bg-background"}`}>
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link to="/" className="flex items-center gap-2">
+        {/* Left: Logo */}
+        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-primary">
             <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
             <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
@@ -39,8 +40,8 @@ const Navbar = () => {
           <span className="font-bold text-lg text-foreground">GeFlow</span>
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-7">
+        {/* Center: Nav links */}
+        <div className="hidden md:flex items-center gap-7 absolute left-1/2 -translate-x-1/2">
           {navLinks.map((l) => (
             <Link
               key={l.href}
@@ -54,14 +55,23 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
+        {/* Right: Toggle + Auth */}
+        <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+          {/* Day/Night Toggle Switch */}
           <button
             onClick={() => setDark(!dark)}
-            className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground"
+            className={`theme-toggle ${dark ? "dark-active" : ""}`}
+            aria-label="Toggle dark mode"
           >
-            {dark ? <Sun size={18} /> : <Moon size={18} />}
+            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10">
+              <Sun size={13} className={`transition-opacity duration-300 ${dark ? "opacity-40" : "opacity-100 text-amber-500"}`} />
+            </span>
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10">
+              <Moon size={13} className={`transition-opacity duration-300 ${dark ? "opacity-100 text-primary-foreground" : "opacity-40"}`} />
+            </span>
           </button>
-          <Button variant="ghost" size="sm" asChild className="gap-1.5">
+
+          <Button variant="outline" size="sm" asChild className="gap-1.5">
             <Link to="/login"><User size={15} /> Login</Link>
           </Button>
           <Button size="sm" asChild>
@@ -69,9 +79,24 @@ const Navbar = () => {
           </Button>
         </div>
 
-        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
-          {open ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile */}
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            onClick={() => setDark(!dark)}
+            className={`theme-toggle scale-90 ${dark ? "dark-active" : ""}`}
+            aria-label="Toggle dark mode"
+          >
+            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10">
+              <Sun size={12} className={`transition-opacity duration-300 ${dark ? "opacity-40" : "opacity-100 text-amber-500"}`} />
+            </span>
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10">
+              <Moon size={12} className={`transition-opacity duration-300 ${dark ? "opacity-100 text-primary-foreground" : "opacity-40"}`} />
+            </span>
+          </button>
+          <button className="text-foreground p-1" onClick={() => setOpen(!open)}>
+            {open ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {open && (
