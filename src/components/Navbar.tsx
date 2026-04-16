@@ -41,12 +41,12 @@ const Navbar = () => {
         </Link>
 
         {/* Center: Nav links */}
-        <div className="hidden md:flex items-center gap-7 absolute left-1/2 -translate-x-1/2">
+        <div className="hidden lg:flex items-center gap-7">
           {navLinks.map((l) => (
             <Link
               key={l.href}
               to={l.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-colors hover:text-primary whitespace-nowrap ${
                 location.pathname === l.href ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -56,7 +56,7 @@ const Navbar = () => {
         </div>
 
         {/* Right: Toggle + Auth */}
-        <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+        <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
           {/* Day/Night Toggle Switch */}
           <button
             onClick={() => setDark(!dark)}
