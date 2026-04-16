@@ -1,98 +1,207 @@
 import Layout from "@/components/Layout";
-import CTASection from "@/components/CTASection";
-import { Package, ShoppingCart, Truck, BarChart3, FileText, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Package,
+  ShoppingCart,
+  ScanLine,
+  TrendingUp,
+  FileText,
+  Truck,
+  CalendarClock,
+  AlertTriangle,
+  Zap,
+  Users,
+  Layers,
+  BarChart3,
+} from "lucide-react";
 
-const featureModules = [
+type Plan = "Free" | "Standard" | "Premium";
+
+interface Feature {
+  title: string;
+  desc: string;
+  icon: React.ElementType;
+  plans: Plan[];
+}
+
+interface Group {
+  title: string;
+  features: Feature[];
+}
+
+const planColor: Record<Plan, string> = {
+  Free: "text-primary",
+  Standard: "text-secondary",
+  Premium: "text-[hsl(320_70%_60%)]",
+};
+
+const groups: Group[] = [
   {
-    title: "Inventory Module",
-    icon: Package,
+    title: "Core Business Operations",
     features: [
-      { title: "Product Management", desc: "Add, edit, and organize products with categories, SKUs, and images." },
-      { title: "Stock Ledger", desc: "Track every stock movement with a detailed ledger history." },
-      { title: "Batch Tracking", desc: "Manage batches with manufacturing and expiry dates." },
-      { title: "Expiry Tracking", desc: "Get alerts before products expire to prevent losses." },
+      {
+        title: "Inventory Control",
+        desc: "Track every item movement with automated SKU generation and history.",
+        icon: Package,
+        plans: ["Free", "Standard", "Premium"],
+      },
+      {
+        title: "Fast POS Terminal",
+        desc: "Lightning-fast billing interface optimized for high-traffic retail environments.",
+        icon: ShoppingCart,
+        plans: ["Free", "Standard", "Premium"],
+      },
+      {
+        title: "Barcode Support",
+        desc: "Native integration with scanning hardware for error-free stock management.",
+        icon: ScanLine,
+        plans: ["Standard", "Premium"],
+      },
     ],
   },
   {
-    title: "POS Module",
-    icon: ShoppingCart,
+    title: "Advanced Financial Logic",
     features: [
-      { title: "Fast Billing", desc: "Process transactions in seconds with an intuitive interface." },
-      { title: "Barcode Scanning", desc: "Scan barcodes to instantly add items to the cart." },
-      { title: "Invoice Generation", desc: "Auto-generate professional invoices for every sale." },
-      { title: "Discount Handling", desc: "Apply percentage or flat discounts with ease." },
+      {
+        title: "Profit Engine",
+        desc: "Real-time gross and net profit calculations based on weighted average costing.",
+        icon: TrendingUp,
+        plans: ["Standard", "Premium"],
+      },
+      {
+        title: "Expense Tracking",
+        desc: "Manage overhead costs like rent, utilities, and wages in one dashboard.",
+        icon: FileText,
+        plans: ["Standard", "Premium"],
+      },
+      {
+        title: "Supplier Portal",
+        desc: "Automate purchase orders and track vendor payments seamlessly.",
+        icon: Truck,
+        plans: ["Standard", "Premium"],
+      },
     ],
   },
   {
-    title: "Purchase Module",
-    icon: Truck,
+    title: "Automation & Alerts",
     features: [
-      { title: "Supplier Management", desc: "Maintain a directory of suppliers with contact and payment details." },
-      { title: "Purchase Entry", desc: "Record purchases and automatically increase stock levels." },
-      { title: "Stock Auto Increase", desc: "Inventory updates in real-time as purchases are recorded." },
+      {
+        title: "Expiry System",
+        desc: "Automated alerts for near-expiry products to minimize business waste.",
+        icon: CalendarClock,
+        plans: ["Premium"],
+      },
+      {
+        title: "Low Stock Alerts",
+        desc: "Never run out of bestsellers with intelligent reorder notifications.",
+        icon: AlertTriangle,
+        plans: ["Premium"],
+      },
+      {
+        title: "Automated Costing",
+        desc: "Live average cost recalculation as soon as new stock is added.",
+        icon: Zap,
+        plans: ["Standard", "Premium"],
+      },
     ],
   },
   {
-    title: "Finance Module",
-    icon: BarChart3,
+    title: "Enterprise Governance",
     features: [
-      { title: "Profit Calculation", desc: "Automatic profit calculations on every sale and period." },
-      { title: "Expense Tracking", desc: "Log and categorize all business expenses." },
-      { title: "Financial Reports", desc: "Generate P&L statements and financial summaries." },
-    ],
-  },
-  {
-    title: "Reports Module",
-    icon: FileText,
-    features: [
-      { title: "Sales Reports", desc: "Daily, weekly, and monthly sales breakdowns." },
-      { title: "Stock Reports", desc: "Current stock levels, movement, and valuation reports." },
-      { title: "Profit Reports", desc: "Margin analysis and profitability insights." },
-    ],
-  },
-  {
-    title: "User Module",
-    icon: Users,
-    features: [
-      { title: "Role-based Access", desc: "Define roles like admin, cashier, and manager with specific permissions." },
-      { title: "Multi-user System", desc: "Add unlimited team members with secure individual logins." },
+      {
+        title: "Role-based Access",
+        desc: "Secure permissions for every employee, from cashier to manager.",
+        icon: Users,
+        plans: ["Standard", "Premium"],
+      },
+      {
+        title: "Multi-branch Architecture",
+        desc: "Connect multiple store locations to a single cloud-based HQ.",
+        icon: Layers,
+        plans: ["Premium"],
+      },
+      {
+        title: "Deep Analytics",
+        desc: "Visual charts and downloadable reports for every business metric.",
+        icon: BarChart3,
+        plans: ["Premium"],
+      },
     ],
   },
 ];
 
+const FeatureCard = ({ feature }: { feature: Feature }) => {
+  const Icon = feature.icon;
+  return (
+    <div className="premium-card p-6 group">
+      <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <h3 className="font-bold text-base mb-2">{feature.title}</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed mb-5">{feature.desc}</p>
+      <div className="pt-4 border-t border-border">
+        <p className="text-[10px] font-bold tracking-wider uppercase">
+          <span className="text-muted-foreground">Available on: </span>
+          {feature.plans.map((p, i) => (
+            <span key={p}>
+              <span className={planColor[p]}>{p.toUpperCase()}</span>
+              {i < feature.plans.length - 1 && <span className="text-muted-foreground">, </span>}
+            </span>
+          ))}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Features = () => (
   <Layout>
-    <section className="section-padding">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <p className="text-primary font-semibold text-sm mb-2">Features</p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Everything your business needs</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">Powerful modules designed to handle every aspect of your business operations.</p>
-        </div>
+    <section className="pt-20 pb-12">
+      <div className="container mx-auto px-4 text-center">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <span className="text-gradient">GeFlow</span> Features
+        </h1>
+        <p className="text-muted-foreground max-w-xl mx-auto">
+          Everything you need to manage your business faster, smarter, and with total accuracy.
+        </p>
+      </div>
+    </section>
 
-        <div className="space-y-16">
-          {featureModules.map((mod) => (
-            <div key={mod.title}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <mod.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold">{mod.title}</h2>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mod.features.map((f) => (
-                  <div key={f.title} className="glass-card rounded-xl p-5 hover:shadow-md transition-shadow">
-                    <h3 className="font-semibold text-sm mb-1">{f.title}</h3>
-                    <p className="text-xs text-muted-foreground">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
+    <section className="pb-20">
+      <div className="container mx-auto px-4 space-y-16">
+        {groups.map((group) => (
+          <div key={group.title}>
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">{group.title}</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {group.features.map((f) => (
+                <FeatureCard key={f.title} feature={f} />
+              ))}
             </div>
-          ))}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section className="pb-24">
+      <div className="container mx-auto px-4">
+        <div className="bg-cta-gradient rounded-3xl p-12 md:p-16 text-center max-w-5xl mx-auto shadow-2xl shadow-primary/20">
+          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+            Ready to Unlock More Features?
+          </h2>
+          <p className="text-primary-foreground/90 max-w-xl mx-auto mb-8">
+            Explore our tiered plans to find the perfect fit for your needs and get access to our most advanced tools.
+          </p>
+          <Button
+            size="lg"
+            className="cta-btn bg-background text-primary hover:bg-background font-semibold px-8 rounded-full"
+            asChild
+          >
+            <Link to="/pricing">View Pricing Plans</Link>
+          </Button>
         </div>
       </div>
     </section>
-    <CTASection />
   </Layout>
 );
 
