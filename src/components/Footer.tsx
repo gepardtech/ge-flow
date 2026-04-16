@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Facebook, Instagram, Twitter, Linkedin } from "lucide-react";
 
 const Footer = () => (
   <footer className="border-t border-border bg-background py-16">
@@ -19,11 +19,21 @@ const Footer = () => (
           <p className="text-muted-foreground text-sm leading-relaxed mb-4">
             GeFlow is a modern business operating system designed to manage inventory, sales, and profit tracking in real time.
           </p>
-          <div className="flex gap-3">
-            {["f", "📷", "📌", "✉"].map((icon, i) => (
-              <span key={i} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                {icon}
-              </span>
+          <div className="flex gap-2">
+            {[
+              { Icon: Facebook, href: "#", label: "Facebook" },
+              { Icon: Instagram, href: "#", label: "Instagram" },
+              { Icon: Twitter, href: "#", label: "Twitter" },
+              { Icon: Linkedin, href: "#", label: "LinkedIn" },
+            ].map(({ Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:scale-110 hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+              >
+                <Icon size={16} />
+              </a>
             ))}
           </div>
         </div>
