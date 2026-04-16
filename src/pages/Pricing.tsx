@@ -122,7 +122,7 @@ const Pricing = () => {
                 ))}
               </ul>
               <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">CHOOSE PLAN</Link>
+                <Link to={`/checkout?plan=standard&period=${billingPeriod}`}>CHOOSE PLAN</Link>
               </Button>
             </div>
 
@@ -145,7 +145,7 @@ const Pricing = () => {
                 ))}
               </ul>
               <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">CHOOSE PLAN</Link>
+                <Link to={`/checkout?plan=premium&period=${billingPeriod}`}>CHOOSE PLAN</Link>
               </Button>
             </div>
           </div>
@@ -198,7 +198,7 @@ const Pricing = () => {
                 ))}
               </ul>
               <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">UNLOCK LIFETIME</Link>
+                <Link to="/checkout?plan=standard&period=lifetime">UNLOCK LIFETIME</Link>
               </Button>
             </div>
 
@@ -218,7 +218,7 @@ const Pricing = () => {
                 ))}
               </ul>
               <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">UNLOCK LIFETIME</Link>
+                <Link to="/checkout?plan=premium&period=lifetime">UNLOCK LIFETIME</Link>
               </Button>
             </div>
           </div>
@@ -262,12 +262,12 @@ const Pricing = () => {
                     </td>
                     <td className="p-4 text-center">
                       <Button size="sm" className="cta-btn rounded-full text-xs" asChild>
-                        <Link to="/signup">CHOOSE STANDARD</Link>
+                        <Link to={`/checkout?plan=standard&period=${billingPeriod}`}>CHOOSE STANDARD</Link>
                       </Button>
                     </td>
                     <td className="p-4 text-center">
                       <Button size="sm" className="cta-btn rounded-full text-xs" asChild>
-                        <Link to="/signup">CHOOSE PREMIUM</Link>
+                        <Link to={`/checkout?plan=premium&period=${billingPeriod}`}>CHOOSE PREMIUM</Link>
                       </Button>
                     </td>
                   </tr>
