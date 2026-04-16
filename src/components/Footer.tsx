@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Facebook, Instagram, Twitter, Linkedin } from "lucide-react";
 
 const Footer = () => (
   <footer className="border-t border-border bg-background py-16">
