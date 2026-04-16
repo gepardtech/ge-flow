@@ -80,7 +80,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile */}
-        <div className="md:hidden flex items-center gap-2">
+        <div className="lg:hidden flex items-center gap-2">
           <button
             onClick={() => setDark(!dark)}
             className={`theme-toggle scale-90 ${dark ? "dark-active" : ""}`}
