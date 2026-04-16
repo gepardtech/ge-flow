@@ -100,7 +100,7 @@ const Navbar = () => {
       </div>
 
       {open && (
-        <div className="md:hidden bg-background border-b border-border px-4 pb-4">
+        <div className="lg:hidden bg-background border-b border-border px-4 pb-4">
           {navLinks.map((l) => (
             <Link key={l.href} to={l.href} onClick={() => setOpen(false)}
               className="block py-2.5 text-sm font-medium text-muted-foreground hover:text-primary">{l.label}</Link>
