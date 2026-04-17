@@ -204,9 +204,33 @@ const Checkout = () => {
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span><span className="text-foreground font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-primary">
+                    <span>Coupon ({appliedCoupon.code})</span>
+                    <span className="font-semibold">−${discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-muted-foreground">
                   <span>Architectural Tax (10%)</span><span className="text-foreground font-semibold">${tax.toFixed(2)}</span>
                 </div>
+              </div>
+
+              {/* Coupon */}
+              <div className="border-t border-border pt-5">
+                <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">COUPON CODE</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={coupon}
+                    onChange={(e) => { setCoupon(e.target.value); setCouponError(""); }}
+                    placeholder="Enter code"
+                    className="h-10 uppercase"
+                  />
+                  <Button type="button" onClick={applyCoupon} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
+                    APPLY
+                  </Button>
+                </div>
+                {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
+                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.percent}% off applied</p>}
               </div>
 
               <div className="border-t border-border" />
