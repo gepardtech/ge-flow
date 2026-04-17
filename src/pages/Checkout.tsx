@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
-import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wallet, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,6 +48,8 @@ const Checkout = () => {
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
+  const [paypalEmail, setPaypalEmail] = useState("");
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
   const [couponError, setCouponError] = useState("");
@@ -77,12 +79,19 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!card.trim() || !expiry.trim() || !cvc.trim()) {
-      toast({ title: "Missing payment details", description: "Please complete card information.", variant: "destructive" });
-      return;
+    if (paymentMethod === "card") {
+      if (!card.trim() || !expiry.trim() || !cvc.trim()) {
+        toast({ title: "Missing payment details", description: "Please complete card information.", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!paypalEmail.trim()) {
+        toast({ title: "PayPal email required", description: "Please enter your PayPal email.", variant: "destructive" });
+        return;
+      }
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signupData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -95,8 +104,13 @@ const Checkout = () => {
       toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Account created!", description: `${data.name} activated. Check your email to verify.` });
-    navigate("/login");
+    toast({ title: "Account created!", description: `${data.name} activated.` });
+    if (signupData.session) {
+      if (email.toLowerCase() === "gepardwebs@gmail.com") navigate("/admin");
+      else navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
   };
 
   return (
@@ -157,23 +171,64 @@ const Checkout = () => {
               </div>
 
               <div className="bg-muted/40 rounded-2xl p-5 space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CREDIT OR DEBIT CARD</label>
-                  <div className="relative">
-                    <CreditCard className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
-                    <Input value={card} onChange={(e) => setCard(e.target.value)} placeholder="0000 0000 0000 0000" className="h-12 pl-11 tracking-wider" maxLength={19} />
-                  </div>
+                {/* Payment method toggler */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-background rounded-xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("card")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                      paymentMethod === "card" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4" /> PAY WITH CARD
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("paypal")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                      paymentMethod === "paypal" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Wallet className="h-4 w-4" /> PAY WITH PAYPAL
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                {paymentMethod === "card" ? (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CREDIT OR DEBIT CARD</label>
+                      <div className="relative">
+                        <CreditCard className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
+                        <Input value={card} onChange={(e) => setCard(e.target.value)} placeholder="0000 0000 0000 0000" className="h-12 pl-11 tracking-wider" maxLength={19} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">EXPIRY DATE</label>
+                        <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM / YY" className="h-12" maxLength={7} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CVC CODE</label>
+                        <Input value={cvc} onChange={(e) => setCvc(e.target.value)} placeholder="•••" className="h-12" maxLength={4} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
                   <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">EXPIRY DATE</label>
-                    <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM / YY" className="h-12" maxLength={7} />
+                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
+                    <div className="relative">
+                      <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
+                      <Input
+                        type="email"
+                        value={paypalEmail}
+                        onChange={(e) => setPaypalEmail(e.target.value)}
+                        placeholder="you@paypal.com"
+                        className="h-12 pl-11"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">You'll be redirected to PayPal to securely complete your payment after creating your account.</p>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CVC CODE</label>
-                    <Input value={cvc} onChange={(e) => setCvc(e.target.value)} placeholder="•••" className="h-12" maxLength={4} />
-                  </div>
-                </div>
+                )}
               </div>
 
               <Button type="submit" disabled={loading} className="cta-btn w-full h-14 rounded-full mt-8 text-sm font-bold tracking-wider gap-2 bg-primary text-primary-foreground hover:bg-primary">

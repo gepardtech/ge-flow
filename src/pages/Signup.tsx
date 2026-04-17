@@ -24,11 +24,11 @@ const Signup = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, plan: "free" },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -36,8 +36,14 @@ const Signup = () => {
     if (error) {
       toast({ title: "Signup failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Account created!", description: "Check your email to verify your account." });
-      navigate("/login");
+      toast({ title: "Account created!", description: "Welcome to GeFlow 🚀" });
+      // With auto-confirm on, the user is signed in. Route by role.
+      if (data.session) {
+        if (email.toLowerCase() === "gepardwebs@gmail.com") navigate("/admin");
+        else navigate("/dashboard");
+      } else {
+        navigate("/login");
+      }
     }
   };
 

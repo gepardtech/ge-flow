@@ -24,7 +24,9 @@ const Login = () => {
     if (error) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
     } else {
-      navigate("/");
+      toast({ title: "Welcome back!" });
+      if (email.toLowerCase() === "gepardwebs@gmail.com") navigate("/admin");
+      else navigate("/dashboard");
     }
   };
 
