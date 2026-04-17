@@ -39,8 +39,7 @@ const Checkout = () => {
   const data = PLAN_DATA[plan] ?? PLAN_DATA.standard;
   const subtotal = data.pricing[period] ?? data.pricing.monthly;
 
-  const tax = useMemo(() => +(subtotal * 0.1).toFixed(2), [subtotal]);
-  const total = useMemo(() => +(subtotal + tax).toFixed(2), [subtotal, tax]);
+  const tax = useMemo(() => +(Math.max(subtotal, 0) * 0.1).toFixed(2), [subtotal]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,6 +48,30 @@ const Checkout = () => {
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [loading, setLoading] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+
+  const COUPONS: Record<string, number> = { GEFLOW10: 10, GEFLOW20: 20, LAUNCH50: 50 };
+
+  const discount = useMemo(
+    () => (appliedCoupon ? +(subtotal * (appliedCoupon.percent / 100)).toFixed(2) : 0),
+    [appliedCoupon, subtotal],
+  );
+  const taxedBase = useMemo(() => +(subtotal - discount).toFixed(2), [subtotal, discount]);
+
+  const applyCoupon = () => {
+    const code = coupon.trim().toUpperCase();
+    if (!code) return;
+    if (COUPONS[code]) {
+      setAppliedCoupon({ code, percent: COUPONS[code] });
+      setCouponError("");
+      toast({ title: "Coupon applied!", description: `${COUPONS[code]}% discount activated.` });
+    } else {
+      setAppliedCoupon(null);
+      setCouponError("Invalid or expired coupon code.");
+    }
+  };
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
 
