@@ -186,7 +186,7 @@ const Index = () => {
                 ))}
               </ul>
               <Button variant="outline" className="w-full cta-btn-outline" asChild>
-                <Link to="/signup">Get Started</Link>
+                <Link to="/signup">Get Started Free</Link>
               </Button>
             </div>
 
@@ -209,7 +209,7 @@ const Index = () => {
                 ))}
               </ul>
               <Button className="w-full cta-btn" asChild>
-                <Link to="/signup">Choose Plan</Link>
+                <Link to={`/checkout?plan=standard&period=${billingPeriod}`}>Choose Plan</Link>
               </Button>
             </div>
 
@@ -234,7 +234,7 @@ const Index = () => {
                 ))}
               </ul>
               <Button variant={billingPeriod === "yearly" ? "default" : "outline"} className={`w-full ${billingPeriod === "yearly" ? "cta-btn" : "cta-btn-outline"}`} asChild>
-                <Link to="/signup">Choose Plan</Link>
+                <Link to={`/checkout?plan=premium&period=${billingPeriod}`}>Choose Plan</Link>
               </Button>
             </div>
           </div>

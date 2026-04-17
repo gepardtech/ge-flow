@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Checkout from "./pages/Checkout";
 import Admin from "./pages/Admin";
+import Dashboard from "./pages/Dashboard";
 import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Refund from "./pages/Refund";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<Refund />} />
