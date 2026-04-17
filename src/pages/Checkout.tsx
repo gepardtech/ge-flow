@@ -39,8 +39,7 @@ const Checkout = () => {
   const data = PLAN_DATA[plan] ?? PLAN_DATA.standard;
   const subtotal = data.pricing[period] ?? data.pricing.monthly;
 
-  const tax = useMemo(() => +(subtotal * 0.1).toFixed(2), [subtotal]);
-  const total = useMemo(() => +(subtotal + tax).toFixed(2), [subtotal, tax]);
+  const tax = useMemo(() => +(Math.max(subtotal, 0) * 0.1).toFixed(2), [subtotal]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,6 +48,30 @@ const Checkout = () => {
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [loading, setLoading] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+
+  const COUPONS: Record<string, number> = { GEFLOW10: 10, GEFLOW20: 20, LAUNCH50: 50 };
+
+  const discount = useMemo(
+    () => (appliedCoupon ? +(subtotal * (appliedCoupon.percent / 100)).toFixed(2) : 0),
+    [appliedCoupon, subtotal],
+  );
+  const total = useMemo(() => +(Math.max(subtotal - discount, 0) + tax).toFixed(2), [subtotal, discount, tax]);
+
+  const applyCoupon = () => {
+    const code = coupon.trim().toUpperCase();
+    if (!code) return;
+    if (COUPONS[code]) {
+      setAppliedCoupon({ code, percent: COUPONS[code] });
+      setCouponError("");
+      toast({ title: "Coupon applied!", description: `${COUPONS[code]}% discount activated.` });
+    } else {
+      setAppliedCoupon(null);
+      setCouponError("Invalid or expired coupon code.");
+    }
+  };
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
 
@@ -181,9 +204,33 @@ const Checkout = () => {
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span><span className="text-foreground font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-primary">
+                    <span>Coupon ({appliedCoupon.code})</span>
+                    <span className="font-semibold">−${discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-muted-foreground">
                   <span>Architectural Tax (10%)</span><span className="text-foreground font-semibold">${tax.toFixed(2)}</span>
                 </div>
+              </div>
+
+              {/* Coupon */}
+              <div className="border-t border-border pt-5">
+                <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">COUPON CODE</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={coupon}
+                    onChange={(e) => { setCoupon(e.target.value); setCouponError(""); }}
+                    placeholder="Enter code"
+                    className="h-10 uppercase"
+                  />
+                  <Button type="button" onClick={applyCoupon} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
+                    APPLY
+                  </Button>
+                </div>
+                {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
+                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.percent}% off applied</p>}
               </div>
 
               <div className="border-t border-border" />

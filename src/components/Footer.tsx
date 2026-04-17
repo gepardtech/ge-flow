@@ -54,11 +54,11 @@ const Footer = () => (
         <div>
           <h4 className="font-bold text-sm mb-4">Legal</h4>
           <div className="flex flex-col gap-2.5">
-            <span className="text-muted-foreground text-sm">About</span>
-            <span className="text-muted-foreground text-sm">Privacy Policy</span>
-            <span className="text-muted-foreground text-sm">Refund Policy</span>
-            <span className="text-muted-foreground text-sm">Terms of Service</span>
-            <span className="text-muted-foreground text-sm">Disclaimer</span>
+            <Link to="/about" className="text-muted-foreground text-sm hover:text-primary transition-colors">About</Link>
+            <Link to="/privacy" className="text-muted-foreground text-sm hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link to="/refund" className="text-muted-foreground text-sm hover:text-primary transition-colors">Refund Policy</Link>
+            <Link to="/terms" className="text-muted-foreground text-sm hover:text-primary transition-colors">Terms of Service</Link>
+            <Link to="/disclaimer" className="text-muted-foreground text-sm hover:text-primary transition-colors">Disclaimer</Link>
           </div>
         </div>
 
