@@ -58,7 +58,7 @@ const Checkout = () => {
     () => (appliedCoupon ? +(subtotal * (appliedCoupon.percent / 100)).toFixed(2) : 0),
     [appliedCoupon, subtotal],
   );
-  const taxedBase = useMemo(() => +(subtotal - discount).toFixed(2), [subtotal, discount]);
+  const total = useMemo(() => +(Math.max(subtotal - discount, 0) + tax).toFixed(2), [subtotal, discount, tax]);
 
   const applyCoupon = () => {
     const code = coupon.trim().toUpperCase();
