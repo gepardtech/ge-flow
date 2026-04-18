@@ -339,6 +339,7 @@ const Checkout = () => {
           </div>
         </div>
       </section>
+      <InvoiceDialog open={showInvoice} onClose={() => setShowInvoice(false)} onContinue={handleContinue} invoice={invoice} />
     </Layout>
   );
 };
