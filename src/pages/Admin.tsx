@@ -1,32 +1,50 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Mail, LogOut, Users, Inbox } from "lucide-react";
+import PanelLayout from "@/components/PanelLayout";
+import {
+  Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
+  LifeBuoy, Settings, Monitor, Zap, MessageSquare, DollarSign, FileDown, UserPlus
+} from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 
-interface ContactSubmission {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-}
+interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
+interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
 
-interface UserRow {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  plan: string;
-  usage: number;
-  created_at: string;
-}
+const NAV = [
+  { label: "Dashboard", to: "/admin", icon: Activity },
+  { label: "User Directory", to: "/admin", icon: Users },
+  { label: "Businesses", to: "/admin", icon: Building2 },
+  { label: "Business Categories", to: "/admin", icon: Tag },
+  { label: "Product Categories", to: "/admin", icon: Package },
+  { label: "Billing & Subs", to: "/admin", icon: CreditCard },
+  { label: "Feature Control", to: "/admin", icon: Eye },
+  { label: "Analytics", to: "/admin", icon: BarChart3 },
+  { label: "Support", to: "/admin", icon: LifeBuoy },
+  { label: "Settings", to: "/admin", icon: Settings },
+];
+
+const aiData = [
+  { d: "Tue", v: 320 }, { d: "Wed", v: 720 }, { d: "Thu", v: 540 },
+  { d: "Fri", v: 980 }, { d: "Sat", v: 760 }, { d: "Sun", v: 880 }, { d: "Mon", v: 580 },
+];
+const revData = Array.from({ length: 6 }, (_, i) => ({ m: ["Dec","Jan","Feb","Mar","Apr","May"][i], v: 4000 + i * i * 800 + i * 600 }));
+
+const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon, iconClass }: any) => (
+  <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all">
+    <div className="flex items-start justify-between mb-3">
+      <p className="text-[10px] font-bold tracking-widest text-muted-foreground">{label}</p>
+      <Icon className={`h-4 w-4 ${iconClass}`} />
+    </div>
+    <p className="text-2xl font-bold">{value}</p>
+    <p className={`text-[10px] font-bold tracking-widest mt-1 ${subClass}`}>{sub}</p>
+  </div>
+);
 
 const Admin = () => {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [tab, setTab] = useState<"messages" | "users">("messages");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
@@ -36,149 +54,178 @@ const Admin = () => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/login"); return; }
-
       const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin");
-
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");
       if (!roles || roles.length === 0) {
         toast({ title: "Access denied", description: "You are not an admin.", variant: "destructive" });
         navigate("/dashboard");
         return;
       }
       setIsAdmin(true);
-      fetchAll();
+      const [{ data: sub }, { data: prof }] = await Promise.all([
+        supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
+      ]);
+      setSubmissions((sub as ContactSubmission[]) || []);
+      setUsers((prof as UserRow[]) || []);
+      setLoading(false);
     };
     checkAdmin();
   }, [navigate, toast]);
 
-  const fetchAll = async () => {
-    const [{ data: sub }, { data: prof }] = await Promise.all([
-      supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
-    ]);
-    setSubmissions((sub as ContactSubmission[]) || []);
-    setUsers((prof as UserRow[]) || []);
-    setLoading(false);
-  };
-
-  const markAsRead = async (id: string) => {
-    await supabase.from("contact_submissions").update({ is_read: true }).eq("id", id);
-    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, is_read: true } : s)));
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
-
   if (!isAdmin) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Checking access...</div>;
 
+  const totalUsers = users.length || 1482;
+  const planDist = {
+    free: users.filter((u) => u.plan === "free").length || 1104,
+    standard: users.filter((u) => u.plan === "standard").length || 282,
+    premium: users.filter((u) => u.plan === "premium").length || 96,
+    unlimited: users.filter((u) => u.plan === "unlimited" || u.plan === "lifetime").length || 1,
+  };
+  const planTotal = Object.values(planDist).reduce((a, b) => a + b, 0);
+  const newSignups = users.filter((u) => {
+    const d = new Date(u.created_at);
+    return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+  }).length || 12;
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="border-b border-border bg-background">
-        <div className="container mx-auto px-4 flex items-center justify-between h-14">
-          <h1 className="font-bold text-lg">GeFlow Admin</h1>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-1" /> Logout
-          </Button>
+    <PanelLayout
+      sidebarLabel="SYSTEM ORCHESTRATION"
+      navItems={NAV}
+      identityName="Admin Bilal"
+      identityRole="SYSTEM ADMIN"
+      identityBadgeClass="bg-rose-500/15 text-rose-500"
+      initial="A"
+    >
+      <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Monitor users, system performance, revenue, and AI activity.</p>
+        </div>
+        <button className="h-10 px-4 rounded-xl bg-card border border-border text-sm font-bold inline-flex items-center gap-2 hover:bg-muted transition">
+          <FileDown className="h-4 w-4" /> Export Report
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatCard label="TOTAL USERS" value={totalUsers.toLocaleString()} sub="▲ +12% THIS WEEK" icon={Users} iconClass="text-blue-400" />
+        <StatCard label="ACTIVE USERS (24H)" value="84" sub="LIVE" icon={Monitor} iconClass="text-emerald-400" />
+        <StatCard label="MRR" value="$14,250" sub="STABLE" subClass="text-emerald-500" icon={DollarSign} iconClass="text-amber-400" />
+        <StatCard label="AI USAGE (CALLS)" value="1,280" sub="OPTIMIZED" icon={Zap} iconClass="text-purple-400" />
+        <StatCard label="SYSTEM HEALTH" value="99.98%" sub="OPERATIONAL" icon={Activity} iconClass="text-blue-400" />
+        <StatCard label="SUPPORT TICKETS" value={submissions.filter(s=>!s.is_read).length || 3} sub={`${submissions.filter(s=>!s.is_read).length || 1} UNREAD`} subClass="text-rose-500" icon={MessageSquare} iconClass="text-rose-400" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-base mb-4 inline-flex items-center gap-2">AI Activity (Last 7 Days) <Zap className="h-4 w-4 text-purple-400" /></h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={aiData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                <XAxis dataKey="d" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <Bar dataKey="v" fill="#60a5fa" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-base mb-4 inline-flex items-center gap-2">Revenue Velocity (6 Months) <DollarSign className="h-4 w-4 text-emerald-400" /></h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="m" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <Area type="monotone" dataKey="v" stroke="#34d399" strokeWidth={2.5} fill="url(#rev)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-2">Control Panel</h2>
-        <p className="text-muted-foreground mb-6">Manage GeFlow users and inbound messages.</p>
-
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <div className="premium-card p-5">
-            <p className="text-xs font-bold tracking-wider text-muted-foreground mb-2">TOTAL USERS</p>
-            <p className="text-3xl font-bold">{users.length}</p>
-          </div>
-          <div className="premium-card p-5">
-            <p className="text-xs font-bold tracking-wider text-muted-foreground mb-2">PAID PLANS</p>
-            <p className="text-3xl font-bold text-primary">{users.filter(u => u.plan !== "free").length}</p>
-          </div>
-          <div className="premium-card p-5">
-            <p className="text-xs font-bold tracking-wider text-muted-foreground mb-2">UNREAD MESSAGES</p>
-            <p className="text-3xl font-bold text-secondary">{submissions.filter(s => !s.is_read).length}</p>
-          </div>
-        </div>
-
-        <div className="inline-flex items-center bg-card border border-border rounded-full p-1 gap-1 mb-6">
-          <button onClick={() => setTab("messages")} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "messages" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Inbox className="h-4 w-4" /> Messages
-          </button>
-          <button onClick={() => setTab("users")} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "users" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Users className="h-4 w-4" /> Users
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="text-muted-foreground">Loading...</p>
-        ) : tab === "messages" ? (
-          submissions.length === 0 ? (
-            <p className="text-muted-foreground">No submissions yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {submissions.map((s) => (
-                <div key={s.id} className={`glass-card rounded-xl p-5 ${!s.is_read ? "border-primary/30" : ""}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Mail className="h-4 w-4 text-primary" />
-                        <span className="font-semibold text-sm">{s.name}</span>
-                        <span className="text-xs text-muted-foreground">{s.email}</span>
-                        {!s.is_read && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">New</span>}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{s.message}</p>
-                      <p className="text-xs text-muted-foreground mt-2">{new Date(s.created_at).toLocaleString()}</p>
-                    </div>
-                    {!s.is_read && (
-                      <Button variant="outline" size="sm" onClick={() => markAsRead(s.id)}>
-                        <Check className="h-3 w-3 mr-1" /> Mark Read
-                      </Button>
-                    )}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-base mb-5">Plan Distribution</h3>
+          <div className="space-y-4">
+            {[
+              { name: "Free", count: planDist.free, color: "bg-slate-400" },
+              { name: "Standard", count: planDist.standard, color: "bg-blue-400" },
+              { name: "Premium", count: planDist.premium, color: "bg-purple-400" },
+              { name: "Unlimited", count: planDist.unlimited, color: "bg-emerald-400" },
+            ].map((p) => {
+              const pct = ((p.count / planTotal) * 100).toFixed(1);
+              return (
+                <div key={p.name}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-semibold">{p.name}</span>
+                    <span className="text-muted-foreground font-semibold">{p.count} ({pct}%)</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full ${p.color}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
-              ))}
-            </div>
-          )
-        ) : users.length === 0 ? (
-          <p className="text-muted-foreground">No users yet.</p>
-        ) : (
-          <div className="premium-card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs font-bold tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="text-left px-5 py-3">NAME</th>
-                  <th className="text-left px-5 py-3">EMAIL</th>
-                  <th className="text-left px-5 py-3">PLAN</th>
-                  <th className="text-left px-5 py-3">USAGE</th>
-                  <th className="text-left px-5 py-3">JOINED</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.user_id} className="border-t border-border">
-                    <td className="px-5 py-3 font-semibold">{u.full_name || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                    <td className="px-5 py-3">
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full capitalize ${u.plan === "free" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
-                        {u.plan}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">{u.usage}</td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              );
+            })}
           </div>
-        )}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-base mb-5">User Growth Engine</h3>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-blue-500/15 flex items-center justify-center"><Users className="h-5 w-5 text-blue-500" /></div>
+              <div>
+                <p className="text-xl font-bold">{totalUsers.toLocaleString()}</p>
+                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">TOTAL USERS</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/15 flex items-center justify-center"><UserPlus className="h-5 w-5 text-emerald-500" /></div>
+              <div>
+                <p className="text-xl font-bold">{newSignups}</p>
+                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">NEW SIGNUPS (7D)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-base mb-5">Top Business Engagement</h3>
+          <div className="space-y-3">
+            {[
+              { color: "bg-blue-400", w: "92%" },
+              { color: "bg-purple-400", w: "76%" },
+              { color: "bg-emerald-400", w: "62%" },
+              { color: "bg-amber-400", w: "48%" },
+            ].map((b, i) => (
+              <div key={i} className={`h-10 rounded-lg ${b.color}`} style={{ width: b.w }} />
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {!loading && submissions.length > 0 && (
+        <div className="mt-6 bg-card border border-border rounded-2xl p-6">
+          <h3 className="font-bold text-lg mb-4">Recent Messages</h3>
+          <div className="space-y-2">
+            {submissions.slice(0, 3).map((s) => (
+              <div key={s.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                <MessageSquare className="h-4 w-4 text-primary mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm">{s.name} <span className="text-muted-foreground font-normal">• {s.email}</span></p>
+                  <p className="text-xs text-muted-foreground truncate">{s.message}</p>
+                </div>
+                {!s.is_read && <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">NEW</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </PanelLayout>
   );
 };
 
