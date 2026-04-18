@@ -6,6 +6,7 @@ import Layout from "@/components/Layout";
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wallet, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
@@ -53,6 +54,9 @@ const Checkout = () => {
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
   const [couponError, setCouponError] = useState("");
+  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [isAdminEmail, setIsAdminEmail] = useState(false);
 
   const COUPONS: Record<string, number> = { GEFLOW10: 10, GEFLOW20: 20, LAUNCH50: 50 };
 
@@ -104,12 +108,30 @@ const Checkout = () => {
       toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Account created!", description: `${data.name} activated.` });
-    if (signupData.session) {
-      if (email.toLowerCase() === "gepardwebs@gmail.com") navigate("/admin");
-      else navigate("/dashboard");
-    } else {
-      navigate("/login");
+    const inv: InvoiceData = {
+      invoiceNumber: `GF-${Date.now().toString().slice(-8)}`,
+      date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+      customerName: fullName,
+      customerEmail: email,
+      planName: data.name,
+      period: PERIOD_LABEL[period],
+      paymentMethod: paymentMethod === "card" ? `Card •••• ${card.slice(-4) || "****"}` : `PayPal (${paypalEmail})`,
+      subtotal,
+      discount,
+      couponCode: appliedCoupon?.code,
+      tax,
+      total,
+    };
+    setInvoice(inv);
+    setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
+    setShowInvoice(true);
+    toast({ title: "Payment successful!", description: `${data.name} activated.` });
+  };
+
+  const handleContinue = () => {
+    setShowInvoice(false);
+    if (invoice) {
+      navigate(isAdminEmail ? "/admin" : "/dashboard");
     }
   };
 
@@ -317,6 +339,7 @@ const Checkout = () => {
           </div>
         </div>
       </section>
+      <InvoiceDialog open={showInvoice} onClose={() => setShowInvoice(false)} onContinue={handleContinue} invoice={invoice} />
     </Layout>
   );
 };
