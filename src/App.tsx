@@ -20,6 +20,26 @@ import Terms from "./pages/Terms";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminBusinesses from "./pages/admin/AdminBusinesses";
+import AdminBusinessCategories from "./pages/admin/AdminBusinessCategories";
+import AdminProductCategories from "./pages/admin/AdminProductCategories";
+import AdminBilling from "./pages/admin/AdminBilling";
+import AdminFeatures from "./pages/admin/AdminFeatures";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminSupport from "./pages/admin/AdminSupport";
+import AdminSettings from "./pages/admin/AdminSettings";
+
+import UserInventory from "./pages/user/UserInventory";
+import UserOutOfStock from "./pages/user/UserOutOfStock";
+import UserPOS from "./pages/user/UserPOS";
+import UserPurchases from "./pages/user/UserPurchases";
+import UserReports from "./pages/user/UserReports";
+import UserAnalytics from "./pages/user/UserAnalytics";
+import UserTeam from "./pages/user/UserTeam";
+import UserSubscription from "./pages/user/UserSubscription";
+import UserWorkspace from "./pages/user/UserWorkspace";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,7 +58,25 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/businesses" element={<AdminBusinesses />} />
+          <Route path="/admin/business-categories" element={<AdminBusinessCategories />} />
+          <Route path="/admin/product-categories" element={<AdminProductCategories />} />
+          <Route path="/admin/billing" element={<AdminBilling />} />
+          <Route path="/admin/features" element={<AdminFeatures />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/admin/support" element={<AdminSupport />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/inventory" element={<UserInventory />} />
+          <Route path="/dashboard/out-of-stock" element={<UserOutOfStock />} />
+          <Route path="/dashboard/pos" element={<UserPOS />} />
+          <Route path="/dashboard/purchases" element={<UserPurchases />} />
+          <Route path="/dashboard/reports" element={<UserReports />} />
+          <Route path="/dashboard/analytics" element={<UserAnalytics />} />
+          <Route path="/dashboard/team" element={<UserTeam />} />
+          <Route path="/dashboard/subscription" element={<UserSubscription />} />
+          <Route path="/dashboard/workspace" element={<UserWorkspace />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<Refund />} />

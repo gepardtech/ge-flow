@@ -34,12 +34,12 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <aside className={`${collapsed ? "w-20" : "w-64"} hidden md:flex flex-col border-r border-border bg-card transition-all duration-300`}>
+      <aside className={`${collapsed ? "w-20" : "w-64"} hidden md:flex flex-col border-r border-border bg-background transition-all duration-300`}>
         <div className="flex items-center justify-between p-4 border-b border-border h-16">
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-bold text-sm">G</div>
-              <span className="font-bold text-lg">GeFlow</span>
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm">G</div>
+              <span className="font-bold text-lg bg-gradient-to-r from-violet-500 to-sky-400 bg-clip-text text-transparent">GeFlow</span>
             </Link>
           )}
           <button onClick={() => setCollapsed(!collapsed)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
@@ -57,8 +57,10 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
                 <li key={item.to}>
                   <Link
                     to={item.to}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      active
+                        ? "bg-sky-400 text-white shadow-sm dark:bg-sky-500/90"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     }`}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -86,7 +88,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-border bg-card flex items-center gap-3 px-4 md:px-6">
+        <header className="h-16 border-b border-border bg-background flex items-center gap-3 px-4 md:px-6">
           <div className="flex-1 max-w-xl relative">
             <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
             <input

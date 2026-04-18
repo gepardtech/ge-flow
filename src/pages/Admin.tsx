@@ -3,27 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PanelLayout from "@/components/PanelLayout";
+import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
-  Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
-  LifeBuoy, Settings, Monitor, Zap, MessageSquare, DollarSign, FileDown, UserPlus
+  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, FileDown, UserPlus
 } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
-
-const NAV = [
-  { label: "Dashboard", to: "/admin", icon: Activity },
-  { label: "User Directory", to: "/admin", icon: Users },
-  { label: "Businesses", to: "/admin", icon: Building2 },
-  { label: "Business Categories", to: "/admin", icon: Tag },
-  { label: "Product Categories", to: "/admin", icon: Package },
-  { label: "Billing & Subs", to: "/admin", icon: CreditCard },
-  { label: "Feature Control", to: "/admin", icon: Eye },
-  { label: "Analytics", to: "/admin", icon: BarChart3 },
-  { label: "Support", to: "/admin", icon: LifeBuoy },
-  { label: "Settings", to: "/admin", icon: Settings },
-];
 
 const aiData = [
   { d: "Tue", v: 320 }, { d: "Wed", v: 720 }, { d: "Thu", v: 540 },
@@ -89,14 +76,7 @@ const Admin = () => {
   }).length || 12;
 
   return (
-    <PanelLayout
-      sidebarLabel="SYSTEM ORCHESTRATION"
-      navItems={NAV}
-      identityName="Admin Bilal"
-      identityRole="SYSTEM ADMIN"
-      identityBadgeClass="bg-rose-500/15 text-rose-500"
-      initial="A"
-    >
+    <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY}>
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1>

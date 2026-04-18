@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
+import { USER_NAV } from "@/lib/panelNav";
 import {
-  LayoutDashboard, Package, AlertCircle, ShoppingCart, ShoppingBag, FileText,
-  BarChart3, Users, CreditCard, Settings, Plus, Sparkles, AlertTriangle, Clock
+  Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
@@ -14,19 +14,6 @@ interface Profile {
   plan: string;
   usage: number;
 }
-
-const NAV = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Inventory", to: "/dashboard", icon: Package },
-  { label: "Out of Stock", to: "/dashboard", icon: AlertCircle },
-  { label: "POS Terminal", to: "/dashboard", icon: ShoppingCart },
-  { label: "Purchases", to: "/dashboard", icon: ShoppingBag },
-  { label: "Reports", to: "/dashboard", icon: FileText },
-  { label: "Analytics", to: "/dashboard", icon: BarChart3 },
-  { label: "Team Hub", to: "/dashboard", icon: Users },
-  { label: "Subscription", to: "/dashboard", icon: CreditCard },
-  { label: "Workspace", to: "/dashboard", icon: Settings },
-];
 
 const chartData = Array.from({ length: 28 }, (_, i) => ({
   day: `Day ${i + 1}`,
@@ -73,11 +60,11 @@ const Dashboard = () => {
 
   return (
     <PanelLayout
-      sidebarLabel="BUSINESS TERMINAL"
-      navItems={NAV}
+      sidebarLabel="BUSINESS WORKSPACE"
+      navItems={USER_NAV}
       identityName={`${planLabel} User ${firstName}`}
       identityRole={`${planLabel.toUpperCase()} PLAN`}
-      identityBadgeClass="bg-primary/15 text-primary"
+      identityBadgeClass="bg-sky-400/15 text-sky-500"
       initial={initial}
     >
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
