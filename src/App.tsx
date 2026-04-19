@@ -25,6 +25,10 @@ import AdminBusinesses from "./pages/admin/AdminBusinesses";
 import AdminBusinessCategories from "./pages/admin/AdminBusinessCategories";
 import AdminProductCategories from "./pages/admin/AdminProductCategories";
 import AdminBilling from "./pages/admin/AdminBilling";
+import AdminBillingSubscriptions from "./pages/admin/AdminBillingSubscriptions";
+import AdminBillingPricing from "./pages/admin/AdminBillingPricing";
+import AdminBillingInvoices from "./pages/admin/AdminBillingInvoices";
+import AdminBillingRefunds from "./pages/admin/AdminBillingRefunds";
 import AdminFeatures from "./pages/admin/AdminFeatures";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSupport from "./pages/admin/AdminSupport";
@@ -63,6 +67,10 @@ const App = () => (
           <Route path="/admin/business-categories" element={<AdminBusinessCategories />} />
           <Route path="/admin/product-categories" element={<AdminProductCategories />} />
           <Route path="/admin/billing" element={<AdminBilling />} />
+          <Route path="/admin/billing/subscriptions" element={<AdminBillingSubscriptions />} />
+          <Route path="/admin/billing/pricing-plans" element={<AdminBillingPricing />} />
+          <Route path="/admin/billing/invoices" element={<AdminBillingInvoices />} />
+          <Route path="/admin/billing/refunds" element={<AdminBillingRefunds />} />
           <Route path="/admin/features" element={<AdminFeatures />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/support" element={<AdminSupport />} />

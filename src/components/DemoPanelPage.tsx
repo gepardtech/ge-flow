@@ -18,7 +18,9 @@ interface Props {
 const DemoPanelPage = ({
   title, description, icon: Icon, sidebarLabel, navItems,
   identityName, identityRole, identityBadgeClass, initial, children,
-}: Props) => (
+}: Props) => {
+  const isAdmin = navItems.some((n) => n.to.startsWith("/admin"));
+  return (
   <PanelLayout
     sidebarLabel={sidebarLabel}
     navItems={navItems}
@@ -26,6 +28,7 @@ const DemoPanelPage = ({
     identityRole={identityRole}
     identityBadgeClass={identityBadgeClass}
     initial={initial}
+    isAdmin={isAdmin}
   >
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-2">
@@ -84,6 +87,7 @@ const DemoPanelPage = ({
       </div>
     )}
   </PanelLayout>
-);
+  );
+};
 
 export default DemoPanelPage;

@@ -1,32 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PanelLayout from "@/components/PanelLayout";
+import ExportReportDialog from "@/components/ExportReportDialog";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
-  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, FileDown, UserPlus
+  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, UserPlus, Building2, CreditCard, BarChart3, LifeBuoy
 } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
 
-const aiData = [
-  { d: "Tue", v: 320 }, { d: "Wed", v: 720 }, { d: "Thu", v: 540 },
-  { d: "Fri", v: 980 }, { d: "Sat", v: 760 }, { d: "Sun", v: 880 }, { d: "Mon", v: 580 },
-];
-const revData = Array.from({ length: 6 }, (_, i) => ({ m: ["Dec","Jan","Feb","Mar","Apr","May"][i], v: 4000 + i * i * 800 + i * 600 }));
+const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 0, lifetime: 0 };
 
-const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon, iconClass }: any) => (
-  <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all">
+const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon, iconClass, accent, onClick }: any) => (
+  <button
+    onClick={onClick}
+    className={`text-left bg-card border border-border rounded-2xl p-5 transition-all hover:-translate-y-1 hover:shadow-xl ${accent} cursor-pointer w-full`}
+  >
     <div className="flex items-start justify-between mb-3">
       <p className="text-[10px] font-bold tracking-widest text-muted-foreground">{label}</p>
       <Icon className={`h-4 w-4 ${iconClass}`} />
     </div>
     <p className="text-2xl font-bold">{value}</p>
     <p className={`text-[10px] font-bold tracking-widest mt-1 ${subClass}`}>{sub}</p>
-  </div>
+  </button>
 );
 
 const Admin = () => {
@@ -36,6 +36,16 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const loadData = useCallback(async () => {
+    const [{ data: sub }, { data: prof }] = await Promise.all([
+      supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
+    ]);
+    setSubmissions((sub as ContactSubmission[]) || []);
+    setUsers((prof as UserRow[]) || []);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -49,66 +59,109 @@ const Admin = () => {
         return;
       }
       setIsAdmin(true);
-      const [{ data: sub }, { data: prof }] = await Promise.all([
-        supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
-      ]);
-      setSubmissions((sub as ContactSubmission[]) || []);
-      setUsers((prof as UserRow[]) || []);
-      setLoading(false);
+      await loadData();
     };
     checkAdmin();
-  }, [navigate, toast]);
+  }, [navigate, toast, loadData]);
+
+  // Realtime + global refresh hook
+  useEffect(() => {
+    if (!isAdmin) return;
+    const onRefresh = () => loadData();
+    window.addEventListener("panel:refresh", onRefresh);
+    const channel = supabase
+      .channel("admin_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "contact_submissions" }, loadData)
+      .subscribe();
+    return () => {
+      window.removeEventListener("panel:refresh", onRefresh);
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, loadData]);
 
   if (!isAdmin) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Checking access...</div>;
 
-  const totalUsers = users.length || 1482;
+  // Real metrics
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => Date.now() - new Date(u.created_at).getTime() < 24 * 60 * 60 * 1000).length;
+  const newSignups = users.filter((u) => Date.now() - new Date(u.created_at).getTime() < 7 * 24 * 60 * 60 * 1000).length;
+  const mrr = users.reduce((sum, u) => sum + (PLAN_PRICES[u.plan] ?? 0), 0);
+  const totalAiUsage = users.reduce((sum, u) => sum + (u.usage ?? 0), 0);
+  const unreadTickets = submissions.filter((s) => !s.is_read).length;
+
   const planDist = {
-    free: users.filter((u) => u.plan === "free").length || 1104,
-    standard: users.filter((u) => u.plan === "standard").length || 282,
-    premium: users.filter((u) => u.plan === "premium").length || 96,
-    unlimited: users.filter((u) => u.plan === "unlimited" || u.plan === "lifetime").length || 1,
+    free: users.filter((u) => u.plan === "free").length,
+    standard: users.filter((u) => u.plan === "standard").length,
+    premium: users.filter((u) => u.plan === "premium").length,
+    unlimited: users.filter((u) => u.plan === "unlimited" || u.plan === "lifetime").length,
   };
-  const planTotal = Object.values(planDist).reduce((a, b) => a + b, 0);
-  const newSignups = users.filter((u) => {
-    const d = new Date(u.created_at);
-    return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
-  }).length || 12;
+  const planTotal = Math.max(1, Object.values(planDist).reduce((a, b) => a + b, 0));
+
+  // Build last-7-days signup chart from real data (proxy for AI activity until usage events exist)
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const aiData = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date();
+    day.setDate(day.getDate() - (6 - i));
+    day.setHours(0, 0, 0, 0);
+    const next = new Date(day); next.setDate(next.getDate() + 1);
+    const v = users.filter((u) => {
+      const t = new Date(u.created_at).getTime();
+      return t >= day.getTime() && t < next.getTime();
+    }).reduce((s, u) => s + (u.usage ?? 0) + 1, 0);
+    return { d: dayLabels[day.getDay()], v };
+  });
+
+  // 6-month revenue velocity
+  const revData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+    const m = d.toLocaleString("default", { month: "short" });
+    const v = users.filter((u) => {
+      const ud = new Date(u.created_at);
+      return ud.getMonth() === d.getMonth() && ud.getFullYear() === d.getFullYear();
+    }).reduce((s, u) => s + (PLAN_PRICES[u.plan] ?? 0), 0);
+    return { m, v };
+  });
+
+  const exportRows = users.map((u) => ({
+    user_id: u.user_id, name: u.full_name ?? "", email: u.email ?? "",
+    plan: u.plan, usage: u.usage, created_at: u.created_at,
+  }));
 
   return (
-    <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY}>
+    <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Monitor users, system performance, revenue, and AI activity.</p>
         </div>
-        <button className="h-10 px-4 rounded-xl bg-card border border-border text-sm font-bold inline-flex items-center gap-2 hover:bg-muted transition">
-          <FileDown className="h-4 w-4" /> Export Report
-        </button>
+        <ExportReportDialog rows={exportRows} filename="geflow-users" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <StatCard label="TOTAL USERS" value={totalUsers.toLocaleString()} sub="▲ +12% THIS WEEK" icon={Users} iconClass="text-blue-400" />
-        <StatCard label="ACTIVE USERS (24H)" value="84" sub="LIVE" icon={Monitor} iconClass="text-emerald-400" />
-        <StatCard label="MRR" value="$14,250" sub="STABLE" subClass="text-emerald-500" icon={DollarSign} iconClass="text-amber-400" />
-        <StatCard label="AI USAGE (CALLS)" value="1,280" sub="OPTIMIZED" icon={Zap} iconClass="text-purple-400" />
-        <StatCard label="SYSTEM HEALTH" value="99.98%" sub="OPERATIONAL" icon={Activity} iconClass="text-blue-400" />
-        <StatCard label="SUPPORT TICKETS" value={submissions.filter(s=>!s.is_read).length || 3} sub={`${submissions.filter(s=>!s.is_read).length || 1} UNREAD`} subClass="text-rose-500" icon={MessageSquare} iconClass="text-rose-400" />
+        <StatCard label="TOTAL USERS" value={totalUsers.toLocaleString()} sub={`▲ +${newSignups} THIS WEEK`} icon={Users} iconClass="text-blue-400" accent="hover:shadow-blue-500/20" onClick={() => navigate("/admin/users")} />
+        <StatCard label="ACTIVE USERS (24H)" value={activeUsers.toString()} sub="LIVE" icon={Monitor} iconClass="text-emerald-400" accent="hover:shadow-emerald-500/20" onClick={() => navigate("/admin/users?filter=active")} />
+        <StatCard label="MRR" value={`$${mrr.toLocaleString()}`} sub={mrr > 0 ? "STABLE" : "NO REVENUE"} subClass={mrr > 0 ? "text-emerald-500" : "text-muted-foreground"} icon={DollarSign} iconClass="text-amber-400" accent="hover:shadow-amber-500/20" onClick={() => navigate("/admin/billing")} />
+        <StatCard label="AI USAGE (CALLS)" value={totalAiUsage.toLocaleString()} sub="OPTIMIZED" icon={Zap} iconClass="text-purple-400" accent="hover:shadow-purple-500/20" onClick={() => navigate("/admin/analytics")} />
+        <StatCard label="SYSTEM HEALTH" value="99.98%" sub="OPERATIONAL" icon={Activity} iconClass="text-blue-400" accent="hover:shadow-sky-500/20" onClick={() => navigate("/admin/analytics")} />
+        <StatCard label="SUPPORT TICKETS" value={submissions.length.toString()} sub={`${unreadTickets} UNREAD`} subClass={unreadTickets > 0 ? "text-rose-500" : "text-muted-foreground"} icon={MessageSquare} iconClass="text-rose-400" accent="hover:shadow-rose-500/20" onClick={() => navigate("/admin/support")} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-purple-500/10 transition-all">
           <h3 className="font-bold text-base mb-4 inline-flex items-center gap-2">AI Activity (Last 7 Days) <Zap className="h-4 w-4 text-purple-400" /></h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={aiData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                 <XAxis dataKey="d" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
                 <Bar dataKey="v" fill="#60a5fa" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-emerald-500/10 transition-all">
           <h3 className="font-bold text-base mb-4 inline-flex items-center gap-2">Revenue Velocity (6 Months) <DollarSign className="h-4 w-4 text-emerald-400" /></h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -120,6 +173,8 @@ const Admin = () => {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="m" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} formatter={(v: any) => [`$${v}`, "Revenue"]} />
                 <Area type="monotone" dataKey="v" stroke="#34d399" strokeWidth={2.5} fill="url(#rev)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -128,8 +183,11 @@ const Admin = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-base mb-5">Plan Distribution</h3>
+        <button onClick={() => navigate("/admin/billing")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-violet-500/15 hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-base">Plan Distribution</h3>
+            <CreditCard className="h-4 w-4 text-violet-500" />
+          </div>
           <div className="space-y-4">
             {[
               { name: "Free", count: planDist.free, color: "bg-slate-400" },
@@ -145,16 +203,19 @@ const Admin = () => {
                     <span className="text-muted-foreground font-semibold">{p.count} ({pct}%)</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full ${p.color}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full rounded-full ${p.color} transition-all`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </button>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-base mb-5">User Growth Engine</h3>
+        <button onClick={() => navigate("/admin/users")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-blue-500/15 hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-base">User Growth Engine</h3>
+            <Users className="h-4 w-4 text-blue-500" />
+          </div>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-xl bg-blue-500/15 flex items-center justify-center"><Users className="h-5 w-5 text-blue-500" /></div>
@@ -171,29 +232,39 @@ const Admin = () => {
               </div>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-base mb-5">Top Business Engagement</h3>
-          <div className="space-y-3">
-            {[
-              { color: "bg-blue-400", w: "92%" },
-              { color: "bg-purple-400", w: "76%" },
-              { color: "bg-emerald-400", w: "62%" },
-              { color: "bg-amber-400", w: "48%" },
-            ].map((b, i) => (
-              <div key={i} className={`h-10 rounded-lg ${b.color}`} style={{ width: b.w }} />
-            ))}
+        <button onClick={() => navigate("/admin/businesses")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-amber-500/15 hover:-translate-y-0.5 transition-all">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-base">Top Business Engagement</h3>
+            <Building2 className="h-4 w-4 text-amber-500" />
           </div>
-        </div>
+          <div className="space-y-3">
+            {(() => {
+              const buckets = [
+                { color: "bg-blue-400", count: planDist.free },
+                { color: "bg-purple-400", count: planDist.standard },
+                { color: "bg-emerald-400", count: planDist.premium },
+                { color: "bg-amber-400", count: planDist.unlimited },
+              ];
+              const max = Math.max(1, ...buckets.map((b) => b.count));
+              return buckets.map((b, i) => (
+                <div key={i} className={`h-10 rounded-lg ${b.color} transition-all`} style={{ width: `${Math.max(15, (b.count / max) * 100)}%` }} />
+              ));
+            })()}
+          </div>
+        </button>
       </div>
 
       {!loading && submissions.length > 0 && (
-        <div className="mt-6 bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-lg mb-4">Recent Messages</h3>
+        <div className="mt-6 bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-primary/10 transition-all">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg">Recent Messages</h3>
+            <button onClick={() => navigate("/admin/support")} className="text-xs font-bold text-sky-500 hover:underline">View all →</button>
+          </div>
           <div className="space-y-2">
             {submissions.slice(0, 3).map((s) => (
-              <div key={s.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+              <div key={s.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors">
                 <MessageSquare className="h-4 w-4 text-primary mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{s.name} <span className="text-muted-foreground font-normal">• {s.email}</span></p>
