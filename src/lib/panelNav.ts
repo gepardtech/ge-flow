@@ -1,9 +1,12 @@
 import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
-  FileText, Settings as SettingsIcon,
+  FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
 } from "lucide-react";
-import type { NavItem } from "@/components/PanelLayout";
+import type { LucideIcon } from "lucide-react";
+
+export interface NavChild { label: string; to: string; }
+export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
 
 export const ADMIN_NAV: NavItem[] = [
   { label: "Dashboard", to: "/admin", icon: Activity },
@@ -11,7 +14,15 @@ export const ADMIN_NAV: NavItem[] = [
   { label: "Businesses", to: "/admin/businesses", icon: Building2 },
   { label: "Business Categories", to: "/admin/business-categories", icon: Tag },
   { label: "Product Categories", to: "/admin/product-categories", icon: Package },
-  { label: "Billing & Subs", to: "/admin/billing", icon: CreditCard },
+  {
+    label: "Billing & Subs", to: "/admin/billing", icon: CreditCard,
+    children: [
+      { label: "Subscriptions", to: "/admin/billing/subscriptions" },
+      { label: "Pricing Plans", to: "/admin/billing/pricing-plans" },
+      { label: "Invoices", to: "/admin/billing/invoices" },
+      { label: "Refunds", to: "/admin/billing/refunds" },
+    ],
+  },
   { label: "Feature Control", to: "/admin/features", icon: Eye },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3 },
   { label: "Support", to: "/admin/support", icon: LifeBuoy },
@@ -46,3 +57,6 @@ export const USER_IDENTITY = {
   identityBadgeClass: "bg-sky-400/15 text-sky-500",
   initial: "U",
 };
+
+// re-export icons used by other files if needed
+export { Repeat, DollarSign, Receipt, Undo2 };
