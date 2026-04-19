@@ -188,12 +188,6 @@ const Admin = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <button onClick={() => navigate("/admin/billing")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-violet-500/15 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-base">Plan Distribution</h3>
-            <CreditCard className="h-4 w-4 text-violet-500" />
-          </div>
-      <div className="grid lg:grid-cols-3 gap-6">
         {/* Plan Distribution — interactive pie */}
         <div onClick={() => navigate("/admin/billing")} role="button" tabIndex={0}
           className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-violet-500/15 hover:-translate-y-1 transition-all cursor-pointer">
