@@ -8,7 +8,7 @@ import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
   Activity, Users, Monitor, Zap, MessageSquare, DollarSign, UserPlus, Building2, CreditCard, BarChart3, LifeBuoy
 } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
@@ -123,10 +123,15 @@ const Admin = () => {
     return { m, v };
   });
 
-  const exportRows = users.map((u) => ({
-    user_id: u.user_id, name: u.full_name ?? "", email: u.email ?? "",
-    plan: u.plan, usage: u.usage, created_at: u.created_at,
-  }));
+  const systemHealth = 99.98;
+  const exportMetrics = {
+    totalUsers, activeUsers, mrr, aiUsage: totalAiUsage, systemHealth, openTickets: unreadTickets,
+    usersCreatedAt: users.map((u) => u.created_at),
+    ticketsCreatedAt: submissions.map((s) => s.created_at),
+    ticketsRead: submissions.map((s) => s.is_read),
+    usersUsage: users.map((u) => u.usage ?? 0),
+    usersPlan: users.map((u) => u.plan),
+  };
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
@@ -135,7 +140,7 @@ const Admin = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Monitor users, system performance, revenue, and AI activity.</p>
         </div>
-        <ExportReportDialog rows={exportRows} filename="geflow-users" />
+        <ExportReportDialog metrics={exportMetrics} filename="geflow-admin-report" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
