@@ -87,6 +87,7 @@ const DemoPanelPage = ({
       </div>
     )}
   </PanelLayout>
-);
+  );
+};
 
 export default DemoPanelPage;
