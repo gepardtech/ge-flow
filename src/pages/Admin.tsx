@@ -8,7 +8,7 @@ import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
   Activity, Users, Monitor, Zap, MessageSquare, DollarSign, UserPlus, Building2, CreditCard, BarChart3, LifeBuoy
 } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
@@ -123,10 +123,15 @@ const Admin = () => {
     return { m, v };
   });
 
-  const exportRows = users.map((u) => ({
-    user_id: u.user_id, name: u.full_name ?? "", email: u.email ?? "",
-    plan: u.plan, usage: u.usage, created_at: u.created_at,
-  }));
+  const systemHealth = 99.98;
+  const exportMetrics = {
+    totalUsers, activeUsers, mrr, aiUsage: totalAiUsage, systemHealth, openTickets: unreadTickets,
+    usersCreatedAt: users.map((u) => u.created_at),
+    ticketsCreatedAt: submissions.map((s) => s.created_at),
+    ticketsRead: submissions.map((s) => s.is_read),
+    usersUsage: users.map((u) => u.usage ?? 0),
+    usersPlan: users.map((u) => u.plan),
+  };
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
@@ -135,7 +140,7 @@ const Admin = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Monitor users, system performance, revenue, and AI activity.</p>
         </div>
-        <ExportReportDialog rows={exportRows} filename="geflow-users" />
+        <ExportReportDialog metrics={exportMetrics} filename="geflow-admin-report" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -183,77 +188,102 @@ const Admin = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <button onClick={() => navigate("/admin/billing")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-violet-500/15 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-base">Plan Distribution</h3>
+        {/* Plan Distribution — interactive pie */}
+        <div onClick={() => navigate("/admin/billing")} role="button" tabIndex={0}
+          className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-violet-500/15 hover:-translate-y-1 transition-all cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-base">Plan Distribution</h3>
+              <p className="text-xs text-muted-foreground">Mix of active subscriptions</p>
+            </div>
             <CreditCard className="h-4 w-4 text-violet-500" />
           </div>
-          <div className="space-y-4">
-            {[
-              { name: "Free", count: planDist.free, color: "bg-slate-400" },
-              { name: "Standard", count: planDist.standard, color: "bg-blue-400" },
-              { name: "Premium", count: planDist.premium, color: "bg-purple-400" },
-              { name: "Unlimited", count: planDist.unlimited, color: "bg-emerald-400" },
-            ].map((p) => {
-              const pct = ((p.count / planTotal) * 100).toFixed(1);
-              return (
-                <div key={p.name}>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="font-semibold">{p.name}</span>
-                    <span className="text-muted-foreground font-semibold">{p.count} ({pct}%)</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full ${p.color} transition-all`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Free", value: planDist.free, fill: "#94a3b8" },
+                    { name: "Standard", value: planDist.standard, fill: "#60a5fa" },
+                    { name: "Premium", value: planDist.premium, fill: "#a78bfa" },
+                    { name: "Unlimited", value: planDist.unlimited, fill: "#34d399" },
+                  ]}
+                  dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={3} stroke="none"
+                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-        </button>
+        </div>
 
-        <button onClick={() => navigate("/admin/users")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-blue-500/15 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-base">User Growth Engine</h3>
+        {/* User Growth Engine — area chart */}
+        <div onClick={() => navigate("/admin/users")} role="button" tabIndex={0}
+          className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-blue-500/15 hover:-translate-y-1 transition-all cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-base">User Growth Engine</h3>
+              <p className="text-xs text-muted-foreground">Signups · last 7 days</p>
+            </div>
             <Users className="h-4 w-4 text-blue-500" />
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-blue-500/15 flex items-center justify-center"><Users className="h-5 w-5 text-blue-500" /></div>
-              <div>
-                <p className="text-xl font-bold">{totalUsers.toLocaleString()}</p>
-                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">TOTAL USERS</p>
-              </div>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-blue-500/5 rounded-xl p-3">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground">TOTAL</p>
+              <p className="text-xl font-bold">{totalUsers}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-emerald-500/15 flex items-center justify-center"><UserPlus className="h-5 w-5 text-emerald-500" /></div>
-              <div>
-                <p className="text-xl font-bold">{newSignups}</p>
-                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">NEW SIGNUPS (7D)</p>
-              </div>
+            <div className="bg-emerald-500/5 rounded-xl p-3">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground">NEW (7D)</p>
+              <p className="text-xl font-bold text-emerald-500">+{newSignups}</p>
             </div>
           </div>
-        </button>
+          <div className="h-32">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={aiData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="growth" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="d" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Area type="monotone" dataKey="v" stroke="#60a5fa" strokeWidth={2} fill="url(#growth)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-        <button onClick={() => navigate("/admin/businesses")} className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-amber-500/15 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-base">Top Business Engagement</h3>
+        {/* Top Business Engagement — horizontal bars */}
+        <div onClick={() => navigate("/admin/businesses")} role="button" tabIndex={0}
+          className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-amber-500/15 hover:-translate-y-1 transition-all cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-base">Top Business Engagement</h3>
+              <p className="text-xs text-muted-foreground">Activity by plan tier</p>
+            </div>
             <Building2 className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="space-y-3">
-            {(() => {
-              const buckets = [
-                { color: "bg-blue-400", count: planDist.free },
-                { color: "bg-purple-400", count: planDist.standard },
-                { color: "bg-emerald-400", count: planDist.premium },
-                { color: "bg-amber-400", count: planDist.unlimited },
-              ];
-              const max = Math.max(1, ...buckets.map((b) => b.count));
-              return buckets.map((b, i) => (
-                <div key={i} className={`h-10 rounded-lg ${b.color} transition-all`} style={{ width: `${Math.max(15, (b.count / max) * 100)}%` }} />
-              ));
-            })()}
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[
+                { name: "Free", v: planDist.free, fill: "#60a5fa" },
+                { name: "Standard", v: planDist.standard, fill: "#a78bfa" },
+                { name: "Premium", v: planDist.premium, fill: "#34d399" },
+                { name: "Unlimited", v: planDist.unlimited, fill: "#fbbf24" },
+              ]} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 10 }}>
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} width={70} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
+                <Bar dataKey="v" radius={[0, 8, 8, 0]}>
+                  {[{ fill: "#60a5fa" }, { fill: "#a78bfa" }, { fill: "#34d399" }, { fill: "#fbbf24" }].map((c, i) => (
+                    <Cell key={i} fill={c.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </button>
+        </div>
       </div>
 
       {!loading && submissions.length > 0 && (
