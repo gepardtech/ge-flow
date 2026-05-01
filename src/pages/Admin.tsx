@@ -11,9 +11,26 @@ import {
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
-interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
+interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; listed_products: number; last_active: string; created_at: string; }
 
 const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 0, lifetime: 0 };
+
+// Theme-aware tooltip that reads CSS tokens so it stays readable in dark + light
+const ChartTooltip = ({ active, payload, label, valuePrefix = "", valueSuffix = "" }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-border bg-popover/95 backdrop-blur shadow-xl px-3 py-2 text-xs">
+      {label !== undefined && <p className="font-bold text-foreground mb-1">{label}</p>}
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="flex items-center gap-2 text-foreground">
+          <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.payload?.fill || p.fill }} />
+          <span className="font-semibold">{p.name}:</span>
+          <span className="font-bold">{valuePrefix}{typeof p.value === "number" ? p.value.toLocaleString() : p.value}{valueSuffix}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon, iconClass, accent, onClick }: any) => (
   <button
@@ -40,7 +57,7 @@ const Admin = () => {
   const loadData = useCallback(async () => {
     const [{ data: sub }, { data: prof }] = await Promise.all([
       supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, full_name, email, plan, usage, listed_products, last_active, created_at").order("created_at", { ascending: false }),
     ]);
     setSubmissions((sub as ContactSubmission[]) || []);
     setUsers((prof as UserRow[]) || []);
