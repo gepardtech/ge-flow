@@ -191,7 +191,7 @@ const Admin = () => {
               <BarChart data={aiData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                 <XAxis dataKey="d" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} content={<ChartTooltip valueSuffix=" calls" />} />
                 <Bar dataKey="v" fill="#60a5fa" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -210,7 +210,7 @@ const Admin = () => {
                 </defs>
                 <XAxis dataKey="m" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} formatter={(v: any) => [`$${v}`, "Revenue"]} />
+                <Tooltip cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.2 }} content={<ChartTooltip valuePrefix="$" />} />
                 <Area type="monotone" dataKey="v" stroke="#34d399" strokeWidth={2.5} fill="url(#rev)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -241,7 +241,7 @@ const Admin = () => {
                   ]}
                   dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={3} stroke="none"
                 />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip content={<ChartTooltip valueSuffix=" users" />} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -278,42 +278,39 @@ const Admin = () => {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="d" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip content={<ChartTooltip valueSuffix=" signups" />} />
                 <Area type="monotone" dataKey="v" stroke="#60a5fa" strokeWidth={2} fill="url(#growth)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Business Engagement — horizontal bars */}
+        {/* Top Business Engagement — top 5 by listings + AI usage */}
         <div onClick={() => navigate("/admin/businesses")} role="button" tabIndex={0}
           className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-amber-500/15 hover:-translate-y-1 transition-all cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="font-bold text-base">Top Business Engagement</h3>
-              <p className="text-xs text-muted-foreground">Activity by plan tier</p>
+              <p className="text-xs text-muted-foreground">Top 5 by listings · sells · margin</p>
             </div>
             <Building2 className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: "Free", v: planDist.free, fill: "#60a5fa" },
-                { name: "Standard", v: planDist.standard, fill: "#a78bfa" },
-                { name: "Premium", v: planDist.premium, fill: "#34d399" },
-                { name: "Unlimited", v: planDist.unlimited, fill: "#fbbf24" },
-              ]} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 10 }}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} width={70} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
-                <Bar dataKey="v" radius={[0, 8, 8, 0]}>
-                  {[{ fill: "#60a5fa" }, { fill: "#a78bfa" }, { fill: "#34d399" }, { fill: "#fbbf24" }].map((c, i) => (
-                    <Cell key={i} fill={c.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {topBusinesses.length === 0 ? (
+            <div className="h-56 flex items-center justify-center text-xs text-muted-foreground">No businesses yet</div>
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topBusinesses} layout="vertical" margin={{ top: 5, right: 16, bottom: 0, left: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} width={90} />
+                  <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} content={<ChartTooltip valueSuffix=" pts" />} />
+                  <Bar dataKey="score" name="Engagement" radius={[0, 8, 8, 0]}>
+                    {topBusinesses.map((_, i) => (<Cell key={i} fill={TOP_COLORS[i % TOP_COLORS.length]} />))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
