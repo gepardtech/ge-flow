@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, User as UserIcon, LucideIcon } from "lucide-react";
+import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, User as UserIcon, LogIn, LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -263,6 +263,16 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
               aria-label="Refresh"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+
+            {/* Quick logout */}
+            <button
+              onClick={handleLogout}
+              className="h-10 w-10 rounded-xl hover:bg-muted flex items-center justify-center transition-all hover:scale-105"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LogIn className="h-4 w-4 rotate-180" />
             </button>
 
             {/* Profile dropdown */}
