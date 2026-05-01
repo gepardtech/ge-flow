@@ -6,7 +6,7 @@ import PanelLayout from "@/components/PanelLayout";
 import ExportReportDialog from "@/components/ExportReportDialog";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
-  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, UserPlus, Building2, CreditCard, BarChart3, LifeBuoy
+  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, Building2, CreditCard
 } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
