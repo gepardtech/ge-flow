@@ -144,11 +144,25 @@ const Admin = () => {
   const exportMetrics = {
     totalUsers, activeUsers, mrr, aiUsage: totalAiUsage, systemHealth, openTickets: unreadTickets,
     usersCreatedAt: users.map((u) => u.created_at),
+    usersLastActive: users.map((u) => u.last_active ?? u.created_at),
     ticketsCreatedAt: submissions.map((s) => s.created_at),
     ticketsRead: submissions.map((s) => s.is_read),
     usersUsage: users.map((u) => u.usage ?? 0),
     usersPlan: users.map((u) => u.plan),
   };
+
+  // Top 5 businesses by composite engagement: listings + AI usage (proxy for sells & profit until events exist)
+  const topBusinesses = [...users]
+    .map((u) => ({
+      name: u.full_name || (u.email ? u.email.split("@")[0] : "Unnamed"),
+      score: (u.listed_products ?? 0) * 2 + (u.usage ?? 0),
+      listings: u.listed_products ?? 0,
+      usage: u.usage ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  const TOP_COLORS = ["#60a5fa", "#a78bfa", "#34d399", "#fbbf24", "#f472b6"];
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
