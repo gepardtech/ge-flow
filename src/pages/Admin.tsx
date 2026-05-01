@@ -6,14 +6,31 @@ import PanelLayout from "@/components/PanelLayout";
 import ExportReportDialog from "@/components/ExportReportDialog";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
-  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, UserPlus, Building2, CreditCard, BarChart3, LifeBuoy
+  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, Building2, CreditCard
 } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
-interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; created_at: string; }
+interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; listed_products: number; last_active: string; created_at: string; }
 
 const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 0, lifetime: 0 };
+
+// Theme-aware tooltip that reads CSS tokens so it stays readable in dark + light
+const ChartTooltip = ({ active, payload, label, valuePrefix = "", valueSuffix = "" }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-border bg-popover/95 backdrop-blur shadow-xl px-3 py-2 text-xs">
+      {label !== undefined && <p className="font-bold text-foreground mb-1">{label}</p>}
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="flex items-center gap-2 text-foreground">
+          <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.payload?.fill || p.fill }} />
+          <span className="font-semibold">{p.name}:</span>
+          <span className="font-bold">{valuePrefix}{typeof p.value === "number" ? p.value.toLocaleString() : p.value}{valueSuffix}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon, iconClass, accent, onClick }: any) => (
   <button
@@ -40,7 +57,7 @@ const Admin = () => {
   const loadData = useCallback(async () => {
     const [{ data: sub }, { data: prof }] = await Promise.all([
       supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("user_id, full_name, email, plan, usage, created_at").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, full_name, email, plan, usage, listed_products, last_active, created_at").order("created_at", { ascending: false }),
     ]);
     setSubmissions((sub as ContactSubmission[]) || []);
     setUsers((prof as UserRow[]) || []);
@@ -127,11 +144,25 @@ const Admin = () => {
   const exportMetrics = {
     totalUsers, activeUsers, mrr, aiUsage: totalAiUsage, systemHealth, openTickets: unreadTickets,
     usersCreatedAt: users.map((u) => u.created_at),
+    usersLastActive: users.map((u) => u.last_active ?? u.created_at),
     ticketsCreatedAt: submissions.map((s) => s.created_at),
     ticketsRead: submissions.map((s) => s.is_read),
     usersUsage: users.map((u) => u.usage ?? 0),
     usersPlan: users.map((u) => u.plan),
   };
+
+  // Top 5 businesses by composite engagement: listings + AI usage (proxy for sells & profit until events exist)
+  const topBusinesses = [...users]
+    .map((u) => ({
+      name: u.full_name || (u.email ? u.email.split("@")[0] : "Unnamed"),
+      score: (u.listed_products ?? 0) * 2 + (u.usage ?? 0),
+      listings: u.listed_products ?? 0,
+      usage: u.usage ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  const TOP_COLORS = ["#60a5fa", "#a78bfa", "#34d399", "#fbbf24", "#f472b6"];
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
@@ -160,7 +191,7 @@ const Admin = () => {
               <BarChart data={aiData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                 <XAxis dataKey="d" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} content={<ChartTooltip valueSuffix=" calls" />} />
                 <Bar dataKey="v" fill="#60a5fa" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -179,7 +210,7 @@ const Admin = () => {
                 </defs>
                 <XAxis dataKey="m" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} formatter={(v: any) => [`$${v}`, "Revenue"]} />
+                <Tooltip cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.2 }} content={<ChartTooltip valuePrefix="$" />} />
                 <Area type="monotone" dataKey="v" stroke="#34d399" strokeWidth={2.5} fill="url(#rev)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -210,7 +241,7 @@ const Admin = () => {
                   ]}
                   dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={3} stroke="none"
                 />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip content={<ChartTooltip valueSuffix=" users" />} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -247,42 +278,39 @@ const Admin = () => {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="d" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} />
+                <Tooltip content={<ChartTooltip valueSuffix=" signups" />} />
                 <Area type="monotone" dataKey="v" stroke="#60a5fa" strokeWidth={2} fill="url(#growth)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Business Engagement — horizontal bars */}
+        {/* Top Business Engagement — top 5 by listings + AI usage */}
         <div onClick={() => navigate("/admin/businesses")} role="button" tabIndex={0}
           className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-xl hover:shadow-amber-500/15 hover:-translate-y-1 transition-all cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="font-bold text-base">Top Business Engagement</h3>
-              <p className="text-xs text-muted-foreground">Activity by plan tier</p>
+              <p className="text-xs text-muted-foreground">Top 5 by listings · sells · margin</p>
             </div>
             <Building2 className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: "Free", v: planDist.free, fill: "#60a5fa" },
-                { name: "Standard", v: planDist.standard, fill: "#a78bfa" },
-                { name: "Premium", v: planDist.premium, fill: "#34d399" },
-                { name: "Unlimited", v: planDist.unlimited, fill: "#fbbf24" },
-              ]} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 10 }}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} width={70} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
-                <Bar dataKey="v" radius={[0, 8, 8, 0]}>
-                  {[{ fill: "#60a5fa" }, { fill: "#a78bfa" }, { fill: "#34d399" }, { fill: "#fbbf24" }].map((c, i) => (
-                    <Cell key={i} fill={c.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {topBusinesses.length === 0 ? (
+            <div className="h-56 flex items-center justify-center text-xs text-muted-foreground">No businesses yet</div>
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topBusinesses} layout="vertical" margin={{ top: 5, right: 16, bottom: 0, left: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} width={90} />
+                  <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} content={<ChartTooltip valueSuffix=" pts" />} />
+                  <Bar dataKey="score" name="Engagement" radius={[0, 8, 8, 0]}>
+                    {topBusinesses.map((_, i) => (<Cell key={i} fill={TOP_COLORS[i % TOP_COLORS.length]} />))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 

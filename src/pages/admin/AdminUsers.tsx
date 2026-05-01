@@ -2,16 +2,30 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
+import ExportReportDialog from "@/components/ExportReportDialog";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Search, Filter, Download, UserPlus, MoreVertical, Users as UsersIcon,
-  UserCheck, Star, ShieldAlert, ChevronDown,
+  Search, Filter, UserPlus, MoreVertical, Users as UsersIcon,
+  UserCheck, Star, ShieldAlert, Eye, KeyRound, ShieldOff, ShieldCheck, Trash2, Pencil, Loader2,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 interface UserRow {
   user_id: string;
@@ -25,6 +39,7 @@ interface UserRow {
   last_active: string;
 }
 
+const PLANS = ["free", "standard", "premium", "unlimited", "lifetime"];
 const PLAN_STYLES: Record<string, string> = {
   free: "bg-slate-400/15 text-slate-500",
   standard: "bg-purple-400/15 text-purple-500",
@@ -32,12 +47,7 @@ const PLAN_STYLES: Record<string, string> = {
   unlimited: "bg-emerald-400/15 text-emerald-500",
   lifetime: "bg-amber-400/15 text-amber-500",
 };
-
-const STATUS_DOT: Record<string, string> = {
-  active: "bg-emerald-500",
-  suspended: "bg-rose-500",
-  pending: "bg-amber-500",
-};
+const STATUS_DOT: Record<string, string> = { active: "bg-emerald-500", suspended: "bg-rose-500", pending: "bg-amber-500" };
 
 const timeAgo = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
@@ -55,8 +65,16 @@ const colorFromName = (name: string) => {
   return colors[(name?.charCodeAt(0) || 0) % colors.length];
 };
 
+const callAdmin = async (body: Record<string, unknown>) => {
+  const { data, error } = await supabase.functions.invoke("admin-users", { body });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [roles, setRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState<string>("all");
@@ -65,13 +83,28 @@ const AdminUsers = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Modal state
+  const [addOpen, setAddOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<UserRow | null>(null);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [resetUser, setResetUser] = useState<UserRow | null>(null);
+  const [suspendUser, setSuspendUser] = useState<UserRow | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
+  const [busy, setBusy] = useState(false);
+
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, email, plan, status, usage, listed_products, created_at, last_active")
-      .order("created_at", { ascending: false });
+    const [{ data: profs, error }, { data: roleRows }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, email, plan, status, usage, listed_products, created_at, last_active")
+        .order("created_at", { ascending: false }),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
     if (error) toast({ title: "Failed to load users", description: error.message, variant: "destructive" });
-    setUsers((data as UserRow[]) ?? []);
+    setUsers((profs as UserRow[]) ?? []);
+    const map: Record<string, string> = {};
+    (roleRows ?? []).forEach((r: any) => { map[r.user_id] = r.role; });
+    setRoles(map);
     setLoading(false);
   }, [toast]);
 
@@ -80,6 +113,7 @@ const AdminUsers = () => {
     const channel = supabase
       .channel("admin_users_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, load)
       .subscribe();
     const onRefresh = () => load();
     window.addEventListener("panel:refresh", onRefresh);
@@ -89,7 +123,6 @@ const AdminUsers = () => {
     };
   }, [load]);
 
-  // URL filter (?filter=active)
   useEffect(() => {
     const f = params.get("filter");
     if (f === "active") setStatusFilter("active");
@@ -115,50 +148,125 @@ const AdminUsers = () => {
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === "active").length;
   const premiumUsers = users.filter((u) => ["premium", "unlimited", "lifetime"].includes(u.plan)).length;
-  const suspended = users.filter((u) => u.status === "suspended").length;
+  const suspendedCount = users.filter((u) => u.status === "suspended").length;
 
-  const updatePlan = async (userId: string, plan: string) => {
-    const { error } = await supabase.from("profiles").update({ plan }).eq("user_id", userId);
+  // Quick actions on profile row
+  const updateProfile = async (userId: string, patch: Partial<UserRow>) => {
+    const { error } = await supabase.from("profiles").update(patch).eq("user_id", userId);
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Plan updated", description: `User plan changed to ${plan}.` });
+      return false;
     }
+    return true;
   };
 
-  const updateStatus = async (userId: string, status: string) => {
-    const { error } = await supabase.from("profiles").update({ status }).eq("user_id", userId);
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Status updated", description: `User status changed to ${status}.` });
-    }
-  };
-
-  const exportCSV = () => {
-    const headers = ["User ID", "Name", "Email", "Plan", "Status", "Joined", "Last Active", "Listed Products"];
-    const rows = filtered.map((u) => [u.user_id, u.full_name ?? "", u.email ?? "", u.plan, u.status, u.created_at, u.last_active, u.listed_products]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => {
-      const s = String(v).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "geflow-users.csv"; a.click(); URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: `${filtered.length} users exported.` });
-  };
+  // Export metrics shared with dashboard popup
+  const exportMetrics = useMemo(() => {
+    const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 0, lifetime: 0 };
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const active24h = users.filter((u) => new Date(u.last_active).getTime() >= dayAgo && u.status === "active").length;
+    const mrr = users.reduce((s, u) => s + (PLAN_PRICES[u.plan] ?? 0), 0);
+    return {
+      totalUsers: users.length,
+      activeUsers: active24h,
+      mrr,
+      aiUsage: users.reduce((s, u) => s + (u.usage ?? 0), 0),
+      systemHealth: 99.98,
+      openTickets: 0,
+      usersCreatedAt: users.map((u) => u.created_at),
+      usersLastActive: users.map((u) => u.last_active),
+      ticketsCreatedAt: [] as string[],
+      ticketsRead: [] as boolean[],
+      usersUsage: users.map((u) => u.usage ?? 0),
+      usersPlan: users.map((u) => u.plan),
+    };
+  }, [users]);
 
   const StatPill = ({ label, value, icon: Icon, accent }: any) => (
     <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-1 hover:shadow-xl ${accent} transition-all`}>
       <div className="flex items-start justify-between mb-3">
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-        <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center">
-          <Icon className="h-4 w-4" />
-        </div>
+        <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center"><Icon className="h-4 w-4" /></div>
       </div>
       <p className="text-3xl font-bold">{value}</p>
     </div>
   );
+
+  // ---------- Add User form ----------
+  const [addForm, setAddForm] = useState({ full_name: "", email: "", plan: "free", password: "", confirm: "" });
+  const resetAddForm = () => setAddForm({ full_name: "", email: "", plan: "free", password: "", confirm: "" });
+  const submitAdd = async () => {
+    if (!addForm.email || !addForm.password) { toast({ title: "Email and password required", variant: "destructive" }); return; }
+    if (addForm.password.length < 6) { toast({ title: "Password must be 6+ characters", variant: "destructive" }); return; }
+    if (addForm.password !== addForm.confirm) { toast({ title: "Passwords do not match", variant: "destructive" }); return; }
+    setBusy(true);
+    try {
+      await callAdmin({ action: "create", email: addForm.email, password: addForm.password, full_name: addForm.full_name, plan: addForm.plan });
+      toast({ title: "User created", description: `${addForm.email} is now active.` });
+      setAddOpen(false); resetAddForm(); load();
+    } catch (e: any) {
+      toast({ title: "Create failed", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  // ---------- Edit Permission ----------
+  const [editForm, setEditForm] = useState({ role: "user", plan: "free" });
+  useEffect(() => {
+    if (editUser) setEditForm({ role: roles[editUser.user_id] ?? "user", plan: editUser.plan });
+  }, [editUser, roles]);
+  const submitEdit = async () => {
+    if (!editUser) return;
+    setBusy(true);
+    try {
+      if (editForm.plan !== editUser.plan) await updateProfile(editUser.user_id, { plan: editForm.plan });
+      if ((roles[editUser.user_id] ?? "user") !== editForm.role) {
+        await callAdmin({ action: "setRole", user_id: editUser.user_id, role: editForm.role });
+      }
+      toast({ title: "Permissions updated" });
+      setEditUser(null); load();
+    } catch (e: any) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  // ---------- Reset Password ----------
+  const submitReset = async () => {
+    if (!resetUser?.email) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetUser.email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) throw error;
+      toast({ title: "Reset link sent", description: `An email was sent to ${resetUser.email}.` });
+      setResetUser(null);
+    } catch (e: any) {
+      toast({ title: "Failed to send", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  // ---------- Suspend / Activate ----------
+  const submitSuspend = async () => {
+    if (!suspendUser) return;
+    setBusy(true);
+    const next = suspendUser.status === "suspended" ? "active" : "suspended";
+    const ok = await updateProfile(suspendUser.user_id, { status: next });
+    if (ok) toast({ title: next === "suspended" ? "Account suspended" : "Account activated" });
+    setSuspendUser(null); setBusy(false);
+  };
+
+  // ---------- Delete ----------
+  const submitDelete = async () => {
+    if (!deleteUser) return;
+    setBusy(true);
+    try {
+      await callAdmin({ action: "delete", user_id: deleteUser.user_id });
+      toast({ title: "User deleted", description: `${deleteUser.email ?? deleteUser.user_id} removed.` });
+      setDeleteUser(null); load();
+    } catch (e: any) {
+      toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
@@ -181,28 +289,43 @@ const AdminUsers = () => {
             <DropdownMenuTrigger asChild>
               <button className="h-10 px-4 rounded-xl bg-card border border-border text-sm font-bold inline-flex items-center gap-2 hover:bg-muted transition">
                 <Filter className="h-4 w-4" /> Filter
+                {(planFilter !== "all" || statusFilter !== "all") && (
+                  <span className="h-2 w-2 rounded-full bg-sky-500" />
+                )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel>Plan</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={planFilter} onValueChange={setPlanFilter}>
-                {["all", "free", "standard", "premium", "unlimited"].map((p) => (
-                  <DropdownMenuRadioItem key={p} value={p} className="capitalize">{p}</DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Status</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
-                {["all", "active", "suspended", "pending"].map((s) => (
-                  <DropdownMenuRadioItem key={s} value={s} className="capitalize">{s}</DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
+            <DropdownMenuContent align="end" className="w-72 p-3">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-1.5">ACCOUNT STATUS</p>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 mb-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-1.5">SUBSCRIPTION PLAN</p>
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="h-9 mb-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All plans</SelectItem>
+                  {PLANS.map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <button
+                onClick={() => { setPlanFilter("all"); setStatusFilter("all"); }}
+                className="w-full h-9 rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted transition"
+              >Clear filters</button>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button onClick={exportCSV} className="h-10 px-4 rounded-xl bg-card border border-border text-sm font-bold inline-flex items-center gap-2 hover:bg-muted transition">
-            <Download className="h-4 w-4" /> Export
-          </button>
-          <button className="h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-white text-sm font-bold inline-flex items-center gap-2 hover:shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5 transition-all">
+
+          <ExportReportDialog metrics={exportMetrics} filename="geflow-users-report" />
+
+          <button
+            onClick={() => setAddOpen(true)}
+            className="h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-white text-sm font-bold inline-flex items-center gap-2 hover:shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5 transition-all"
+          >
             <UserPlus className="h-4 w-4" /> Add New User
           </button>
         </div>
@@ -212,7 +335,7 @@ const AdminUsers = () => {
         <StatPill label="Total Users" value={totalUsers} icon={UsersIcon} accent="hover:shadow-blue-500/15" />
         <StatPill label="Active Users" value={activeUsers} icon={UserCheck} accent="hover:shadow-emerald-500/15" />
         <StatPill label="Premium Users" value={premiumUsers} icon={Star} accent="hover:shadow-purple-500/15" />
-        <StatPill label="Suspended" value={suspended} icon={ShieldAlert} accent="hover:shadow-rose-500/15" />
+        <StatPill label="Suspended" value={suspendedCount} icon={ShieldAlert} accent="hover:shadow-rose-500/15" />
       </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -236,6 +359,7 @@ const AdminUsers = () => {
                 <tr><td colSpan={7} className="p-12 text-center text-muted-foreground">No users match your filters.</td></tr>
               ) : filtered.map((u) => {
                 const initial = (u.full_name || u.email || "?").charAt(0).toUpperCase();
+                const isSuspended = u.status === "suspended";
                 return (
                   <tr key={u.user_id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
@@ -264,20 +388,17 @@ const AdminUsers = () => {
                         <DropdownMenuTrigger asChild>
                           <button className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center ml-auto"><MoreVertical className="h-4 w-4" /></button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Change Plan</DropdownMenuLabel>
-                          <DropdownMenuRadioGroup value={u.plan} onValueChange={(v) => updatePlan(u.user_id, v)}>
-                            {["free", "standard", "premium", "unlimited"].map((p) => (
-                              <DropdownMenuRadioItem key={p} value={p} className="capitalize">{p}</DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem onClick={() => setViewUser(u)}><Eye className="h-4 w-4 mr-2" /> View Profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditUser(u)}><Pencil className="h-4 w-4 mr-2" /> Edit Permission</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setResetUser(u)}><KeyRound className="h-4 w-4 mr-2" /> Reset Password</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Status</DropdownMenuLabel>
-                          <DropdownMenuRadioGroup value={u.status} onValueChange={(v) => updateStatus(u.user_id, v)}>
-                            {["active", "suspended", "pending"].map((s) => (
-                              <DropdownMenuRadioItem key={s} value={s} className="capitalize">{s}</DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
+                          <DropdownMenuItem onClick={() => setSuspendUser(u)}>
+                            {isSuspended ? <><ShieldCheck className="h-4 w-4 mr-2" /> Activate Account</> : <><ShieldOff className="h-4 w-4 mr-2" /> Suspend Account</>}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeleteUser(u)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -288,6 +409,144 @@ const AdminUsers = () => {
           </table>
         </div>
       </div>
+
+      {/* Add User dialog */}
+      <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) resetAddForm(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>Creates an authenticated account and profile.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Full Name</Label><Input value={addForm.full_name} onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })} placeholder="Jane Doe" /></div>
+            <div><Label>Email</Label><Input type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="user@example.com" /></div>
+            <div>
+              <Label>Subscription Plan</Label>
+              <Select value={addForm.plan} onValueChange={(v) => setAddForm({ ...addForm, plan: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PLANS.map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Password</Label><Input type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} /></div>
+              <div><Label>Confirm</Label><Input type="password" value={addForm.confirm} onChange={(e) => setAddForm({ ...addForm, confirm: e.target.value })} /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={submitAdd} disabled={busy}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Profile */}
+      <Dialog open={!!viewUser} onOpenChange={(v) => !v && setViewUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>User Profile</DialogTitle></DialogHeader>
+          {viewUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className={`h-16 w-16 rounded-full flex items-center justify-center font-bold text-2xl ${colorFromName(viewUser.full_name || viewUser.email || "")}`}>
+                  {(viewUser.full_name || viewUser.email || "?").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-lg">{viewUser.full_name || "Unnamed"}</p>
+                  <p className="text-sm text-muted-foreground">{viewUser.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-muted/40 rounded-xl p-3"><p className="text-[10px] font-bold tracking-widest text-muted-foreground">PLAN</p><p className="font-bold capitalize mt-1">{viewUser.plan}</p></div>
+                <div className="bg-muted/40 rounded-xl p-3"><p className="text-[10px] font-bold tracking-widest text-muted-foreground">STATUS</p><p className="font-bold capitalize mt-1">{viewUser.status}</p></div>
+                <div className="bg-muted/40 rounded-xl p-3"><p className="text-[10px] font-bold tracking-widest text-muted-foreground">INVENTORY</p><p className="font-bold mt-1">{viewUser.listed_products} products</p></div>
+                <div className="bg-muted/40 rounded-xl p-3"><p className="text-[10px] font-bold tracking-widest text-muted-foreground">JOINED</p><p className="font-bold mt-1">{new Date(viewUser.created_at).toLocaleDateString()}</p></div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Permission */}
+      <Dialog open={!!editUser} onOpenChange={(v) => !v && setEditUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Permission</DialogTitle>
+            <DialogDescription>Assign role and subscription plan.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Role</Label>
+              <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Plan</Label>
+              <Select value={editForm.plan} onValueChange={(v) => setEditForm({ ...editForm, plan: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PLANS.map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
+            <Button onClick={submitEdit} disabled={busy}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password confirm */}
+      <AlertDialog open={!!resetUser} onOpenChange={(v) => !v && setResetUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send password reset link?</AlertDialogTitle>
+            <AlertDialogDescription>
+              An email will be sent to <strong>{resetUser?.email}</strong> with a secure link to set a new password. After resetting they will be redirected to the login page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={submitReset} disabled={busy}>Send Link</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend / Activate confirm */}
+      <AlertDialog open={!!suspendUser} onOpenChange={(v) => !v && setSuspendUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{suspendUser?.status === "suspended" ? "Activate this account?" : "Suspend this account?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendUser?.status === "suspended"
+                ? `${suspendUser?.email} will regain access immediately.`
+                : `${suspendUser?.email} will lose access until reactivated.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={submitSuspend} disabled={busy}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteUser} onOpenChange={(v) => !v && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes <strong>{deleteUser?.email}</strong>, their profile, role and authentication record. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={submitDelete} disabled={busy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PanelLayout>
   );
 };
