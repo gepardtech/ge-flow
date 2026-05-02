@@ -138,8 +138,10 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 export const PLAN_ORDER: PlanId[] = ["free", "standard", "premium", "lifetime"];
 
 export const normalizePlan = (raw?: string | null): PlanId => {
-  const p = (raw || "free").toLowerCase();
-  if (p === "standard" || p === "premium" || p === "lifetime") return p;
+  const p = (raw || "free").toLowerCase().trim();
+  if (p === "standard") return "standard";
+  if (p === "premium") return "premium";
+  if (p === "lifetime" || p === "unlimited") return "lifetime";
   return "free";
 };
 
