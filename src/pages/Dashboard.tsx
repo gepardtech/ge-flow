@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { USER_NAV } from "@/lib/panelNav";
+import { usePlan } from "@/hooks/usePlan";
 import {
   Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock
 } from "lucide-react";
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { plan } = usePlan();
 
   useEffect(() => {
     const load = async () => {
@@ -55,17 +57,18 @@ const Dashboard = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading dashboard...</div>;
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
-  const planLabel = (profile?.plan || "free").charAt(0).toUpperCase() + (profile?.plan || "free").slice(1);
+  const planLabel = plan.label;
   const initial = firstName.charAt(0).toUpperCase();
 
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
       navItems={USER_NAV}
-      identityName={`${planLabel} User ${firstName}`}
+      identityName={`${planLabel} ${firstName}`}
       identityRole={`${planLabel.toUpperCase()} PLAN`}
-      identityBadgeClass="bg-sky-400/15 text-sky-500"
+      identityBadgeClass={plan.badgeClass}
       initial={initial}
+      lockedPaths={plan.lockedRoutes}
     >
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
         <div>
