@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, User as UserIcon, LogIn, LucideIcon } from "lucide-react";
+import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, User as UserIcon, LogIn, Lock, LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,9 +23,11 @@ interface Props {
   identityBadgeClass?: string;
   initial: string;
   isAdmin?: boolean;
+  lockedPaths?: string[];
 }
 
-const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityRole, identityBadgeClass = "bg-primary/10 text-primary", initial, isAdmin = false }: Props) => {
+const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityRole, identityBadgeClass = "bg-primary/10 text-primary", initial, isAdmin = false, lockedPaths = [] }: Props) => {
+  const isLocked = (to: string) => lockedPaths.some((p) => to === p || to.startsWith(p + "/"));
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -170,16 +172,19 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
                 );
               }
 
+              const locked = isLocked(item.to);
               return (
                 <li key={item.to}>
                   <Link
                     to={item.to}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       active ? "bg-sky-400 text-white shadow-sm dark:bg-sky-500/90" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                    }`}
+                    } ${locked ? "opacity-70" : ""}`}
+                    title={locked ? `${item.label} — Upgrade required` : item.label}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && <span className="flex-1">{item.label}</span>}
+                    {!collapsed && locked && <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                   </Link>
                 </li>
               );

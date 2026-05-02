@@ -41,6 +41,7 @@ const UserPanelGate = ({ children, pageTitle }: Props) => {
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}
       initial={initial}
+      lockedPaths={plan.lockedRoutes}
     >
       {locked ? (
         <PlanLockedScreen currentPlan={planId} path={location.pathname} pageTitle={pageTitle} />
