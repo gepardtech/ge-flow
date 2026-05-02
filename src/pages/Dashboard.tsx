@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { USER_NAV } from "@/lib/panelNav";
+import { usePlan } from "@/hooks/usePlan";
 import {
   Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock
 } from "lucide-react";
