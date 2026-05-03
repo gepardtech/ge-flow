@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_categories: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          currency: string
+          default_tax: number
+          enabled_features: string[]
+          enabled_modules: string[]
+          id: string
+          industry_type: string
+          internal_description: string | null
+          name: string
+          status: string
+          stock_alert_limit: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          currency?: string
+          default_tax?: number
+          enabled_features?: string[]
+          enabled_modules?: string[]
+          id?: string
+          industry_type: string
+          internal_description?: string | null
+          name: string
+          status?: string
+          stock_alert_limit?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          currency?: string
+          default_tax?: number
+          enabled_features?: string[]
+          enabled_modules?: string[]
+          id?: string
+          industry_type?: string
+          internal_description?: string | null
+          name?: string
+          status?: string
+          stock_alert_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      businesses: {
+        Row: {
+          business_address: string | null
+          business_name: string
+          category_id: string | null
+          created_at: string
+          currency: string
+          default_tax: number
+          id: string
+          last_active: string
+          listed_products: number
+          owner_user_id: string
+          status: string
+          stock_alert_limit: number
+          updated_at: string
+          usage: number
+        }
+        Insert: {
+          business_address?: string | null
+          business_name: string
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          default_tax?: number
+          id?: string
+          last_active?: string
+          listed_products?: number
+          owner_user_id: string
+          status?: string
+          stock_alert_limit?: number
+          updated_at?: string
+          usage?: number
+        }
+        Update: {
+          business_address?: string | null
+          business_name?: string
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          default_tax?: number
+          id?: string
+          last_active?: string
+          listed_products?: number
+          owner_user_id?: string
+          status?: string
+          stock_alert_limit?: number
+          updated_at?: string
+          usage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           created_at: string
@@ -103,6 +210,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_business_limit: { Args: { _plan: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
