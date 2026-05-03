@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Download, X } from "lucide-react";
+import { Download } from "lucide-react";
 import { format, startOfDay, subDays, startOfYear, isSameDay, isWithinInterval, addMonths, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -133,7 +133,7 @@ const AuditExportDialog = ({ trigger, triggerLabel = "Export Report", title = "E
           </button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-border" hideClose>
+      <DialogContent className="max-w-4xl p-0 overflow-hidden border-border">
         <div className="grid grid-cols-[200px_1fr]">
           <div className="bg-muted/40 border-r border-border p-5">
             <p className="text-[10px] font-bold tracking-widest text-sky-500 mb-4">PRESETS</p>
@@ -151,7 +151,6 @@ const AuditExportDialog = ({ trigger, triggerLabel = "Export Report", title = "E
             </div>
           </div>
           <div className="p-6 relative">
-            <button onClick={() => setOpen(false)} className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center"><X className="h-4 w-4" /></button>
             <h2 className="text-2xl font-bold mb-5">{title}</h2>
             <div className="grid grid-cols-2 gap-6">
               <MonthGrid month={month1} range={{ from, to }} onPick={pickDay} />
