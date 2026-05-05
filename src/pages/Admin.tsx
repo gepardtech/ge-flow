@@ -12,6 +12,7 @@ import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContaine
 
 interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; listed_products: number; last_active: string; created_at: string; }
+interface BusinessRow { id: string; business_name: string; owner_user_id: string; listed_products: number; usage: number; created_at: string; }
 
 const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 0, lifetime: 0 };
 
@@ -49,18 +50,21 @@ const StatCard = ({ label, value, sub, subClass = "text-emerald-500", icon: Icon
 const Admin = () => {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    const [{ data: sub }, { data: prof }] = await Promise.all([
+    const [{ data: sub }, { data: prof }, { data: biz }] = await Promise.all([
       supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("user_id, full_name, email, plan, usage, listed_products, last_active, created_at").order("created_at", { ascending: false }),
+      supabase.from("businesses").select("id, business_name, owner_user_id, listed_products, usage, created_at"),
     ]);
     setSubmissions((sub as ContactSubmission[]) || []);
     setUsers((prof as UserRow[]) || []);
+    setBusinesses((biz as BusinessRow[]) || []);
     setLoading(false);
   }, []);
 
@@ -89,6 +93,7 @@ const Admin = () => {
     const channel = supabase
       .channel("admin_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, loadData)
       .on("postgres_changes", { event: "*", schema: "public", table: "contact_submissions" }, loadData)
       .subscribe();
     return () => {
@@ -151,13 +156,13 @@ const Admin = () => {
     usersPlan: users.map((u) => u.plan),
   };
 
-  // Top 5 businesses by composite engagement: listings + AI usage (proxy for sells & profit until events exist)
-  const topBusinesses = [...users]
-    .map((u) => ({
-      name: u.full_name || (u.email ? u.email.split("@")[0] : "Unnamed"),
-      score: (u.listed_products ?? 0) * 2 + (u.usage ?? 0),
-      listings: u.listed_products ?? 0,
-      usage: u.usage ?? 0,
+  // Top 5 businesses by composite engagement: listings + AI usage (real businesses table)
+  const topBusinesses = [...businesses]
+    .map((b) => ({
+      name: b.business_name,
+      score: (b.listed_products ?? 0) * 2 + (b.usage ?? 0),
+      listings: b.listed_products ?? 0,
+      usage: b.usage ?? 0,
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
