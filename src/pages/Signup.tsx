@@ -40,7 +40,7 @@ const Signup = () => {
       // With auto-confirm on, the user is signed in. Route by role.
       if (data.session) {
         if (email.toLowerCase() === "gepardwebs@gmail.com") navigate("/admin");
-        else navigate("/dashboard");
+        else navigate("/setup/business");
       } else {
         navigate("/login");
       }

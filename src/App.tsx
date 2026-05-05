@@ -20,6 +20,7 @@ import Refund from "./pages/Refund";
 import Terms from "./pages/Terms";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
+import SetupBusiness from "./pages/SetupBusiness";
 
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminBusinesses from "./pages/admin/AdminBusinesses";
@@ -77,6 +78,7 @@ const App = () => (
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/support" element={<AdminSupport />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/setup/business" element={<SetupBusiness />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/inventory" element={<UserInventory />} />
           <Route path="/dashboard/out-of-stock" element={<UserOutOfStock />} />

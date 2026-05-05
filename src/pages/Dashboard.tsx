@@ -45,9 +45,11 @@ const Dashboard = () => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/login"); return; }
-      const { data } = await supabase
-        .from("profiles").select("full_name, email, plan, usage")
-        .eq("user_id", user.id).maybeSingle();
+      const [{ data }, { count }] = await Promise.all([
+        supabase.from("profiles").select("full_name, email, plan, usage").eq("user_id", user.id).maybeSingle(),
+        supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_user_id", user.id),
+      ]);
+      if ((count ?? 0) === 0) { navigate("/setup/business"); return; }
       setProfile((data as Profile) || { full_name: null, email: user.email ?? null, plan: "free", usage: 0 });
       setLoading(false);
     };
