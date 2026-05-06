@@ -148,6 +148,170 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount: number
+          billing_email: string
+          business_id: string | null
+          client_name: string
+          created_at: string
+          id: string
+          invoice_number: string
+          issue_date: string
+          notes: string | null
+          owner_user_id: string | null
+          payment_method: string
+          plan: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billing_email: string
+          business_id?: string | null
+          client_name: string
+          created_at?: string
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          notes?: string | null
+          owner_user_id?: string | null
+          payment_method?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_email?: string
+          business_id?: string | null
+          client_name?: string
+          created_at?: string
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          notes?: string | null
+          owner_user_id?: string | null
+          payment_method?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_plans: {
+        Row: {
+          created_at: string
+          features: string[]
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          lifetime_price: number
+          monthly_price: number
+          name: string
+          payment_method_synced: boolean
+          plan_key: string
+          sort_order: number
+          tagline: string | null
+          updated_at: string
+          yearly_price: number
+        }
+        Insert: {
+          created_at?: string
+          features?: string[]
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          lifetime_price?: number
+          monthly_price?: number
+          name: string
+          payment_method_synced?: boolean
+          plan_key: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+          yearly_price?: number
+        }
+        Update: {
+          created_at?: string
+          features?: string[]
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          lifetime_price?: number
+          monthly_price?: number
+          name?: string
+          payment_method_synced?: boolean
+          plan_key?: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+          yearly_price?: number
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          id: string
+          industry_assignments: string[]
+          inherit_alerts: boolean
+          inherit_barcode: boolean
+          inherit_batch: boolean
+          inherit_expiry: boolean
+          name: string
+          parent_id: string | null
+          slug: string
+          status: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          description?: string | null
+          id?: string
+          industry_assignments?: string[]
+          inherit_alerts?: boolean
+          inherit_barcode?: boolean
+          inherit_batch?: boolean
+          inherit_expiry?: boolean
+          name: string
+          parent_id?: string | null
+          slug: string
+          status?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          id?: string
+          industry_assignments?: string[]
+          inherit_alerts?: boolean
+          inherit_barcode?: boolean
+          inherit_batch?: boolean
+          inherit_expiry?: boolean
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          status?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -184,6 +348,87 @@ export type Database = {
           status?: string
           usage?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      refund_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          business_id: string | null
+          created_at: string
+          id: string
+          owner_user_id: string
+          reason: string
+          resolved_at: string | null
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          reason: string
+          resolved_at?: string | null
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          reason?: string
+          resolved_at?: string | null
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          business_id: string | null
+          created_at: string
+          cycle: string
+          id: string
+          next_billing_date: string | null
+          owner_user_id: string
+          status: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          cycle?: string
+          id?: string
+          next_billing_date?: string | null
+          owner_user_id: string
+          status?: string
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string | null
+          created_at?: string
+          cycle?: string
+          id?: string
+          next_billing_date?: string | null
+          owner_user_id?: string
+          status?: string
+          tier?: string
+          updated_at?: string
         }
         Relationships: []
       }
