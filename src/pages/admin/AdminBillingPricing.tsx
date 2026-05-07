@@ -15,6 +15,7 @@ interface PlanRow {
   monthly_price: number; yearly_price: number; lifetime_price: number;
   features: string[]; is_active: boolean; is_popular: boolean;
   payment_method_synced: boolean; sort_order: number;
+  badge_text: string | null; badge_position: string; badge_cycle: string;
 }
 
 const blank = () => ({
