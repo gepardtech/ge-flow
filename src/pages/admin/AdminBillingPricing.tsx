@@ -53,6 +53,7 @@ const AdminBillingPricing = () => {
       plan_key: r.plan_key, name: r.name, tagline: r.tagline ?? "",
       monthly_price: r.monthly_price, yearly_price: r.yearly_price, lifetime_price: r.lifetime_price,
       features: (r.features ?? []).join("\n"), is_active: r.is_active, is_popular: r.is_popular, sort_order: r.sort_order,
+      badge_text: r.badge_text ?? "", badge_position: r.badge_position ?? "top", badge_cycle: r.badge_cycle ?? "all",
     });
     setOpen(true);
   };
