@@ -162,6 +162,22 @@ const AdminBillingPricing = () => {
               <Toggle label="POPULAR" checked={form.is_popular} onChange={(v) => setForm((f) => ({ ...f, is_popular: v }))} />
               <Field label="SORT"><input type="number" value={form.sort_order} onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Field>
             </div>
+            <div className="border-t border-border pt-3">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-2">PROMOTIONAL BADGE</p>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="BADGE TEXT"><input value={form.badge_text} onChange={(e) => setForm((f) => ({ ...f, badge_text: e.target.value }))} placeholder="e.g. SAVE 20%" className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Field>
+                <Field label="POSITION">
+                  <select value={form.badge_position} onChange={(e) => setForm((f) => ({ ...f, badge_position: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
+                    <option value="top">Top</option><option value="bottom">Bottom</option>
+                  </select>
+                </Field>
+                <Field label="APPLIES TO">
+                  <select value={form.badge_cycle} onChange={(e) => setForm((f) => ({ ...f, badge_cycle: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
+                    <option value="all">All cycles</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="lifetime">Lifetime</option>
+                  </select>
+                </Field>
+              </div>
+            </div>
             <Button onClick={submit} disabled={busy} className="w-full h-11 rounded-xl bg-sky-400 hover:bg-sky-500 text-white font-bold">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Save Changes" : "Create Plan"}
             </Button>
