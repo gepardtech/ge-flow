@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          created_by_user_id: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          link_label: string | null
+          link_url: string | null
+          position: string
+          starts_at: string
+          title: string
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          created_at?: string
+          created_by_user_id: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          position?: string
+          starts_at?: string
+          title: string
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          created_by_user_id?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          position?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       business_categories: {
         Row: {
           created_at: string
@@ -148,6 +199,63 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_modules: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          function_group: string
+          global_active: boolean
+          health: string
+          id: string
+          latency_ms: number
+          lifecycle_phase: string
+          module_code: string
+          name: string
+          plan_free: boolean
+          plan_premium: boolean
+          plan_standard: boolean
+          source_file_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          description?: string | null
+          function_group?: string
+          global_active?: boolean
+          health?: string
+          id?: string
+          latency_ms?: number
+          lifecycle_phase?: string
+          module_code: string
+          name: string
+          plan_free?: boolean
+          plan_premium?: boolean
+          plan_standard?: boolean
+          source_file_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          function_group?: string
+          global_active?: boolean
+          health?: string
+          id?: string
+          latency_ms?: number
+          lifecycle_phase?: string
+          module_code?: string
+          name?: string
+          plan_free?: boolean
+          plan_premium?: boolean
+          plan_standard?: boolean
+          source_file_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -199,8 +307,83 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base_articles: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          is_active: boolean
+          page_assignments: string[]
+          question: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          is_active?: boolean
+          page_assignments?: string[]
+          question: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          is_active?: boolean
+          page_assignments?: string[]
+          question?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      plan_limits: {
+        Row: {
+          created_at: string
+          id: string
+          is_locked: boolean
+          label: string
+          limit_value: number | null
+          plan_key: string
+          resource_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          label: string
+          limit_value?: number | null
+          plan_key: string
+          resource_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          label?: string
+          limit_value?: number | null
+          plan_key?: string
+          resource_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pricing_plans: {
         Row: {
+          badge_cycle: string
+          badge_position: string
+          badge_text: string | null
           created_at: string
           features: string[]
           id: string
@@ -217,6 +400,9 @@ export type Database = {
           yearly_price: number
         }
         Insert: {
+          badge_cycle?: string
+          badge_position?: string
+          badge_text?: string | null
           created_at?: string
           features?: string[]
           id?: string
@@ -233,6 +419,9 @@ export type Database = {
           yearly_price?: number
         }
         Update: {
+          badge_cycle?: string
+          badge_position?: string
+          badge_text?: string | null
           created_at?: string
           features?: string[]
           id?: string
@@ -393,6 +582,39 @@ export type Database = {
         }
         Relationships: []
       }
+      reply_templates: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          is_default: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          is_default?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          is_default?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount: number
@@ -431,6 +653,160 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      support_automation_settings: {
+        Row: {
+          ai_auto_reply_after_hours: number
+          ai_auto_reply_enabled: boolean
+          auto_feedback_reply_enabled: boolean
+          auto_feedback_template_ids: string[]
+          auto_reply_enabled: boolean
+          auto_reply_template_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_auto_reply_after_hours?: number
+          ai_auto_reply_enabled?: boolean
+          auto_feedback_reply_enabled?: boolean
+          auto_feedback_template_ids?: string[]
+          auto_reply_enabled?: boolean
+          auto_reply_template_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_auto_reply_after_hours?: number
+          ai_auto_reply_enabled?: boolean
+          auto_feedback_reply_enabled?: boolean
+          auto_feedback_template_ids?: string[]
+          auto_reply_enabled?: boolean
+          auto_reply_template_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_automation_settings_auto_reply_template_id_fkey"
+            columns: ["auto_reply_template_id"]
+            isOneToOne: false
+            referencedRelation: "reply_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_team_members: {
+        Row: {
+          appointed_by_user_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointed_by_user_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointed_by_user_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to_user_id: string | null
+          category: string
+          contact_submission_id: string | null
+          created_at: string
+          id: string
+          owner_user_id: string
+          priority: string
+          resolved_at: string | null
+          source: string
+          status: string
+          subject: string
+          ticket_number: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          category?: string
+          contact_submission_id?: string | null
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          priority?: string
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject: string
+          ticket_number?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          category?: string
+          contact_submission_id?: string | null
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          priority?: string
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ticket_messages: {
+        Row: {
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          is_admin: boolean
+          ticket_id: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          ticket_id: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
