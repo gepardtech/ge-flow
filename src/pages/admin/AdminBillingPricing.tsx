@@ -20,6 +20,7 @@ interface PlanRow {
 const blank = () => ({
   plan_key: "", name: "", tagline: "", monthly_price: 0, yearly_price: 0, lifetime_price: 0,
   features: "", is_active: true, is_popular: false, sort_order: 0,
+  badge_text: "", badge_position: "top", badge_cycle: "all",
 });
 
 const AdminBillingPricing = () => {
