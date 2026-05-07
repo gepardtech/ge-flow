@@ -15,11 +15,13 @@ interface PlanRow {
   monthly_price: number; yearly_price: number; lifetime_price: number;
   features: string[]; is_active: boolean; is_popular: boolean;
   payment_method_synced: boolean; sort_order: number;
+  badge_text: string | null; badge_position: string; badge_cycle: string;
 }
 
 const blank = () => ({
   plan_key: "", name: "", tagline: "", monthly_price: 0, yearly_price: 0, lifetime_price: 0,
   features: "", is_active: true, is_popular: false, sort_order: 0,
+  badge_text: "", badge_position: "top", badge_cycle: "all",
 });
 
 const AdminBillingPricing = () => {
@@ -51,6 +53,7 @@ const AdminBillingPricing = () => {
       plan_key: r.plan_key, name: r.name, tagline: r.tagline ?? "",
       monthly_price: r.monthly_price, yearly_price: r.yearly_price, lifetime_price: r.lifetime_price,
       features: (r.features ?? []).join("\n"), is_active: r.is_active, is_popular: r.is_popular, sort_order: r.sort_order,
+      badge_text: r.badge_text ?? "", badge_position: r.badge_position ?? "top", badge_cycle: r.badge_cycle ?? "all",
     });
     setOpen(true);
   };
@@ -63,6 +66,7 @@ const AdminBillingPricing = () => {
       monthly_price: Number(form.monthly_price), yearly_price: Number(form.yearly_price), lifetime_price: Number(form.lifetime_price),
       features: form.features.split("\n").map((s) => s.trim()).filter(Boolean),
       is_active: form.is_active, is_popular: form.is_popular, sort_order: Number(form.sort_order),
+      badge_text: form.badge_text?.trim() || null, badge_position: form.badge_position, badge_cycle: form.badge_cycle,
     };
     let error;
     if (editing) ({ error } = await supabase.from("pricing_plans").update(payload).eq("id", editing.id));
@@ -157,6 +161,22 @@ const AdminBillingPricing = () => {
               <Toggle label="ACTIVE" checked={form.is_active} onChange={(v) => setForm((f) => ({ ...f, is_active: v }))} />
               <Toggle label="POPULAR" checked={form.is_popular} onChange={(v) => setForm((f) => ({ ...f, is_popular: v }))} />
               <Field label="SORT"><input type="number" value={form.sort_order} onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Field>
+            </div>
+            <div className="border-t border-border pt-3">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-2">PROMOTIONAL BADGE</p>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="BADGE TEXT"><input value={form.badge_text} onChange={(e) => setForm((f) => ({ ...f, badge_text: e.target.value }))} placeholder="e.g. SAVE 20%" className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Field>
+                <Field label="POSITION">
+                  <select value={form.badge_position} onChange={(e) => setForm((f) => ({ ...f, badge_position: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
+                    <option value="top">Top</option><option value="bottom">Bottom</option>
+                  </select>
+                </Field>
+                <Field label="APPLIES TO">
+                  <select value={form.badge_cycle} onChange={(e) => setForm((f) => ({ ...f, badge_cycle: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
+                    <option value="all">All cycles</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="lifetime">Lifetime</option>
+                  </select>
+                </Field>
+              </div>
             </div>
             <Button onClick={submit} disabled={busy} className="w-full h-11 rounded-xl bg-sky-400 hover:bg-sky-500 text-white font-bold">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Save Changes" : "Create Plan"}

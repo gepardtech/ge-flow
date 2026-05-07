@@ -17,7 +17,15 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.from("contact_submissions").insert({ name, email, message });
+    const { data: submission, error } = await supabase.from("contact_submissions").insert({ name, email, message }).select().single();
+    // Also create a support ticket if user is signed in so it lands in admin Support inbox
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && !error) {
+      await supabase.from("support_tickets").insert({
+        owner_user_id: user.id, subject: `Contact: ${name}`, category: "general",
+        priority: "medium", source: "contact_form", contact_submission_id: submission?.id ?? null,
+      });
+    }
     setLoading(false);
     if (error) {
       toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
