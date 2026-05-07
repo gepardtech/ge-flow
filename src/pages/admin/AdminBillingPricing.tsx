@@ -66,6 +66,7 @@ const AdminBillingPricing = () => {
       monthly_price: Number(form.monthly_price), yearly_price: Number(form.yearly_price), lifetime_price: Number(form.lifetime_price),
       features: form.features.split("\n").map((s) => s.trim()).filter(Boolean),
       is_active: form.is_active, is_popular: form.is_popular, sort_order: Number(form.sort_order),
+      badge_text: form.badge_text?.trim() || null, badge_position: form.badge_position, badge_cycle: form.badge_cycle,
     };
     let error;
     if (editing) ({ error } = await supabase.from("pricing_plans").update(payload).eq("id", editing.id));
