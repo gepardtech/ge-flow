@@ -35,6 +35,7 @@ import AdminFeatures from "./pages/admin/AdminFeatures";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPlanLimits from "./pages/admin/AdminPlanLimits";
 
 import UserInventory from "./pages/user/UserInventory";
 import UserOutOfStock from "./pages/user/UserOutOfStock";
@@ -45,6 +46,8 @@ import UserAnalytics from "./pages/user/UserAnalytics";
 import UserTeam from "./pages/user/UserTeam";
 import UserSubscription from "./pages/user/UserSubscription";
 import UserWorkspace from "./pages/user/UserWorkspace";
+import UserAnnouncements from "./pages/user/UserAnnouncements";
+import UserSupport from "./pages/user/UserSupport";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +80,7 @@ const App = () => (
           <Route path="/admin/features" element={<AdminFeatures />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/support" element={<AdminSupport />} />
+          <Route path="/admin/plan-limits" element={<AdminPlanLimits />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/setup/business" element={<SetupBusiness />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -88,6 +92,8 @@ const App = () => (
           <Route path="/dashboard/analytics" element={<UserAnalytics />} />
           <Route path="/dashboard/team" element={<UserTeam />} />
           <Route path="/dashboard/subscription" element={<UserSubscription />} />
+          <Route path="/dashboard/announcements" element={<UserAnnouncements />} />
+          <Route path="/dashboard/support" element={<UserSupport />} />
           <Route path="/dashboard/workspace" element={<UserWorkspace />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
