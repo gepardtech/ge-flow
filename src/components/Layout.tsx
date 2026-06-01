@@ -6,8 +6,10 @@ import AnnouncementBar from "./AnnouncementBar";
 const Layout = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen flex flex-col">
     <Navbar />
-    <AnnouncementBar audience="public" />
-    <main className="flex-1 pt-16">{children}</main>
+    <main className="flex-1 pt-16">
+      <AnnouncementBar audience="public" />
+      {children}
+    </main>
     <Footer />
   </div>
 );
