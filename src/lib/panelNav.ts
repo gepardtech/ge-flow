@@ -2,6 +2,7 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
+  SlidersHorizontal, Megaphone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   { label: "Feature Control", to: "/admin/features", icon: Eye },
+  { label: "Plan Limits", to: "/admin/plan-limits", icon: SlidersHorizontal },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3 },
   { label: "Support", to: "/admin/support", icon: LifeBuoy },
   { label: "Settings", to: "/admin/settings", icon: Settings },
@@ -39,6 +41,8 @@ export const USER_NAV: NavItem[] = [
   { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3 },
   { label: "Team Hub", to: "/dashboard/team", icon: Users },
   { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard },
+  { label: "Announcements", to: "/dashboard/announcements", icon: Megaphone },
+  { label: "Support", to: "/dashboard/support", icon: LifeBuoy },
   { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon },
 ];
 
