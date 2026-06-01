@@ -8,6 +8,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import AnnouncementBar from "@/components/AnnouncementBar";
 
 export interface NavChild { label: string; to: string; }
 export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
@@ -307,6 +308,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
             </DropdownMenu>
           </div>
         </header>
+        <AnnouncementBar audience={isAdmin ? "admins" : "users"} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
