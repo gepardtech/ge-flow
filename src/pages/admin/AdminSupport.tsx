@@ -157,6 +157,20 @@ const AdminSupport = () => {
 
   // Ticket detail / reply dialog
   const [openTicket, setOpenTicket] = useState<Ticket | null>(null);
+  const [delTicket, setDelTicket] = useState<Ticket | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteTicket = async () => {
+    if (!delTicket) return;
+    setDeleting(true);
+    await supabase.from("ticket_messages").delete().eq("ticket_id", delTicket.id);
+    const { error } = await supabase.from("support_tickets").delete().eq("id", delTicket.id);
+    setDeleting(false);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Ticket deleted" });
+    setDelTicket(null);
+    loadTickets();
+  };
 
   // ---- popups ----
   const [tplOpen, setTplOpen] = useState(false);
