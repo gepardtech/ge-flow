@@ -75,7 +75,6 @@ export type Database = {
           enabled_modules: string[]
           id: string
           industry_type: string
-          internal_description: string | null
           name: string
           status: string
           stock_alert_limit: number
@@ -90,7 +89,6 @@ export type Database = {
           enabled_modules?: string[]
           id?: string
           industry_type: string
-          internal_description?: string | null
           name: string
           status?: string
           stock_alert_limit?: number
@@ -105,13 +103,38 @@ export type Database = {
           enabled_modules?: string[]
           id?: string
           industry_type?: string
-          internal_description?: string | null
           name?: string
           status?: string
           stock_alert_limit?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      business_category_internal: {
+        Row: {
+          category_id: string
+          internal_description: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          internal_description?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          internal_description?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_category_internal_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       businesses: {
         Row: {
@@ -168,13 +191,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "business_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "businesses_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "business_categories_public"
             referencedColumns: ["id"]
           },
         ]
@@ -916,42 +932,7 @@ export type Database = {
       }
     }
     Views: {
-      business_categories_public: {
-        Row: {
-          currency: string | null
-          default_tax: number | null
-          enabled_features: string[] | null
-          enabled_modules: string[] | null
-          id: string | null
-          industry_type: string | null
-          name: string | null
-          status: string | null
-          stock_alert_limit: number | null
-        }
-        Insert: {
-          currency?: string | null
-          default_tax?: number | null
-          enabled_features?: string[] | null
-          enabled_modules?: string[] | null
-          id?: string | null
-          industry_type?: string | null
-          name?: string | null
-          status?: string | null
-          stock_alert_limit?: number | null
-        }
-        Update: {
-          currency?: string | null
-          default_tax?: number | null
-          enabled_features?: string[] | null
-          enabled_modules?: string[] | null
-          id?: string | null
-          industry_type?: string | null
-          name?: string | null
-          status?: string | null
-          stock_alert_limit?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       get_business_limit: { Args: { _plan: string }; Returns: number }
