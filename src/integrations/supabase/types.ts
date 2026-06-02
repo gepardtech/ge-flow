@@ -170,6 +170,13 @@ export type Database = {
             referencedRelation: "business_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "businesses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "business_categories_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contact_submissions: {
@@ -909,7 +916,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      business_categories_public: {
+        Row: {
+          currency: string | null
+          default_tax: number | null
+          enabled_features: string[] | null
+          enabled_modules: string[] | null
+          id: string | null
+          industry_type: string | null
+          name: string | null
+          status: string | null
+          stock_alert_limit: number | null
+        }
+        Insert: {
+          currency?: string | null
+          default_tax?: number | null
+          enabled_features?: string[] | null
+          enabled_modules?: string[] | null
+          id?: string | null
+          industry_type?: string | null
+          name?: string | null
+          status?: string | null
+          stock_alert_limit?: number | null
+        }
+        Update: {
+          currency?: string | null
+          default_tax?: number | null
+          enabled_features?: string[] | null
+          enabled_modules?: string[] | null
+          id?: string | null
+          industry_type?: string | null
+          name?: string | null
+          status?: string | null
+          stock_alert_limit?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_business_limit: { Args: { _plan: string }; Returns: number }
