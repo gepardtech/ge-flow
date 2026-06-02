@@ -102,12 +102,15 @@ const AdminBusinessCategories = () => {
   const [del, setDel] = useState<CategoryRow | null>(null);
 
   const load = useCallback(async () => {
-    const [{ data, error }, { data: biz }] = await Promise.all([
+    const [{ data, error }, { data: biz }, { data: notes }] = await Promise.all([
       supabase.from("business_categories").select("*").order("created_at", { ascending: false }),
       supabase.from("businesses").select("category_id"),
+      supabase.from("business_category_internal").select("category_id, internal_description"),
     ]);
     if (error) toast({ title: "Failed to load categories", description: error.message, variant: "destructive" });
-    setRows((data as CategoryRow[]) ?? []);
+    const noteMap: Record<string, string | null> = {};
+    (notes ?? []).forEach((n: any) => { noteMap[n.category_id] = n.internal_description; });
+    setRows(((data as any[]) ?? []).map((r) => ({ ...r, internal_description: noteMap[r.id] ?? null })) as CategoryRow[]);
     const tally: Record<string, number> = {};
     (biz ?? []).forEach((b: any) => { if (b.category_id) tally[b.category_id] = (tally[b.category_id] ?? 0) + 1; });
     setOrgsByCat(tally);
@@ -119,6 +122,7 @@ const AdminBusinessCategories = () => {
     const ch = supabase
       .channel("admin_categories_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "business_categories" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "business_category_internal" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, load)
       .subscribe();
     const onR = () => load();
@@ -154,24 +158,38 @@ const AdminBusinessCategories = () => {
     if (!form.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
     if (!form.industry_type) { toast({ title: "Industry is required", variant: "destructive" }); return; }
     setBusy(true);
+    const internalNote = form.internal_description.trim() || null;
     const payload = {
       name: form.name.trim(), industry_type: form.industry_type,
-      internal_description: form.internal_description.trim() || null,
       status: form.status, enabled_modules: form.enabled_modules, enabled_features: form.enabled_features,
       default_tax: form.default_tax, currency: form.currency, stock_alert_limit: form.stock_alert_limit,
     };
     let error;
+    let categoryId = editing?.id;
     if (editing) {
       ({ error } = await supabase.from("business_categories").update(payload).eq("id", editing.id));
     } else {
       const { data: { user } } = await supabase.auth.getUser();
-      ({ error } = await supabase.from("business_categories").insert({ ...payload, created_by_user_id: user!.id }));
+      const res = await supabase
+        .from("business_categories")
+        .insert({ ...payload, created_by_user_id: user!.id })
+        .select("id")
+        .single();
+      error = res.error;
+      categoryId = res.data?.id;
+    }
+    if (!error && categoryId) {
+      const { error: noteErr } = await supabase
+        .from("business_category_internal")
+        .upsert({ category_id: categoryId, internal_description: internalNote, updated_at: new Date().toISOString() });
+      if (noteErr) error = noteErr;
     }
     setBusy(false);
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: editing ? "Category updated" : "Category created" });
     setOpenForm(false);
   };
+
 
   const confirmDelete = async () => {
     if (!del) return;
