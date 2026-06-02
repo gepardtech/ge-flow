@@ -102,12 +102,15 @@ const AdminBusinessCategories = () => {
   const [del, setDel] = useState<CategoryRow | null>(null);
 
   const load = useCallback(async () => {
-    const [{ data, error }, { data: biz }] = await Promise.all([
+    const [{ data, error }, { data: biz }, { data: notes }] = await Promise.all([
       supabase.from("business_categories").select("*").order("created_at", { ascending: false }),
       supabase.from("businesses").select("category_id"),
+      supabase.from("business_category_internal").select("category_id, internal_description"),
     ]);
     if (error) toast({ title: "Failed to load categories", description: error.message, variant: "destructive" });
-    setRows((data as CategoryRow[]) ?? []);
+    const noteMap: Record<string, string | null> = {};
+    (notes ?? []).forEach((n: any) => { noteMap[n.category_id] = n.internal_description; });
+    setRows(((data as any[]) ?? []).map((r) => ({ ...r, internal_description: noteMap[r.id] ?? null })) as CategoryRow[]);
     const tally: Record<string, number> = {};
     (biz ?? []).forEach((b: any) => { if (b.category_id) tally[b.category_id] = (tally[b.category_id] ?? 0) + 1; });
     setOrgsByCat(tally);
