@@ -411,6 +411,7 @@ export type Database = {
           automated_tax_receipts: boolean
           base_currency: string
           default_theme: string
+          favicon_url: string | null
           global_branch_sync: boolean
           global_ip_guard: boolean
           hardware_key: boolean
@@ -437,6 +438,7 @@ export type Database = {
           automated_tax_receipts?: boolean
           base_currency?: string
           default_theme?: string
+          favicon_url?: string | null
           global_branch_sync?: boolean
           global_ip_guard?: boolean
           hardware_key?: boolean
@@ -463,6 +465,7 @@ export type Database = {
           automated_tax_receipts?: boolean
           base_currency?: string
           default_theme?: string
+          favicon_url?: string | null
           global_branch_sync?: boolean
           global_ip_guard?: boolean
           hardware_key?: boolean
