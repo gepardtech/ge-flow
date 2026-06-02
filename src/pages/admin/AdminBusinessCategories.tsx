@@ -122,6 +122,7 @@ const AdminBusinessCategories = () => {
     const ch = supabase
       .channel("admin_categories_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "business_categories" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "business_category_internal" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, load)
       .subscribe();
     const onR = () => load();
