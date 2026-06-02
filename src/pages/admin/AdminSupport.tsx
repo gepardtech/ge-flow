@@ -7,6 +7,10 @@ import {
   LifeBuoy, Eye, Send, Plus, Pencil, Trash2, Loader2, X, Sparkles, Activity, Shield, Clock,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -153,6 +157,20 @@ const AdminSupport = () => {
 
   // Ticket detail / reply dialog
   const [openTicket, setOpenTicket] = useState<Ticket | null>(null);
+  const [delTicket, setDelTicket] = useState<Ticket | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteTicket = async () => {
+    if (!delTicket) return;
+    setDeleting(true);
+    await supabase.from("ticket_messages").delete().eq("ticket_id", delTicket.id);
+    const { error } = await supabase.from("support_tickets").delete().eq("id", delTicket.id);
+    setDeleting(false);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Ticket deleted" });
+    setDelTicket(null);
+    loadTickets();
+  };
 
   // ---- popups ----
   const [tplOpen, setTplOpen] = useState(false);
@@ -290,9 +308,14 @@ const AdminSupport = () => {
                         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${statusClass(t.status)}`}>{t.status.replace("_", " ")}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => setOpenTicket(t)} className="inline-flex items-center gap-1.5 text-sm font-bold text-sky-500 hover:underline">
-                          <Eye className="h-4 w-4" /> View Detail
-                        </button>
+                        <div className="inline-flex items-center gap-3">
+                          <button onClick={() => setOpenTicket(t)} className="inline-flex items-center gap-1.5 text-sm font-bold text-sky-500 hover:underline">
+                            <Eye className="h-4 w-4" /> View Detail
+                          </button>
+                          <button onClick={() => setDelTicket(t)} title="Delete ticket" className="h-8 w-8 rounded-lg hover:bg-rose-500/10 text-rose-500 inline-flex items-center justify-center">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -363,6 +386,23 @@ const AdminSupport = () => {
       <TemplatesDialog open={tplOpen} onOpenChange={setTplOpen} templates={templates} onChange={loadTemplates} />
       <AnnouncementDialog open={annOpen} onOpenChange={setAnnOpen} onSaved={loadAnnouncements} />
       <TicketDialog open={!!openTicket} ticket={openTicket} templates={templates} onOpenChange={(o) => !o && setOpenTicket(null)} onUpdated={loadTickets} />
+
+      <AlertDialog open={!!delTicket} onOpenChange={(o) => !o && setDelTicket(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes ticket {delTicket?.ticket_number} and all of its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); deleteTicket(); }} disabled={deleting} className="bg-rose-500 hover:bg-rose-600 text-white">
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Ticket"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PanelLayout>
   );
 };
