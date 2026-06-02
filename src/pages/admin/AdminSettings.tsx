@@ -55,7 +55,7 @@ const AdminSettings = () => {
     if (!row) return;
     setSaving(true);
     const { id, created_at, updated_at, singleton, ...payload } = form;
-    const { error } = await supabase.from("platform_settings").update(payload).eq("id", row.id);
+    const { error } = await supabase.from("platform_settings").update(payload as any).eq("id", row.id);
     setSaving(false);
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
     applyPlatformSettings(form);
