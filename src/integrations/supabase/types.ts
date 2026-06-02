@@ -379,6 +379,87 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          admin_2fa: boolean
+          alerts: Json
+          api_maintenance: boolean
+          app_name: string
+          automated_tax_receipts: boolean
+          base_currency: string
+          default_theme: string
+          global_branch_sync: boolean
+          global_ip_guard: boolean
+          hardware_key: boolean
+          id: string
+          interface_language: string
+          invoice_prefix: string
+          logo_url: string | null
+          min_pass_length: number
+          multi_business: boolean
+          primary_accent: string
+          secondary_accent: string
+          session_ttl: number
+          singleton: boolean
+          system_timezone: string
+          universal_tax: number
+          updated_at: string
+          white_label: boolean
+        }
+        Insert: {
+          admin_2fa?: boolean
+          alerts?: Json
+          api_maintenance?: boolean
+          app_name?: string
+          automated_tax_receipts?: boolean
+          base_currency?: string
+          default_theme?: string
+          global_branch_sync?: boolean
+          global_ip_guard?: boolean
+          hardware_key?: boolean
+          id?: string
+          interface_language?: string
+          invoice_prefix?: string
+          logo_url?: string | null
+          min_pass_length?: number
+          multi_business?: boolean
+          primary_accent?: string
+          secondary_accent?: string
+          session_ttl?: number
+          singleton?: boolean
+          system_timezone?: string
+          universal_tax?: number
+          updated_at?: string
+          white_label?: boolean
+        }
+        Update: {
+          admin_2fa?: boolean
+          alerts?: Json
+          api_maintenance?: boolean
+          app_name?: string
+          automated_tax_receipts?: boolean
+          base_currency?: string
+          default_theme?: string
+          global_branch_sync?: boolean
+          global_ip_guard?: boolean
+          hardware_key?: boolean
+          id?: string
+          interface_language?: string
+          invoice_prefix?: string
+          logo_url?: string | null
+          min_pass_length?: number
+          multi_business?: boolean
+          primary_accent?: string
+          secondary_accent?: string
+          session_ttl?: number
+          singleton?: boolean
+          system_timezone?: string
+          universal_tax?: number
+          updated_at?: string
+          white_label?: boolean
+        }
+        Relationships: []
+      }
       pricing_plans: {
         Row: {
           badge_cycle: string
