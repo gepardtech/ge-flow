@@ -308,9 +308,14 @@ const AdminSupport = () => {
                         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${statusClass(t.status)}`}>{t.status.replace("_", " ")}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => setOpenTicket(t)} className="inline-flex items-center gap-1.5 text-sm font-bold text-sky-500 hover:underline">
-                          <Eye className="h-4 w-4" /> View Detail
-                        </button>
+                        <div className="inline-flex items-center gap-3">
+                          <button onClick={() => setOpenTicket(t)} className="inline-flex items-center gap-1.5 text-sm font-bold text-sky-500 hover:underline">
+                            <Eye className="h-4 w-4" /> View Detail
+                          </button>
+                          <button onClick={() => setDelTicket(t)} title="Delete ticket" className="h-8 w-8 rounded-lg hover:bg-rose-500/10 text-rose-500 inline-flex items-center justify-center">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
