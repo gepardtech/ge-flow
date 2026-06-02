@@ -386,6 +386,23 @@ const AdminSupport = () => {
       <TemplatesDialog open={tplOpen} onOpenChange={setTplOpen} templates={templates} onChange={loadTemplates} />
       <AnnouncementDialog open={annOpen} onOpenChange={setAnnOpen} onSaved={loadAnnouncements} />
       <TicketDialog open={!!openTicket} ticket={openTicket} templates={templates} onOpenChange={(o) => !o && setOpenTicket(null)} onUpdated={loadTickets} />
+
+      <AlertDialog open={!!delTicket} onOpenChange={(o) => !o && setDelTicket(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes ticket {delTicket?.ticket_number} and all of its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); deleteTicket(); }} disabled={deleting} className="bg-rose-500 hover:bg-rose-600 text-white">
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Ticket"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PanelLayout>
   );
 };
