@@ -157,24 +157,38 @@ const AdminBusinessCategories = () => {
     if (!form.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
     if (!form.industry_type) { toast({ title: "Industry is required", variant: "destructive" }); return; }
     setBusy(true);
+    const internalNote = form.internal_description.trim() || null;
     const payload = {
       name: form.name.trim(), industry_type: form.industry_type,
-      internal_description: form.internal_description.trim() || null,
       status: form.status, enabled_modules: form.enabled_modules, enabled_features: form.enabled_features,
       default_tax: form.default_tax, currency: form.currency, stock_alert_limit: form.stock_alert_limit,
     };
     let error;
+    let categoryId = editing?.id;
     if (editing) {
       ({ error } = await supabase.from("business_categories").update(payload).eq("id", editing.id));
     } else {
       const { data: { user } } = await supabase.auth.getUser();
-      ({ error } = await supabase.from("business_categories").insert({ ...payload, created_by_user_id: user!.id }));
+      const res = await supabase
+        .from("business_categories")
+        .insert({ ...payload, created_by_user_id: user!.id })
+        .select("id")
+        .single();
+      error = res.error;
+      categoryId = res.data?.id;
+    }
+    if (!error && categoryId) {
+      const { error: noteErr } = await supabase
+        .from("business_category_internal")
+        .upsert({ category_id: categoryId, internal_description: internalNote, updated_at: new Date().toISOString() });
+      if (noteErr) error = noteErr;
     }
     setBusy(false);
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: editing ? "Category updated" : "Category created" });
     setOpenForm(false);
   };
+
 
   const confirmDelete = async () => {
     if (!del) return;
