@@ -329,12 +329,12 @@ const Checkout = () => {
                     placeholder="Enter code"
                     className="h-10 uppercase"
                   />
-                  <Button type="button" onClick={applyCoupon} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
-                    APPLY
+                  <Button type="button" onClick={applyCoupon} disabled={couponLoading} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
+                    {couponLoading ? "..." : "APPLY"}
                   </Button>
                 </div>
                 {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
-                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.percent}% off applied</p>}
+                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.label} applied</p>}
               </div>
 
               <div className="border-t border-border" />
