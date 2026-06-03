@@ -240,7 +240,7 @@ const AdminSettings = () => {
 };
 
 const Card = ({ title, desc, children }: any) => (
-  <div className="bg-card border border-border rounded-2xl p-6 max-w-3xl">
+  <div className="bg-card border border-border rounded-2xl p-6 w-full">
     <p className="font-bold text-lg">{title}</p>
     <p className="text-sm text-muted-foreground mb-5">{desc}</p>
     <div className="space-y-5">{children}</div>
