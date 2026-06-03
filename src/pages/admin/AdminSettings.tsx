@@ -125,7 +125,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         {/* BRANDING */}
-        <TabsContent value="branding" className="mt-6 space-y-6">
+        <TabsContent value="branding" className="mt-6 grid lg:grid-cols-2 gap-6 items-start">
           <Card title="Brand Assets" desc="Logo and favicon shown across the app and browser tab.">
             <div className="grid sm:grid-cols-2 gap-6">
               {/* Logo */}
