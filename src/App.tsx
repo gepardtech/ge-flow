@@ -21,7 +21,8 @@ import Terms from "./pages/Terms";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import SetupBusiness from "./pages/SetupBusiness";
-import PlatformSettingsApplier from "./components/PlatformSettingsApplier";
+import PlatformSettingsProvider from "./components/PlatformSettingsProvider";
+import AdminBillingCoupons from "./pages/admin/AdminBillingCoupons";
 
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminBusinesses from "./pages/admin/AdminBusinesses";
