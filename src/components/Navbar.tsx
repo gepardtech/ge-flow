@@ -17,6 +17,7 @@ const Navbar = () => {
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { settings } = usePlatformSettings();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
