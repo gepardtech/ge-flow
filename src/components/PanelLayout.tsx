@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 export interface NavChild { label: string; to: string; }
 export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
