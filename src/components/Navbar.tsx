@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Moon, Sun, User } from "lucide-react";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 const navLinks = [
   { label: "Home", href: "/" },
