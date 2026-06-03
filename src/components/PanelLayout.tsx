@@ -39,6 +39,8 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  const { settings } = usePlatformSettings();
+
 
   useEffect(() => { setMounted(true); }, []);
 
