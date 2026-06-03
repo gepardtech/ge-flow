@@ -80,6 +80,7 @@ const App = () => (
           <Route path="/admin/billing/pricing-plans" element={<AdminBillingPricing />} />
           <Route path="/admin/billing/invoices" element={<AdminBillingInvoices />} />
           <Route path="/admin/billing/refunds" element={<AdminBillingRefunds />} />
+          <Route path="/admin/billing/coupons" element={<AdminBillingCoupons />} />
           <Route path="/admin/features" element={<AdminFeatures />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/support" element={<AdminSupport />} />
