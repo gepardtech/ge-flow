@@ -117,8 +117,14 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
         <div className="flex items-center justify-between p-4 border-b border-border h-16 flex-shrink-0">
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm">G</div>
-              <span className="font-bold text-lg bg-gradient-to-r from-violet-500 to-sky-400 bg-clip-text text-transparent">GeFlow</span>
+              {settings?.logo_url ? (
+                <img src={settings.logo_url} alt={settings?.app_name ?? "Logo"} className="h-8 max-w-[140px] object-contain" />
+              ) : (
+                <>
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm">G</div>
+                  <span className="font-bold text-lg bg-gradient-to-r from-violet-500 to-sky-400 bg-clip-text text-transparent">{settings?.app_name ?? "GeFlow"}</span>
+                </>
+              )}
             </Link>
           )}
           <button onClick={() => setCollapsed(!collapsed)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
