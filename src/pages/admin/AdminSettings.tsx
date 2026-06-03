@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
-import { applyPlatformSettings } from "@/components/PlatformSettingsApplier";
+import { applyPlatformSettings } from "@/components/PlatformSettingsProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         {/* BRANDING */}
-        <TabsContent value="branding" className="mt-6 space-y-6">
+        <TabsContent value="branding" className="mt-6 grid lg:grid-cols-2 gap-6 items-start">
           <Card title="Brand Assets" desc="Logo and favicon shown across the app and browser tab.">
             <div className="grid sm:grid-cols-2 gap-6">
               {/* Logo */}
@@ -240,7 +240,7 @@ const AdminSettings = () => {
 };
 
 const Card = ({ title, desc, children }: any) => (
-  <div className="bg-card border border-border rounded-2xl p-6 max-w-3xl">
+  <div className="bg-card border border-border rounded-2xl p-6 w-full">
     <p className="font-bold text-lg">{title}</p>
     <p className="text-sm text-muted-foreground mb-5">{desc}</p>
     <div className="space-y-5">{children}</div>

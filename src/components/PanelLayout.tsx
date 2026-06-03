@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 export interface NavChild { label: string; to: string; }
 export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
@@ -38,6 +39,8 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  const { settings } = usePlatformSettings();
+
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -117,8 +120,14 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
         <div className="flex items-center justify-between p-4 border-b border-border h-16 flex-shrink-0">
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm">G</div>
-              <span className="font-bold text-lg bg-gradient-to-r from-violet-500 to-sky-400 bg-clip-text text-transparent">GeFlow</span>
+              {settings?.logo_url ? (
+                <img src={settings.logo_url} alt={settings?.app_name ?? "Logo"} className="h-8 max-w-[140px] object-contain" />
+              ) : (
+                <>
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm">G</div>
+                  <span className="font-bold text-lg bg-gradient-to-r from-violet-500 to-sky-400 bg-clip-text text-transparent">{settings?.app_name ?? "GeFlow"}</span>
+                </>
+              )}
             </Link>
           )}
           <button onClick={() => setCollapsed(!collapsed)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
@@ -219,7 +228,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
               className="w-full h-10 pl-10 pr-4 bg-muted/40 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 ml-auto pl-2">
             {/* Theme toggle */}
             <button
               onClick={() => setTheme(isDark ? "light" : "dark")}

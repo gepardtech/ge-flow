@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Moon, Sun, User } from "lucide-react";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -16,6 +17,7 @@ const Navbar = () => {
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { settings } = usePlatformSettings();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -33,11 +35,17 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         {/* Left: Logo */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-primary">
-            <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
-          </svg>
-          <span className="font-bold text-lg text-foreground">GeFlow</span>
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt={settings?.app_name ?? "GeFlow"} className="h-8 max-w-[150px] object-contain" />
+          ) : (
+            <>
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-primary">
+                <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
+              </svg>
+              <span className="font-bold text-lg text-foreground">{settings?.app_name ?? "GeFlow"}</span>
+            </>
+          )}
         </Link>
 
         {/* Center: Nav links */}

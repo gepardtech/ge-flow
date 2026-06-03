@@ -21,7 +21,8 @@ import Terms from "./pages/Terms";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import SetupBusiness from "./pages/SetupBusiness";
-import PlatformSettingsApplier from "./components/PlatformSettingsApplier";
+import PlatformSettingsProvider from "./components/PlatformSettingsProvider";
+import AdminBillingCoupons from "./pages/admin/AdminBillingCoupons";
 
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminBusinesses from "./pages/admin/AdminBusinesses";
@@ -58,7 +59,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PlatformSettingsApplier />
+      <PlatformSettingsProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -79,6 +80,7 @@ const App = () => (
           <Route path="/admin/billing/pricing-plans" element={<AdminBillingPricing />} />
           <Route path="/admin/billing/invoices" element={<AdminBillingInvoices />} />
           <Route path="/admin/billing/refunds" element={<AdminBillingRefunds />} />
+          <Route path="/admin/billing/coupons" element={<AdminBillingCoupons />} />
           <Route path="/admin/features" element={<AdminFeatures />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/support" element={<AdminSupport />} />
@@ -105,6 +107,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </PlatformSettingsProvider>
     </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

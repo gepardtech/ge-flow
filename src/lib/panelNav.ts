@@ -22,6 +22,7 @@ export const ADMIN_NAV: NavItem[] = [
       { label: "Pricing Plans", to: "/admin/billing/pricing-plans" },
       { label: "Invoices", to: "/admin/billing/invoices" },
       { label: "Refunds", to: "/admin/billing/refunds" },
+      { label: "Coupon Codes", to: "/admin/billing/coupons" },
     ],
   },
   { label: "Feature Control", to: "/admin/features", icon: Eye },

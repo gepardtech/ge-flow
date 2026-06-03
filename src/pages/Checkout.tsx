@@ -52,32 +52,59 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
   const [paypalEmail, setPaypalEmail] = useState("");
   const [coupon, setCoupon] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number; label: string } | null>(null);
   const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [isAdminEmail, setIsAdminEmail] = useState(false);
 
-  const COUPONS: Record<string, number> = { GEFLOW10: 10, GEFLOW20: 20, LAUNCH50: 50 };
-
-  const discount = useMemo(
-    () => (appliedCoupon ? +(subtotal * (appliedCoupon.percent / 100)).toFixed(2) : 0),
-    [appliedCoupon, subtotal],
-  );
+  const discount = appliedCoupon?.amount ?? 0;
   const total = useMemo(() => +(Math.max(subtotal - discount, 0) + tax).toFixed(2), [subtotal, discount, tax]);
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     const code = coupon.trim().toUpperCase();
     if (!code) return;
-    if (COUPONS[code]) {
-      setAppliedCoupon({ code, percent: COUPONS[code] });
-      setCouponError("");
-      toast({ title: "Coupon applied!", description: `${COUPONS[code]}% discount activated.` });
-    } else {
+    setCouponLoading(true);
+    setCouponError("");
+    const { data, error } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("code", code)
+      .eq("active", true)
+      .maybeSingle();
+    setCouponLoading(false);
+    if (error || !data) {
       setAppliedCoupon(null);
       setCouponError("Invalid or expired coupon code.");
+      return;
     }
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      setAppliedCoupon(null); setCouponError("This coupon has expired."); return;
+    }
+    if (data.starts_at && new Date(data.starts_at) > new Date()) {
+      setAppliedCoupon(null); setCouponError("This coupon is not active yet."); return;
+    }
+    if (data.max_uses != null && data.used_count >= data.max_uses) {
+      setAppliedCoupon(null); setCouponError("This coupon has reached its usage limit."); return;
+    }
+    if (data.applies_to_plan && data.applies_to_plan !== plan) {
+      setAppliedCoupon(null); setCouponError(`This coupon only applies to the ${data.applies_to_plan} plan.`); return;
+    }
+    if (data.min_amount && subtotal < Number(data.min_amount)) {
+      setAppliedCoupon(null); setCouponError(`Requires a minimum order of $${Number(data.min_amount).toFixed(2)}.`); return;
+    }
+    const amount = data.discount_type === "fixed"
+      ? Math.min(Number(data.discount_value), subtotal)
+      : +(subtotal * (Number(data.discount_value) / 100)).toFixed(2);
+    const label = data.discount_type === "fixed"
+      ? `$${Number(data.discount_value).toFixed(2)} off`
+      : `${data.discount_value}% off`;
+    setAppliedCoupon({ code, amount: +amount.toFixed(2), label });
+    setCouponError("");
+    toast({ title: "Coupon applied!", description: `${label} activated.` });
   };
+
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
 
@@ -302,12 +329,12 @@ const Checkout = () => {
                     placeholder="Enter code"
                     className="h-10 uppercase"
                   />
-                  <Button type="button" onClick={applyCoupon} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
-                    APPLY
+                  <Button type="button" onClick={applyCoupon} disabled={couponLoading} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
+                    {couponLoading ? "..." : "APPLY"}
                   </Button>
                 </div>
                 {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
-                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.percent}% off applied</p>}
+                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.label} applied</p>}
               </div>
 
               <div className="border-t border-border" />

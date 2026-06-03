@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { CreditCard, Receipt, DollarSign, Undo2 } from "lucide-react";
+import { CreditCard, Receipt, DollarSign, Undo2, Ticket } from "lucide-react";
 
 const tabs = [
   { to: "/admin/billing/subscriptions", label: "Subscriptions", icon: CreditCard },
   { to: "/admin/billing/pricing-plans", label: "Pricing Plans", icon: DollarSign },
   { to: "/admin/billing/invoices", label: "Invoices", icon: Receipt },
   { to: "/admin/billing/refunds", label: "Refunds", icon: Undo2 },
+  { to: "/admin/billing/coupons", label: "Coupon Codes", icon: Ticket },
 ];
 
 const BillingTabs = () => (
