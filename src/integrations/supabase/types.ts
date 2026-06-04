@@ -990,12 +990,36 @@ export type Database = {
     }
     Functions: {
       get_business_limit: { Args: { _plan: string }; Returns: number }
+      get_public_platform_settings: {
+        Args: never
+        Returns: {
+          app_name: string
+          default_theme: string
+          favicon_url: string
+          id: string
+          interface_language: string
+          logo_url: string
+          primary_accent: string
+          secondary_accent: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      validate_coupon: {
+        Args: { _code: string; _plan: string; _subtotal: number }
+        Returns: {
+          amount: number
+          discount_type: string
+          discount_value: number
+          label: string
+          reason: string
+          valid: boolean
+        }[]
       }
     }
     Enums: {
