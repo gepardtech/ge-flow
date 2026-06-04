@@ -36,7 +36,7 @@ const UserPanelGate = ({ children, pageTitle }: Props) => {
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
-      navItems={USER_NAV}
+      navItems={userNavForPlan(planId)}
       identityName={`${plan.label} ${firstName}`}
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}
