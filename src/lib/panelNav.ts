@@ -2,12 +2,20 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
-  SlidersHorizontal, Megaphone,
+  SlidersHorizontal, Megaphone, TriangleAlert,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { PlanId } from "@/lib/plans";
 
 export interface NavChild { label: string; to: string; }
-export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
+export interface NavItem {
+  label: string;
+  to: string;
+  icon: LucideIcon;
+  children?: NavChild[];
+  /** Plans allowed to access this item. Undefined = all plans. */
+  plans?: PlanId[];
+}
 
 export const ADMIN_NAV: NavItem[] = [
   { label: "Dashboard", to: "/admin", icon: Activity },
