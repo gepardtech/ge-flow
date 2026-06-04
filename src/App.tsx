@@ -40,6 +40,8 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPlanLimits from "./pages/admin/AdminPlanLimits";
 
 import UserInventory from "./pages/user/UserInventory";
+import UserLowStock from "./pages/user/UserLowStock";
+import UserBusinesses from "./pages/user/UserBusinesses";
 import UserOutOfStock from "./pages/user/UserOutOfStock";
 import UserPOS from "./pages/user/UserPOS";
 import UserPurchases from "./pages/user/UserPurchases";
@@ -89,6 +91,8 @@ const App = () => (
           <Route path="/setup/business" element={<SetupBusiness />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/inventory" element={<UserInventory />} />
+          <Route path="/dashboard/low-stock" element={<UserLowStock />} />
+          <Route path="/dashboard/businesses" element={<UserBusinesses />} />
           <Route path="/dashboard/out-of-stock" element={<UserOutOfStock />} />
           <Route path="/dashboard/pos" element={<UserPOS />} />
           <Route path="/dashboard/purchases" element={<UserPurchases />} />

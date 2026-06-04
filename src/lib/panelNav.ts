@@ -2,12 +2,20 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
-  SlidersHorizontal, Megaphone,
+  SlidersHorizontal, Megaphone, TriangleAlert,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { PlanId } from "@/lib/plans";
 
 export interface NavChild { label: string; to: string; }
-export interface NavItem { label: string; to: string; icon: LucideIcon; children?: NavChild[]; }
+export interface NavItem {
+  label: string;
+  to: string;
+  icon: LucideIcon;
+  children?: NavChild[];
+  /** Plans allowed to access this item. Undefined = all plans. */
+  plans?: PlanId[];
+}
 
 export const ADMIN_NAV: NavItem[] = [
   { label: "Dashboard", to: "/admin", icon: Activity },
@@ -35,17 +43,24 @@ export const ADMIN_NAV: NavItem[] = [
 export const USER_NAV: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Inventory", to: "/dashboard/inventory", icon: Package },
+  { label: "Low Stock", to: "/dashboard/low-stock", icon: TriangleAlert },
   { label: "Out of Stock", to: "/dashboard/out-of-stock", icon: AlertCircle },
   { label: "POS Terminal", to: "/dashboard/pos", icon: ShoppingCart },
-  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag },
+  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag, plans: ["standard", "premium", "lifetime"] },
   { label: "Reports", to: "/dashboard/reports", icon: FileText },
-  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3 },
-  { label: "Team Hub", to: "/dashboard/team", icon: Users },
+  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3, plans: ["premium", "lifetime"] },
+  { label: "My Businesses", to: "/dashboard/businesses", icon: Building2 },
+  { label: "Team Hub", to: "/dashboard/team", icon: Users, plans: ["standard", "premium", "lifetime"] },
   { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard },
   { label: "Announcements", to: "/dashboard/announcements", icon: Megaphone },
   { label: "Support", to: "/dashboard/support", icon: LifeBuoy },
   { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon },
 ];
+
+/** Returns the nav items a given plan is allowed to see. */
+export const userNavForPlan = (planId: PlanId): NavItem[] =>
+  USER_NAV.filter((item) => !item.plans || item.plans.includes(planId));
+
 
 export const ADMIN_IDENTITY = {
   sidebarLabel: "SYSTEM ORCHESTRATION",
