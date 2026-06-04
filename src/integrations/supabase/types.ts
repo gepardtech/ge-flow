@@ -986,42 +986,23 @@ export type Database = {
       }
     }
     Views: {
-      public_platform_settings: {
-        Row: {
-          app_name: string | null
-          default_theme: string | null
-          favicon_url: string | null
-          id: string | null
-          interface_language: string | null
-          logo_url: string | null
-          primary_accent: string | null
-          secondary_accent: string | null
-        }
-        Insert: {
-          app_name?: string | null
-          default_theme?: string | null
-          favicon_url?: string | null
-          id?: string | null
-          interface_language?: string | null
-          logo_url?: string | null
-          primary_accent?: string | null
-          secondary_accent?: string | null
-        }
-        Update: {
-          app_name?: string | null
-          default_theme?: string | null
-          favicon_url?: string | null
-          id?: string | null
-          interface_language?: string | null
-          logo_url?: string | null
-          primary_accent?: string | null
-          secondary_accent?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       get_business_limit: { Args: { _plan: string }; Returns: number }
+      get_public_platform_settings: {
+        Args: never
+        Returns: {
+          app_name: string
+          default_theme: string
+          favicon_url: string
+          id: string
+          interface_language: string
+          logo_url: string
+          primary_accent: string
+          secondary_accent: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
