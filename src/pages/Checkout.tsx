@@ -67,39 +67,26 @@ const Checkout = () => {
     if (!code) return;
     setCouponLoading(true);
     setCouponError("");
-    const { data, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .eq("code", code)
-      .eq("active", true)
-      .maybeSingle();
+    // Validate via a secure function so the full coupon table is never exposed.
+    const { data, error } = await supabase.rpc("validate_coupon", {
+      _code: code,
+      _plan: plan,
+      _subtotal: subtotal,
+    });
     setCouponLoading(false);
-    if (error || !data) {
+    const result = Array.isArray(data) ? data[0] : data;
+    if (error || !result) {
       setAppliedCoupon(null);
       setCouponError("Invalid or expired coupon code.");
       return;
     }
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      setAppliedCoupon(null); setCouponError("This coupon has expired."); return;
+    if (!result.valid) {
+      setAppliedCoupon(null);
+      setCouponError(result.reason || "Invalid or expired coupon code.");
+      return;
     }
-    if (data.starts_at && new Date(data.starts_at) > new Date()) {
-      setAppliedCoupon(null); setCouponError("This coupon is not active yet."); return;
-    }
-    if (data.max_uses != null && data.used_count >= data.max_uses) {
-      setAppliedCoupon(null); setCouponError("This coupon has reached its usage limit."); return;
-    }
-    if (data.applies_to_plan && data.applies_to_plan !== plan) {
-      setAppliedCoupon(null); setCouponError(`This coupon only applies to the ${data.applies_to_plan} plan.`); return;
-    }
-    if (data.min_amount && subtotal < Number(data.min_amount)) {
-      setAppliedCoupon(null); setCouponError(`Requires a minimum order of $${Number(data.min_amount).toFixed(2)}.`); return;
-    }
-    const amount = data.discount_type === "fixed"
-      ? Math.min(Number(data.discount_value), subtotal)
-      : +(subtotal * (Number(data.discount_value) / 100)).toFixed(2);
-    const label = data.discount_type === "fixed"
-      ? `$${Number(data.discount_value).toFixed(2)} off`
-      : `${data.discount_value}% off`;
+    const amount = Number(result.amount) || 0;
+    const label = result.label || "";
     setAppliedCoupon({ code, amount: +amount.toFixed(2), label });
     setCouponError("");
     toast({ title: "Coupon applied!", description: `${label} activated.` });
