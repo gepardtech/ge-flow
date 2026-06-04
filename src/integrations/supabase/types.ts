@@ -659,6 +659,97 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          barcode: string | null
+          batch_number: string | null
+          business_id: string
+          category_id: string | null
+          created_at: string
+          description: string | null
+          discount_price: number | null
+          expiry_date: string | null
+          id: string
+          images: string[]
+          internal_sku: string | null
+          min_stock_alert: number
+          name: string
+          owner_user_id: string
+          purchase_cost: number
+          retail_price: number
+          status: string
+          stock_units: number
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          batch_number?: string | null
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_price?: number | null
+          expiry_date?: string | null
+          id?: string
+          images?: string[]
+          internal_sku?: string | null
+          min_stock_alert?: number
+          name: string
+          owner_user_id: string
+          purchase_cost?: number
+          retail_price?: number
+          status?: string
+          stock_units?: number
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          batch_number?: string | null
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_price?: number | null
+          expiry_date?: string | null
+          id?: string
+          images?: string[]
+          internal_sku?: string | null
+          min_stock_alert?: number
+          name?: string
+          owner_user_id?: string
+          purchase_cost?: number
+          retail_price?: number
+          status?: string
+          stock_units?: number
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -772,6 +863,149 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          owner_user_id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          unit_cost: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          sale_id: string
+          unit_cost?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          unit_cost?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          owner_user_id: string
+          processed_by: string | null
+          profit: number
+          status: string
+          total: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          processed_by?: string | null
+          profit?: number
+          status?: string
+          total?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          processed_by?: string | null
+          profit?: number
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          note: string | null
+          owner_user_id: string
+          product_id: string
+          quantity: number
+          reason: string | null
+          type: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_user_id: string
+          product_id: string
+          quantity?: number
+          reason?: string | null
+          type?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_user_id?: string
+          product_id?: string
+          quantity?: number
+          reason?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
