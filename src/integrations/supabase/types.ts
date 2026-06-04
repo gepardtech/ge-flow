@@ -986,7 +986,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_platform_settings: {
+        Row: {
+          app_name: string | null
+          default_theme: string | null
+          favicon_url: string | null
+          id: string | null
+          interface_language: string | null
+          logo_url: string | null
+          primary_accent: string | null
+          secondary_accent: string | null
+        }
+        Insert: {
+          app_name?: string | null
+          default_theme?: string | null
+          favicon_url?: string | null
+          id?: string | null
+          interface_language?: string | null
+          logo_url?: string | null
+          primary_accent?: string | null
+          secondary_accent?: string | null
+        }
+        Update: {
+          app_name?: string | null
+          default_theme?: string | null
+          favicon_url?: string | null
+          id?: string | null
+          interface_language?: string | null
+          logo_url?: string | null
+          primary_accent?: string | null
+          secondary_accent?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_business_limit: { Args: { _plan: string }; Returns: number }
@@ -996,6 +1028,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      validate_coupon: {
+        Args: { _code: string; _plan: string; _subtotal: number }
+        Returns: {
+          amount: number
+          discount_type: string
+          discount_value: number
+          label: string
+          reason: string
+          valid: boolean
+        }[]
       }
     }
     Enums: {
