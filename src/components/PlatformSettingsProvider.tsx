@@ -68,18 +68,20 @@ export const PlatformSettingsProvider = ({ children }: { children: ReactNode }) 
 
   useEffect(() => {
     let active = true;
+    // Only public, display-facing branding fields are fetched here via a
+    // secure function. Sensitive platform settings stay admin-only at the DB.
     const load = async () => {
-      const { data } = await supabase.from("platform_settings").select("*").limit(1).maybeSingle();
-      if (active && data) { setSettings(data); applyPlatformSettings(data); }
+      const { data } = await supabase.rpc("get_public_platform_settings");
+      const row = Array.isArray(data) ? data[0] : data;
+      if (active && row) { setSettings(row); applyPlatformSettings(row); }
       setLoading(false);
     };
     load();
     const ch = supabase
       .channel("platform_settings_global")
-      .on("postgres_changes", { event: "*", schema: "public", table: "platform_settings" }, (p) => {
-        const next = p.new as PlatformSettings;
-        setSettings(next);
-        applyPlatformSettings(next);
+      .on("postgres_changes", { event: "*", schema: "public", table: "platform_settings" }, () => {
+        // Re-fetch only the safe public fields on any change.
+        load();
       })
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
