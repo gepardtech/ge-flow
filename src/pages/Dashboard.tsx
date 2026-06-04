@@ -126,8 +126,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (bizLoading) return;
+    if (!active) { navigate("/setup/business"); return; }
     load();
-  }, [bizLoading, load]);
+  }, [bizLoading, active, load, navigate]);
 
   // Realtime
   useEffect(() => {
