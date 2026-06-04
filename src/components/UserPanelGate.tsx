@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import PanelLayout from "@/components/PanelLayout";
-import { USER_NAV } from "@/lib/panelNav";
+import { userNavForPlan } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 import { isRouteLocked } from "@/lib/plans";
 import PlanLockedScreen from "@/components/PlanLockedScreen";
