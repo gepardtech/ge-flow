@@ -74,21 +74,21 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/businesses" element={<AdminBusinesses />} />
-          <Route path="/admin/business-categories" element={<AdminBusinessCategories />} />
-          <Route path="/admin/product-categories" element={<AdminProductCategories />} />
-          <Route path="/admin/billing" element={<AdminBilling />} />
-          <Route path="/admin/billing/subscriptions" element={<AdminBillingSubscriptions />} />
-          <Route path="/admin/billing/pricing-plans" element={<AdminBillingPricing />} />
-          <Route path="/admin/billing/invoices" element={<AdminBillingInvoices />} />
-          <Route path="/admin/billing/refunds" element={<AdminBillingRefunds />} />
-          <Route path="/admin/billing/coupons" element={<AdminBillingCoupons />} />
-          <Route path="/admin/features" element={<AdminFeatures />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          <Route path="/admin/support" element={<AdminSupport />} />
-          <Route path="/admin/plan-limits" element={<AdminPlanLimits />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
+          <Route path="/admin/businesses" element={<AdminGuard><AdminBusinesses /></AdminGuard>} />
+          <Route path="/admin/business-categories" element={<AdminGuard><AdminBusinessCategories /></AdminGuard>} />
+          <Route path="/admin/product-categories" element={<AdminGuard><AdminProductCategories /></AdminGuard>} />
+          <Route path="/admin/billing" element={<AdminGuard><AdminBilling /></AdminGuard>} />
+          <Route path="/admin/billing/subscriptions" element={<AdminGuard><AdminBillingSubscriptions /></AdminGuard>} />
+          <Route path="/admin/billing/pricing-plans" element={<AdminGuard><AdminBillingPricing /></AdminGuard>} />
+          <Route path="/admin/billing/invoices" element={<AdminGuard><AdminBillingInvoices /></AdminGuard>} />
+          <Route path="/admin/billing/refunds" element={<AdminGuard><AdminBillingRefunds /></AdminGuard>} />
+          <Route path="/admin/billing/coupons" element={<AdminGuard><AdminBillingCoupons /></AdminGuard>} />
+          <Route path="/admin/features" element={<AdminGuard><AdminFeatures /></AdminGuard>} />
+          <Route path="/admin/analytics" element={<AdminGuard><AdminAnalytics /></AdminGuard>} />
+          <Route path="/admin/support" element={<AdminGuard><AdminSupport /></AdminGuard>} />
+          <Route path="/admin/plan-limits" element={<AdminGuard><AdminPlanLimits /></AdminGuard>} />
+          <Route path="/admin/settings" element={<AdminGuard><AdminSettings /></AdminGuard>} />
           <Route path="/setup/business" element={<SetupBusiness />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/inventory" element={<UserInventory />} />
