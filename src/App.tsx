@@ -22,6 +22,7 @@ import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import SetupBusiness from "./pages/SetupBusiness";
 import PlatformSettingsProvider from "./components/PlatformSettingsProvider";
+import AdminGuard from "./components/AdminGuard";
 import AdminBillingCoupons from "./pages/admin/AdminBillingCoupons";
 
 import AdminUsers from "./pages/admin/AdminUsers";
