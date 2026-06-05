@@ -34,7 +34,7 @@ const AnnouncementBar = ({ audience, position = "top" }: Props) => {
       setItems(filtered as Announcement[]);
     };
     load();
-    const ch = supabase.channel(`ann_${audience}_${position}`)
+    const ch = supabase.channel(`ann_${audience}_${position}_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };

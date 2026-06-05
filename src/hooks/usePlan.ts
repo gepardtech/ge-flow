@@ -55,7 +55,7 @@ export const usePlan = (): PlanState => {
       apply(data, user.id, user.email ?? null);
 
       channel = supabase
-        .channel(`profile-plan-${user.id}`)
+        .channel(`profile-plan-${user.id}-${Math.random().toString(36).slice(2)}`)
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
