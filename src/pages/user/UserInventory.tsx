@@ -1,106 +1,259 @@
-import { useEffect, useState } from "react";
-import { Package, Plus, Lock, AlertTriangle, Infinity as InfinityIcon, ShieldCheck } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  Package, Plus, Lock, Search, MoreVertical, BarChart3, Pencil, Gauge, Trash2,
+  Boxes, DollarSign, AlertTriangle, XCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import UserPanelGate from "@/components/UserPanelGate";
 import { usePlan } from "@/hooks/usePlan";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import ProductDialog, { ProductRecord } from "@/components/inventory/ProductDialog";
+import ProductInsightsDialog from "@/components/inventory/ProductInsightsDialog";
+
+const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 const UserInventory = () => {
   const { plan } = usePlan();
-  const { getLimit, isExceeded, loading } = usePlanLimits();
+  const { getLimit, isExceeded } = usePlanLimits();
+  const { active, loading: bizLoading } = useActiveBusiness();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [used, setUsed] = useState(0);
+
+  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [userId, setUserId] = useState<string>("");
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<ProductRecord | null>(null);
+  const [insights, setInsights] = useState<{ product: ProductRecord; mode: "analytics" | "velocity" } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProductRecord | null>(null);
+
+  const load = useCallback(async () => {
+    if (!active) { setLoading(false); return; }
+    setLoading(true);
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, internal_sku, description, category_id, purchase_cost, retail_price, discount_price, stock_units, min_stock_alert, batch_number, expiry_date, barcode, status")
+      .eq("business_id", active.id)
+      .order("created_at", { ascending: false });
+    setProducts((data as ProductRecord[]) ?? []);
+    setLoading(false);
+  }, [active]);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("listed_products").eq("user_id", user.id).maybeSingle();
-      setUsed((data as any)?.listed_products ?? 0);
+      setUserId(user?.id ?? "");
     })();
   }, []);
 
-  const productLimit = getLimit("products"); // null = unlimited
-  const exceeded = isExceeded("products", used);
-  const pct = productLimit === null ? 0 : Math.min(100, Math.round((used / productLimit) * 100));
+  useEffect(() => { if (!bizLoading) load(); }, [bizLoading, load]);
 
-  const handleAdd = () => {
+  useEffect(() => {
+    if (!active) return;
+    const ch = supabase.channel(`inventory-${active.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `business_id=eq.${active.id}` }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [active, load]);
+
+  const productLimit = getLimit("products");
+  const used = products.length;
+  const exceeded = isExceeded("products", used);
+
+  const totalStockValue = products.reduce((s, p) => s + p.stock_units * Number(p.purchase_cost), 0);
+  const lowStock = products.filter((p) => p.stock_units > 0 && p.stock_units <= p.min_stock_alert).length;
+  const outOfStock = products.filter((p) => p.stock_units <= 0).length;
+
+  const openAdd = () => {
     if (exceeded) {
-      toast({
-        title: "Product limit reached",
-        description: `Your ${plan.label} plan allows ${productLimit} products. Upgrade to add more.`,
-        variant: "destructive",
-      });
+      toast({ title: "Product limit reached", description: `Your ${plan.label} plan allows ${productLimit} products. Upgrade to add more.`, variant: "destructive" });
       return;
     }
-    toast({ title: "Ready to add a product", description: "Product form coming up next." });
+    setEditing(null);
+    setDialogOpen(true);
   };
+
+  const openEdit = (p: ProductRecord) => { setEditing(p); setDialogOpen(true); };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("products").delete().eq("id", deleteTarget.id);
+    if (error) { toast({ title: "Could not delete", description: error.message, variant: "destructive" }); }
+    else { toast({ title: "Product deleted", description: deleteTarget.name }); load(); }
+    setDeleteTarget(null);
+  };
+
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.internal_sku ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (p.barcode ?? "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const kpis = [
+    { label: "Total Products", value: used, icon: Boxes, color: "text-sky-500 bg-sky-500/15" },
+    { label: "Stock Value", value: fmt(totalStockValue), icon: DollarSign, color: "text-emerald-500 bg-emerald-500/15" },
+    { label: "Low Stock", value: lowStock, icon: AlertTriangle, color: "text-amber-500 bg-amber-500/15" },
+    { label: "Out of Stock", value: outOfStock, icon: XCircle, color: "text-rose-500 bg-rose-500/15" },
+  ];
 
   return (
     <UserPanelGate pageTitle="Inventory">
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Inventory</h1>
-          <p className="text-sm text-muted-foreground">All products, batches and stock levels for your {plan.label} workspace.</p>
+          <p className="text-sm text-muted-foreground">
+            All products, batches and stock levels for {active?.business_name ?? "your workspace"}.
+            {productLimit !== null && <> <span className="font-semibold">{used}/{productLimit}</span> used.</>}
+          </p>
         </div>
-        <Button onClick={handleAdd} disabled={exceeded} className="h-11 px-5 rounded-xl bg-sky-400 hover:bg-sky-500 text-white font-bold disabled:opacity-60">
+        <Button onClick={openAdd} disabled={exceeded} className="h-11 px-5 rounded-xl bg-sky-400 hover:bg-sky-500 text-white font-bold disabled:opacity-60">
           {exceeded ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />} Add Product
         </Button>
       </div>
 
-      {/* Live quota card driven by plan_limits */}
-      <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-sky-400/15 text-sky-500 flex items-center justify-center"><Package className="h-4 w-4" /></div>
-            <div>
-              <p className="font-bold">Product Quota</p>
-              <p className="text-xs text-muted-foreground">Live limit enforced from your plan tier.</p>
-            </div>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {kpis.map((k) => (
+          <div key={k.label} className="bg-card border border-border rounded-2xl p-5">
+            <div className={`h-10 w-10 rounded-xl ${k.color} flex items-center justify-center mb-3`}><k.icon className="h-5 w-5" /></div>
+            <p className="text-2xl font-bold">{k.value}</p>
+            <p className="text-xs text-muted-foreground tracking-wider mt-0.5">{k.label}</p>
           </div>
-          <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full ${plan.badgeClass}`}>{plan.label.toUpperCase()}</span>
-        </div>
+        ))}
+      </div>
 
-        {loading ? (
-          <div className="h-2 w-full bg-muted rounded-full animate-pulse" />
-        ) : (
-          <>
-            <div className="flex items-end justify-between mb-2">
-              <p className="text-2xl font-bold">{used} <span className="text-sm font-medium text-muted-foreground">used</span></p>
-              <p className="text-sm font-bold text-muted-foreground inline-flex items-center gap-1">
-                {productLimit === null ? <><InfinityIcon className="h-4 w-4 text-emerald-500" /> Unlimited</> : `of ${productLimit}`}
-              </p>
-            </div>
-            {productLimit !== null && (
-              <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-sky-400"}`} style={{ width: `${pct}%` }} />
-              </div>
-            )}
-          </>
-        )}
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products by name, SKU or barcode..." className="w-full h-12 pl-11 pr-4 bg-card border border-border rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+      </div>
 
-        {exceeded ? (
-          <div className="mt-4 flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
-            <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0" />
-            <p className="text-xs flex-1">You've reached your product limit. Upgrade your plan to keep adding inventory.</p>
-            <Button onClick={() => navigate("/dashboard/subscription")} size="sm" className="bg-rose-500 hover:bg-rose-600 text-white">Upgrade</Button>
+      {/* Table */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {bizLoading || loading ? (
+          <div className="p-12 text-center text-muted-foreground">Loading inventory...</div>
+        ) : !active ? (
+          <div className="p-12 text-center">
+            <Package className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+            <p className="font-bold">No business selected</p>
+            <p className="text-sm text-muted-foreground mt-1">Create or select a business to manage inventory.</p>
+            <Button onClick={() => navigate("/dashboard/businesses")} className="mt-4">Go to Businesses</Button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center">
+            <Package className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+            <p className="font-bold">{search ? "No matching products" : "No products yet"}</p>
+            <p className="text-sm text-muted-foreground mt-1">{search ? "Try a different search." : "Add your first product to start tracking stock, batches and pricing."}</p>
           </div>
         ) : (
-          <div className="mt-4 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
-            <ShieldCheck className="h-4 w-4" /> You can keep adding products within your plan limit.
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-[10px] font-bold tracking-widest text-muted-foreground border-b border-border">
+                  <th className="text-left px-6 py-4">PRODUCT / SKU</th>
+                  <th className="text-left px-6 py-4">PRICING</th>
+                  <th className="text-left px-6 py-4">STOCK</th>
+                  <th className="text-left px-6 py-4">STATUS</th>
+                  <th className="text-right px-6 py-4">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const out = p.stock_units <= 0;
+                  const low = !out && p.stock_units <= p.min_stock_alert;
+                  const margin = Number(p.retail_price) > 0 ? Math.round(((Number(p.retail_price) - Number(p.purchase_cost)) / Number(p.retail_price)) * 100) : 0;
+                  return (
+                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><Package className="h-4 w-4" /></div>
+                          <div>
+                            <p className="font-bold text-sm">{p.name}</p>
+                            <p className="text-[10px] text-muted-foreground tracking-wider">{p.internal_sku || p.barcode || "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-sm">{fmt(Number(p.discount_price ?? p.retail_price))}</p>
+                        <p className="text-[10px] text-muted-foreground">cost {fmt(Number(p.purchase_cost))} · <span className={margin >= 0 ? "text-emerald-500" : "text-rose-500"}>{margin}% margin</span></p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-lg font-bold ${out ? "text-rose-500" : low ? "text-amber-500" : "text-foreground"}`}>{p.stock_units}</span>
+                        <p className="text-[10px] text-muted-foreground tracking-wider">alert ≤ {p.min_stock_alert}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full ${out ? "bg-rose-500/15 text-rose-500" : low ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500"}`}>
+                          {out ? "OUT OF STOCK" : low ? "LOW STOCK" : "IN STOCK"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem onClick={() => setInsights({ product: p, mode: "analytics" })}><BarChart3 className="h-4 w-4 mr-2" /> View Analytics</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(p)}><Pencil className="h-4 w-4 mr-2" /> Edit Product</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setInsights({ product: p, mode: "velocity" })}><Gauge className="h-4 w-4 mr-2" /> View Sale Velocity</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setDeleteTarget(p)} className="text-rose-500 focus:text-rose-500"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-12 text-center">
-        <Package className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-        <p className="font-bold">No products yet</p>
-        <p className="text-sm text-muted-foreground mt-1">Add your first product to start tracking stock, batches and pricing.</p>
-      </div>
+      {active && userId && (
+        <ProductDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          businessId={active.id}
+          ownerUserId={userId}
+          product={editing}
+          onSaved={load}
+        />
+      )}
+
+      <ProductInsightsDialog
+        open={!!insights}
+        onOpenChange={(v) => { if (!v) setInsights(null); }}
+        product={insights?.product ?? null}
+        mode={insights?.mode ?? "analytics"}
+      />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-semibold">{deleteTarget?.name}</span> and its stock records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-rose-500 hover:bg-rose-600 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </UserPanelGate>
   );
 };
