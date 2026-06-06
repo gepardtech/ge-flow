@@ -15,6 +15,8 @@ export interface NavItem {
   children?: NavChild[];
   /** Plans allowed to access this item. Undefined = all plans. */
   plans?: PlanId[];
+  /** Business-category module id required to see this item. Undefined = always visible. */
+  module?: string;
 }
 
 export const ADMIN_NAV: NavItem[] = [
