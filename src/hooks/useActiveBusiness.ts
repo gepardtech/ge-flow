@@ -43,6 +43,7 @@ export const useActiveBusiness = () => {
   const setActive = useCallback((id: string) => {
     localStorage.setItem(LS_KEY, id);
     setActiveId(id);
+    window.dispatchEvent(new CustomEvent("geflow:business-changed"));
   }, []);
 
   const active = businesses.find((b) => b.id === activeId) ?? null;
