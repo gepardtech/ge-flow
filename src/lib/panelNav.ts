@@ -15,6 +15,8 @@ export interface NavItem {
   children?: NavChild[];
   /** Plans allowed to access this item. Undefined = all plans. */
   plans?: PlanId[];
+  /** Business-category module id required to see this item. Undefined = always visible. */
+  module?: string;
 }
 
 export const ADMIN_NAV: NavItem[] = [
@@ -41,25 +43,38 @@ export const ADMIN_NAV: NavItem[] = [
 ];
 
 export const USER_NAV: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Inventory", to: "/dashboard/inventory", icon: Package },
-  { label: "Low Stock", to: "/dashboard/low-stock", icon: TriangleAlert },
-  { label: "Out of Stock", to: "/dashboard/out-of-stock", icon: AlertCircle },
-  { label: "POS Terminal", to: "/dashboard/pos", icon: ShoppingCart },
-  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag, plans: ["standard", "premium", "lifetime"] },
-  { label: "Reports", to: "/dashboard/reports", icon: FileText },
-  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3, plans: ["premium", "lifetime"] },
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, module: "dashboard" },
+  { label: "Inventory", to: "/dashboard/inventory", icon: Package, module: "inventory" },
+  { label: "Low Stock", to: "/dashboard/low-stock", icon: TriangleAlert, module: "inventory" },
+  { label: "Out of Stock", to: "/dashboard/out-of-stock", icon: AlertCircle, module: "inventory" },
+  { label: "POS Terminal", to: "/dashboard/pos", icon: ShoppingCart, module: "pos" },
+  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag, plans: ["standard", "premium", "lifetime"], module: "purchases" },
+  { label: "Reports", to: "/dashboard/reports", icon: FileText, module: "reports" },
+  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3, plans: ["premium", "lifetime"], module: "analytics" },
   { label: "My Businesses", to: "/dashboard/businesses", icon: Building2 },
-  { label: "Team Hub", to: "/dashboard/team", icon: Users, plans: ["standard", "premium", "lifetime"] },
+  { label: "Team Hub", to: "/dashboard/team", icon: Users, plans: ["standard", "premium", "lifetime"], module: "team" },
   { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard },
   { label: "Announcements", to: "/dashboard/announcements", icon: Megaphone },
   { label: "Support", to: "/dashboard/support", icon: LifeBuoy },
-  { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon },
+  { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon, module: "settings" },
 ];
 
 /** Returns the nav items a given plan is allowed to see. */
 export const userNavForPlan = (planId: PlanId): NavItem[] =>
   USER_NAV.filter((item) => !item.plans || item.plans.includes(planId));
+
+/**
+ * Returns nav items allowed by BOTH the user's plan and the admin-appointed
+ * modules for the active business category. When `modules` is null (no business
+ * category resolved yet) module gating is skipped so account pages stay usable.
+ */
+export const userNavForPlanAndModules = (planId: PlanId, modules: string[] | null): NavItem[] =>
+  USER_NAV.filter((item) => {
+    if (item.plans && !item.plans.includes(planId)) return false;
+    if (item.module && modules !== null && !modules.includes(item.module)) return false;
+    return true;
+  });
+
 
 
 export const ADMIN_IDENTITY = {
