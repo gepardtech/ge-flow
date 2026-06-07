@@ -16,6 +16,20 @@ import {
 
 type SettingsRow = Record<string, any>;
 
+// Full global timezone list (falls back to a curated set on older browsers).
+const TIMEZONES: string[] = (() => {
+  try {
+    // @ts-ignore - supportedValuesOf is widely available in modern browsers
+    const list = Intl.supportedValuesOf?.("timeZone");
+    if (Array.isArray(list) && list.length) return list as string[];
+  } catch { /* noop */ }
+  return [
+    "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+    "Europe/London", "Europe/Paris", "Europe/Berlin", "Asia/Dubai", "Asia/Karachi",
+    "Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo", "Australia/Sydney",
+  ];
+})();
+
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result as string);
