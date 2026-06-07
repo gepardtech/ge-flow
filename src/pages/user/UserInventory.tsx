@@ -28,6 +28,7 @@ const UserInventory = () => {
   const { getLimit, isExceeded } = usePlanLimits();
   const { active, loading: bizLoading } = useActiveBusiness();
   const { toast } = useToast();
+  const { format: fmt } = useMoney();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
