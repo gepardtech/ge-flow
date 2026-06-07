@@ -16,6 +16,20 @@ import {
 
 type SettingsRow = Record<string, any>;
 
+// Full global timezone list (falls back to a curated set on older browsers).
+const TIMEZONES: string[] = (() => {
+  try {
+    // @ts-ignore - supportedValuesOf is widely available in modern browsers
+    const list = Intl.supportedValuesOf?.("timeZone");
+    if (Array.isArray(list) && list.length) return list as string[];
+  } catch { /* noop */ }
+  return [
+    "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+    "Europe/London", "Europe/Paris", "Europe/Berlin", "Asia/Dubai", "Asia/Karachi",
+    "Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo", "Australia/Sydney",
+  ];
+})();
+
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result as string);
@@ -101,11 +115,19 @@ const AdminSettings = () => {
         </TabsList>
 
         {/* GENERAL */}
-        <TabsContent value="general" className="mt-6">
+        <TabsContent value="general" className="mt-6 space-y-6">
           <Card title="Platform Identity" desc="Core naming and regional defaults.">
             <Field label="Application Name"><Input value={form.app_name ?? ""} onChange={(e) => set("app_name", e.target.value)} /></Field>
+            <Field label="Tagline"><Input value={form.tagline ?? ""} onChange={(e) => set("tagline", e.target.value)} placeholder="Short slogan shown across the app" /></Field>
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="System Timezone"><Input value={form.system_timezone ?? ""} onChange={(e) => set("system_timezone", e.target.value)} /></Field>
+              <Field label="System Timezone">
+                <Select value={form.system_timezone ?? "UTC"} onValueChange={(v) => set("system_timezone", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {TIMEZONES.map((tz) => <SelectItem key={tz} value={tz}>{tz.replace(/_/g, " ")}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Interface Language">
                 <Select value={form.interface_language ?? "en-US"} onValueChange={(v) => set("interface_language", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -122,7 +144,15 @@ const AdminSettings = () => {
             <Toggle label="Global branch sync" desc="Keep inventory and pricing synced across branches." checked={!!form.global_branch_sync} onChange={(v) => set("global_branch_sync", v)} />
             <Toggle label="API maintenance mode" desc="Temporarily pause external API access for maintenance." checked={!!form.api_maintenance} onChange={(v) => set("api_maintenance", v)} />
           </Card>
+
+          <Card title="Maintenance Mode" desc="Take the user panel offline for everyone except admins.">
+            <Toggle label="Enable maintenance mode" desc="When on, all non-admin users see a maintenance screen instead of the workspace." checked={!!form.maintenance_mode} onChange={(v) => set("maintenance_mode", v)} />
+            <Field label="Maintenance Message">
+              <Input value={form.maintenance_message ?? ""} onChange={(e) => set("maintenance_message", e.target.value)} placeholder="GeFlow is under maintenance, please come back in some time." />
+            </Field>
+          </Card>
         </TabsContent>
+
 
         {/* BRANDING */}
         <TabsContent value="branding" className="mt-6 grid lg:grid-cols-2 gap-6 items-start">

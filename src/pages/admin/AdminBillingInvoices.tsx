@@ -3,13 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import BillingTabs from "@/components/BillingTabs";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
-import { Search, Plus, MoreVertical, Loader2, Download } from "lucide-react";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
+import { Search, Plus, MoreVertical, Loader2, Download, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+
+interface BrandOpts { logo?: string | null; appName?: string; tagline?: string | null; }
+
 
 interface Inv {
   id: string; invoice_number: string; client_name: string; billing_email: string;
@@ -25,10 +30,23 @@ const statusBadge = (s: string) => ({
 
 const blank = () => ({ client_name: "", billing_email: "", plan: "standard", payment_method: "Stripe", amount: 0, status: "paid", issue_date: new Date().toISOString().slice(0,10), notes: "" });
 
-const downloadInvoicePdf = (inv: Inv & { notes?: string | null }) => {
+const downloadInvoicePdf = (inv: Inv & { notes?: string | null }, brand: BrandOpts = {}) => {
   const doc = new jsPDF();
-  doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.text("GeFlow", 20, 22);
-  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.text("by Gepard Tech", 20, 28);
+  const appName = brand.appName || "GeFlow";
+  let headerY = 22;
+  if (brand.logo) {
+    try {
+      const fmt = brand.logo.startsWith("data:image/png") ? "PNG"
+        : brand.logo.startsWith("data:image/jpeg") || brand.logo.startsWith("data:image/jpg") ? "JPEG"
+        : brand.logo.startsWith("data:image/webp") ? "WEBP" : "PNG";
+      doc.addImage(brand.logo, fmt, 20, 12, 40, 16);
+      headerY = 36;
+    } catch { /* fall back to text below */ }
+  }
+  if (!brand.logo) {
+    doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.text(appName, 20, 22);
+    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.text(brand.tagline || "by Gepard Tech", 20, 28);
+  }
   doc.setFontSize(18); doc.setFont("helvetica","bold"); doc.text("INVOICE", 190, 22, { align: "right" });
   doc.setFontSize(10); doc.setFont("helvetica","normal");
   doc.text(`#${inv.invoice_number}`, 190, 28, { align: "right" });
@@ -48,16 +66,20 @@ const downloadInvoicePdf = (inv: Inv & { notes?: string | null }) => {
   doc.setFont("helvetica","bold"); doc.setFontSize(13);
   doc.text("TOTAL", 130, 122); doc.text(`$${Number(inv.amount).toFixed(2)}`, 187, 122, { align: "right" });
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120);
-  doc.text("Thank you for choosing GeFlow. For support, contact gepardwebs@gmail.com", 105, 270, { align: "center" });
-  doc.save(`GeFlow-${inv.invoice_number}.pdf`);
+  doc.text(`Thank you for choosing ${appName}. For support, contact gepardwebs@gmail.com`, 105, 270, { align: "center" });
+  doc.save(`${appName}-${inv.invoice_number}.pdf`);
 };
 
 const AdminBillingInvoices = () => {
   const { toast } = useToast();
+  const { settings } = usePlatformSettings();
+  const brand: BrandOpts = { logo: settings?.logo_url, appName: settings?.app_name, tagline: settings?.tagline };
   const [rows, setRows] = useState<Inv[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [delTarget, setDelTarget] = useState<Inv | null>(null);
+
   const [form, setForm] = useState(blank());
   const [busy, setBusy] = useState(false);
 
@@ -87,7 +109,8 @@ const AdminBillingInvoices = () => {
   const submit = async () => {
     if (!form.client_name.trim() || !form.billing_email.trim()) { toast({ title: "Client name and email required", variant: "destructive" }); return; }
     setBusy(true);
-    const num = `INV-${Date.now().toString().slice(-6)}`;
+    const prefix = (settings?.invoice_prefix?.trim() || "INV").replace(/-+$/, "");
+    const num = `${prefix}-${Date.now().toString().slice(-6)}`;
     const { data: { user } } = await supabase.auth.getUser();
     const { error, data } = await supabase.from("invoices").insert({
       invoice_number: num, owner_user_id: user?.id ?? null,
@@ -100,9 +123,18 @@ const AdminBillingInvoices = () => {
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Invoice created" });
     setOpen(false);
-    if (data) downloadInvoicePdf(data as any);
+    if (data) downloadInvoicePdf(data as any, brand);
     setForm(blank());
   };
+
+  const confirmDelete = async () => {
+    if (!delTarget) return;
+    const { error } = await supabase.from("invoices").delete().eq("id", delTarget.id);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); }
+    else { toast({ title: "Invoice deleted", description: delTarget.invoice_number }); load(); }
+    setDelTarget(null);
+  };
+
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
@@ -155,8 +187,10 @@ const AdminBillingInvoices = () => {
                       <button className="h-8 w-8 rounded-lg hover:bg-muted inline-flex items-center justify-center"><MoreVertical className="h-4 w-4" /></button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => downloadInvoicePdf(r as any)}><Download className="h-4 w-4 mr-2" /> Download PDF</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadInvoicePdf(r as any, brand)}><Download className="h-4 w-4 mr-2" /> Download PDF</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDelTarget(r)} className="text-rose-500 focus:text-rose-500"><Trash2 className="h-4 w-4 mr-2" /> Delete Invoice</DropdownMenuItem>
                     </DropdownMenuContent>
+
                   </DropdownMenu>
                 </td>
               </tr>
@@ -246,7 +280,23 @@ const AdminBillingInvoices = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!delTarget} onOpenChange={(o) => !o && setDelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes <span className="font-semibold">{delTarget?.invoice_number}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-rose-500 hover:bg-rose-600 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PanelLayout>
+
   );
 };
 

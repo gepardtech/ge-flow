@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useMoney } from "@/lib/currency";
 import { Loader2, Package } from "lucide-react";
+
 
 export interface ProductRecord {
   id: string;
@@ -28,7 +30,14 @@ export interface ProductRecord {
   status: string;
 }
 
-interface CategoryOption { id: string; name: string }
+interface CategoryOption {
+  id: string;
+  name: string;
+  inherit_expiry: boolean;
+  inherit_batch: boolean;
+  inherit_barcode: boolean;
+  inherit_alerts: boolean;
+}
 
 interface Props {
   open: boolean;
@@ -57,6 +66,7 @@ const emptyForm = {
 
 const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, onSaved }: Props) => {
   const { toast } = useToast();
+  const { symbol } = useMoney();
   const [form, setForm] = useState({ ...emptyForm });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [saving, setSaving] = useState(false);
@@ -67,12 +77,13 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
     (async () => {
       const { data } = await supabase
         .from("product_categories")
-        .select("id, name")
+        .select("id, name, inherit_expiry, inherit_batch, inherit_barcode, inherit_alerts")
         .eq("status", "active")
         .order("name");
       setCategories((data as CategoryOption[]) ?? []);
     })();
   }, [open]);
+
 
   useEffect(() => {
     if (open && product) {
@@ -97,6 +108,15 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
   }, [open, product]);
 
   const set = (k: keyof typeof emptyForm, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Admin-configured inheritance flags for the selected product category.
+  // When no category is chosen we show all fields by default.
+  const selectedCategory = categories.find((c) => c.id === form.category_id) ?? null;
+  const showExpiry = !selectedCategory || selectedCategory.inherit_expiry;
+  const showBatch = !selectedCategory || selectedCategory.inherit_batch;
+  const showBarcode = !selectedCategory || selectedCategory.inherit_barcode;
+  const showAlerts = !selectedCategory || selectedCategory.inherit_alerts;
+
 
   const handleSave = async () => {
     if (!form.name.trim()) {
@@ -168,10 +188,13 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
               <Label>SKU / Code</Label>
               <Input value={form.internal_sku} onChange={(e) => set("internal_sku", e.target.value)} placeholder="SKU-001" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Barcode</Label>
-              <Input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} placeholder="Scan or enter barcode" />
-            </div>
+            {showBarcode && (
+              <div className="space-y-1.5">
+                <Label>Barcode</Label>
+                <Input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} placeholder="Scan or enter barcode" />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Select value={form.category_id} onValueChange={(v) => set("category_id", v)}>
@@ -202,19 +225,20 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
             <p className="text-xs font-bold tracking-widest text-muted-foreground">PRICING</p>
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Purchase Cost</Label>
+                <Label>Purchase Cost ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.purchase_cost} onChange={(e) => set("purchase_cost", e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-1.5">
-                <Label>Retail Price</Label>
+                <Label>Retail Price ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.retail_price} onChange={(e) => set("retail_price", e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-1.5">
-                <Label>Discount Price</Label>
+                <Label>Discount Price ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.discount_price} onChange={(e) => set("discount_price", e.target.value)} placeholder="Optional" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Profit margin: <span className={`font-bold ${margin >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{margin}%</span></p>
+
           </div>
 
           <div className="rounded-xl border border-border p-4 space-y-4">
@@ -224,20 +248,27 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
                 <Label>Stock Units</Label>
                 <Input type="number" min="0" value={form.stock_units} onChange={(e) => set("stock_units", e.target.value)} placeholder="0" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Low Stock Alert</Label>
-                <Input type="number" min="0" value={form.min_stock_alert} onChange={(e) => set("min_stock_alert", e.target.value)} placeholder="10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Batch Number</Label>
-                <Input value={form.batch_number} onChange={(e) => set("batch_number", e.target.value)} placeholder="Optional" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Expiry Date</Label>
-                <Input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
-              </div>
+              {showAlerts && (
+                <div className="space-y-1.5">
+                  <Label>Low Stock Alert</Label>
+                  <Input type="number" min="0" value={form.min_stock_alert} onChange={(e) => set("min_stock_alert", e.target.value)} placeholder="10" />
+                </div>
+              )}
+              {showBatch && (
+                <div className="space-y-1.5">
+                  <Label>Batch Number</Label>
+                  <Input value={form.batch_number} onChange={(e) => set("batch_number", e.target.value)} placeholder="Optional" />
+                </div>
+              )}
+              {showExpiry && (
+                <div className="space-y-1.5">
+                  <Label>Expiry Date</Label>
+                  <Input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
+                </div>
+              )}
             </div>
           </div>
+
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

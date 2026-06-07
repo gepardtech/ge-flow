@@ -470,6 +470,8 @@ export type Database = {
           interface_language: string
           invoice_prefix: string
           logo_url: string | null
+          maintenance_message: string | null
+          maintenance_mode: boolean
           min_pass_length: number
           multi_business: boolean
           primary_accent: string
@@ -477,6 +479,7 @@ export type Database = {
           session_ttl: number
           singleton: boolean
           system_timezone: string
+          tagline: string | null
           universal_tax: number
           updated_at: string
           white_label: boolean
@@ -497,6 +500,8 @@ export type Database = {
           interface_language?: string
           invoice_prefix?: string
           logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
           min_pass_length?: number
           multi_business?: boolean
           primary_accent?: string
@@ -504,6 +509,7 @@ export type Database = {
           session_ttl?: number
           singleton?: boolean
           system_timezone?: string
+          tagline?: string | null
           universal_tax?: number
           updated_at?: string
           white_label?: boolean
@@ -524,6 +530,8 @@ export type Database = {
           interface_language?: string
           invoice_prefix?: string
           logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
           min_pass_length?: number
           multi_business?: boolean
           primary_accent?: string
@@ -531,6 +539,7 @@ export type Database = {
           session_ttl?: number
           singleton?: boolean
           system_timezone?: string
+          tagline?: string | null
           universal_tax?: number
           updated_at?: string
           white_label?: boolean
@@ -786,6 +795,63 @@ export type Database = {
           status?: string
           usage?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      public_settings: {
+        Row: {
+          app_name: string | null
+          base_currency: string | null
+          default_theme: string | null
+          favicon_url: string | null
+          id: string
+          interface_language: string | null
+          invoice_prefix: string | null
+          logo_url: string | null
+          maintenance_message: string | null
+          maintenance_mode: boolean
+          primary_accent: string | null
+          secondary_accent: string | null
+          system_timezone: string | null
+          tagline: string | null
+          universal_tax: number | null
+          updated_at: string
+        }
+        Insert: {
+          app_name?: string | null
+          base_currency?: string | null
+          default_theme?: string | null
+          favicon_url?: string | null
+          id: string
+          interface_language?: string | null
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
+          primary_accent?: string | null
+          secondary_accent?: string | null
+          system_timezone?: string | null
+          tagline?: string | null
+          universal_tax?: number | null
+          updated_at?: string
+        }
+        Update: {
+          app_name?: string | null
+          base_currency?: string | null
+          default_theme?: string | null
+          favicon_url?: string | null
+          id?: string
+          interface_language?: string | null
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
+          primary_accent?: string | null
+          secondary_accent?: string | null
+          system_timezone?: string | null
+          tagline?: string | null
+          universal_tax?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
