@@ -3,13 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import BillingTabs from "@/components/BillingTabs";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
-import { Search, Plus, MoreVertical, Loader2, Download } from "lucide-react";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
+import { Search, Plus, MoreVertical, Loader2, Download, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+
+interface BrandOpts { logo?: string | null; appName?: string; tagline?: string | null; }
+
 
 interface Inv {
   id: string; invoice_number: string; client_name: string; billing_email: string;
