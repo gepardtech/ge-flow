@@ -68,21 +68,18 @@ export const PlatformSettingsProvider = ({ children }: { children: ReactNode }) 
 
   useEffect(() => {
     let active = true;
-    // Only public, display-facing branding fields are fetched here via a
-    // secure function. Sensitive platform settings stay admin-only at the DB.
+    // public_settings is a safe, public-readable mirror of platform_settings.
+    // Reading it directly (instead of an RPC) lets us subscribe to realtime
+    // changes so every visitor — signed-in or not — sees updates instantly.
     const load = async () => {
-      const { data } = await supabase.rpc("get_public_platform_settings");
-      const row = Array.isArray(data) ? data[0] : data;
-      if (active && row) { setSettings(row); applyPlatformSettings(row); }
+      const { data } = await supabase.from("public_settings").select("*").limit(1).maybeSingle();
+      if (active && data) { setSettings(data); applyPlatformSettings(data); }
       setLoading(false);
     };
     load();
     const ch = supabase
-      .channel("platform_settings_global")
-      .on("postgres_changes", { event: "*", schema: "public", table: "platform_settings" }, () => {
-        // Re-fetch only the safe public fields on any change.
-        load();
-      })
+      .channel(`public_settings_global_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "public_settings" }, () => load())
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
   }, []);
