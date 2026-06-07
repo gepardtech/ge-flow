@@ -109,7 +109,8 @@ const AdminBillingInvoices = () => {
   const submit = async () => {
     if (!form.client_name.trim() || !form.billing_email.trim()) { toast({ title: "Client name and email required", variant: "destructive" }); return; }
     setBusy(true);
-    const num = `INV-${Date.now().toString().slice(-6)}`;
+    const prefix = (settings?.invoice_prefix?.trim() || "INV").replace(/-+$/, "");
+    const num = `${prefix}-${Date.now().toString().slice(-6)}`;
     const { data: { user } } = await supabase.auth.getUser();
     const { error, data } = await supabase.from("invoices").insert({
       invoice_number: num, owner_user_id: user?.id ?? null,
@@ -122,9 +123,18 @@ const AdminBillingInvoices = () => {
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Invoice created" });
     setOpen(false);
-    if (data) downloadInvoicePdf(data as any);
+    if (data) downloadInvoicePdf(data as any, brand);
     setForm(blank());
   };
+
+  const confirmDelete = async () => {
+    if (!delTarget) return;
+    const { error } = await supabase.from("invoices").delete().eq("id", delTarget.id);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); }
+    else { toast({ title: "Invoice deleted", description: delTarget.invoice_number }); load(); }
+    setDelTarget(null);
+  };
+
 
   return (
     <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
