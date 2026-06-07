@@ -30,10 +30,23 @@ const statusBadge = (s: string) => ({
 
 const blank = () => ({ client_name: "", billing_email: "", plan: "standard", payment_method: "Stripe", amount: 0, status: "paid", issue_date: new Date().toISOString().slice(0,10), notes: "" });
 
-const downloadInvoicePdf = (inv: Inv & { notes?: string | null }) => {
+const downloadInvoicePdf = (inv: Inv & { notes?: string | null }, brand: BrandOpts = {}) => {
   const doc = new jsPDF();
-  doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.text("GeFlow", 20, 22);
-  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.text("by Gepard Tech", 20, 28);
+  const appName = brand.appName || "GeFlow";
+  let headerY = 22;
+  if (brand.logo) {
+    try {
+      const fmt = brand.logo.startsWith("data:image/png") ? "PNG"
+        : brand.logo.startsWith("data:image/jpeg") || brand.logo.startsWith("data:image/jpg") ? "JPEG"
+        : brand.logo.startsWith("data:image/webp") ? "WEBP" : "PNG";
+      doc.addImage(brand.logo, fmt, 20, 12, 40, 16);
+      headerY = 36;
+    } catch { /* fall back to text below */ }
+  }
+  if (!brand.logo) {
+    doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.text(appName, 20, 22);
+    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.text(brand.tagline || "by Gepard Tech", 20, 28);
+  }
   doc.setFontSize(18); doc.setFont("helvetica","bold"); doc.text("INVOICE", 190, 22, { align: "right" });
   doc.setFontSize(10); doc.setFont("helvetica","normal");
   doc.text(`#${inv.invoice_number}`, 190, 28, { align: "right" });
@@ -53,16 +66,20 @@ const downloadInvoicePdf = (inv: Inv & { notes?: string | null }) => {
   doc.setFont("helvetica","bold"); doc.setFontSize(13);
   doc.text("TOTAL", 130, 122); doc.text(`$${Number(inv.amount).toFixed(2)}`, 187, 122, { align: "right" });
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120);
-  doc.text("Thank you for choosing GeFlow. For support, contact gepardwebs@gmail.com", 105, 270, { align: "center" });
-  doc.save(`GeFlow-${inv.invoice_number}.pdf`);
+  doc.text(`Thank you for choosing ${appName}. For support, contact gepardwebs@gmail.com`, 105, 270, { align: "center" });
+  doc.save(`${appName}-${inv.invoice_number}.pdf`);
 };
 
 const AdminBillingInvoices = () => {
   const { toast } = useToast();
+  const { settings } = usePlatformSettings();
+  const brand: BrandOpts = { logo: settings?.logo_url, appName: settings?.app_name, tagline: settings?.tagline };
   const [rows, setRows] = useState<Inv[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [delTarget, setDelTarget] = useState<Inv | null>(null);
+
   const [form, setForm] = useState(blank());
   const [busy, setBusy] = useState(false);
 
