@@ -188,10 +188,13 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
               <Label>SKU / Code</Label>
               <Input value={form.internal_sku} onChange={(e) => set("internal_sku", e.target.value)} placeholder="SKU-001" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Barcode</Label>
-              <Input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} placeholder="Scan or enter barcode" />
-            </div>
+            {showBarcode && (
+              <div className="space-y-1.5">
+                <Label>Barcode</Label>
+                <Input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} placeholder="Scan or enter barcode" />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Select value={form.category_id} onValueChange={(v) => set("category_id", v)}>
