@@ -66,6 +66,7 @@ const emptyForm = {
 
 const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, onSaved }: Props) => {
   const { toast } = useToast();
+  const { symbol } = useMoney();
   const [form, setForm] = useState({ ...emptyForm });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [saving, setSaving] = useState(false);
@@ -76,12 +77,13 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
     (async () => {
       const { data } = await supabase
         .from("product_categories")
-        .select("id, name")
+        .select("id, name, inherit_expiry, inherit_batch, inherit_barcode, inherit_alerts")
         .eq("status", "active")
         .order("name");
       setCategories((data as CategoryOption[]) ?? []);
     })();
   }, [open]);
+
 
   useEffect(() => {
     if (open && product) {
