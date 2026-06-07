@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useMoney } from "@/lib/currency";
 import { Loader2, Package } from "lucide-react";
+
 
 export interface ProductRecord {
   id: string;
