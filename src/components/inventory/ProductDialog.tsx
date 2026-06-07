@@ -109,6 +109,15 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
 
   const set = (k: keyof typeof emptyForm, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Admin-configured inheritance flags for the selected product category.
+  // When no category is chosen we show all fields by default.
+  const selectedCategory = categories.find((c) => c.id === form.category_id) ?? null;
+  const showExpiry = !selectedCategory || selectedCategory.inherit_expiry;
+  const showBatch = !selectedCategory || selectedCategory.inherit_batch;
+  const showBarcode = !selectedCategory || selectedCategory.inherit_barcode;
+  const showAlerts = !selectedCategory || selectedCategory.inherit_alerts;
+
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       toast({ title: "Product name required", variant: "destructive" });
