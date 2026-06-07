@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import ProductDialog, { ProductRecord } from "@/components/inventory/ProductDialog";
 import ProductInsightsDialog from "@/components/inventory/ProductInsightsDialog";
+import { useMoney } from "@/lib/currency";
 
-const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 const UserInventory = () => {
   const { plan } = usePlan();
