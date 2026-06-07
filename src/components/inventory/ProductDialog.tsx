@@ -30,7 +30,14 @@ export interface ProductRecord {
   status: string;
 }
 
-interface CategoryOption { id: string; name: string }
+interface CategoryOption {
+  id: string;
+  name: string;
+  inherit_expiry: boolean;
+  inherit_batch: boolean;
+  inherit_barcode: boolean;
+  inherit_alerts: boolean;
+}
 
 interface Props {
   open: boolean;
