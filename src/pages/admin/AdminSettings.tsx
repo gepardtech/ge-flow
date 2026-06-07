@@ -115,7 +115,7 @@ const AdminSettings = () => {
         </TabsList>
 
         {/* GENERAL */}
-        <TabsContent value="general" className="mt-6">
+        <TabsContent value="general" className="mt-6 space-y-6">
           <Card title="Platform Identity" desc="Core naming and regional defaults.">
             <Field label="Application Name"><Input value={form.app_name ?? ""} onChange={(e) => set("app_name", e.target.value)} /></Field>
             <Field label="Tagline"><Input value={form.tagline ?? ""} onChange={(e) => set("tagline", e.target.value)} placeholder="Short slogan shown across the app" /></Field>
