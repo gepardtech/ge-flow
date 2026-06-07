@@ -248,20 +248,27 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
                 <Label>Stock Units</Label>
                 <Input type="number" min="0" value={form.stock_units} onChange={(e) => set("stock_units", e.target.value)} placeholder="0" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Low Stock Alert</Label>
-                <Input type="number" min="0" value={form.min_stock_alert} onChange={(e) => set("min_stock_alert", e.target.value)} placeholder="10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Batch Number</Label>
-                <Input value={form.batch_number} onChange={(e) => set("batch_number", e.target.value)} placeholder="Optional" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Expiry Date</Label>
-                <Input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
-              </div>
+              {showAlerts && (
+                <div className="space-y-1.5">
+                  <Label>Low Stock Alert</Label>
+                  <Input type="number" min="0" value={form.min_stock_alert} onChange={(e) => set("min_stock_alert", e.target.value)} placeholder="10" />
+                </div>
+              )}
+              {showBatch && (
+                <div className="space-y-1.5">
+                  <Label>Batch Number</Label>
+                  <Input value={form.batch_number} onChange={(e) => set("batch_number", e.target.value)} placeholder="Optional" />
+                </div>
+              )}
+              {showExpiry && (
+                <div className="space-y-1.5">
+                  <Label>Expiry Date</Label>
+                  <Input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
+                </div>
+              )}
             </div>
           </div>
+
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
