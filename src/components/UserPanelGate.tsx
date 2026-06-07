@@ -4,8 +4,11 @@ import PanelLayout from "@/components/PanelLayout";
 import { userNavForPlanAndModules } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 import { useBusinessModules } from "@/hooks/useBusinessModules";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 import { isRouteLocked } from "@/lib/plans";
 import PlanLockedScreen from "@/components/PlanLockedScreen";
+import MaintenanceScreen from "@/components/MaintenanceScreen";
 
 interface Props {
   children: ReactNode;
@@ -20,19 +23,28 @@ interface Props {
  * - Renders the user PanelLayout with plan-aware identity
  * - Filters the sidebar to admin-appointed modules for the active business
  * - Blocks locked routes with an upgrade screen
+ * - Shuts the panel down for non-admins when maintenance mode is on
  */
 const UserPanelGate = ({ children, pageTitle, module }: Props) => {
   const { plan, planId, fullName, loading } = usePlan();
   const { modules, loading: modulesLoading } = useBusinessModules();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { settings, loading: settingsLoading } = usePlatformSettings();
   const location = useLocation();
 
-  if (loading || modulesLoading) {
+  if (loading || modulesLoading || adminLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Loading workspace...
       </div>
     );
   }
+
+  // Maintenance mode: block everyone except admins.
+  if (settings?.maintenance_mode && !isAdmin) {
+    return <MaintenanceScreen />;
+  }
+
 
   const firstName = fullName?.split(" ")[0] || "Operator";
   const initial = firstName.charAt(0).toUpperCase();
