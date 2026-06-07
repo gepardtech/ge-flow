@@ -187,8 +187,10 @@ const AdminBillingInvoices = () => {
                       <button className="h-8 w-8 rounded-lg hover:bg-muted inline-flex items-center justify-center"><MoreVertical className="h-4 w-4" /></button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => downloadInvoicePdf(r as any)}><Download className="h-4 w-4 mr-2" /> Download PDF</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadInvoicePdf(r as any, brand)}><Download className="h-4 w-4 mr-2" /> Download PDF</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDelTarget(r)} className="text-rose-500 focus:text-rose-500"><Trash2 className="h-4 w-4 mr-2" /> Delete Invoice</DropdownMenuItem>
                     </DropdownMenuContent>
+
                   </DropdownMenu>
                 </td>
               </tr>
