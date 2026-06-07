@@ -225,19 +225,20 @@ const ProductDialog = ({ open, onOpenChange, businessId, ownerUserId, product, o
             <p className="text-xs font-bold tracking-widest text-muted-foreground">PRICING</p>
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Purchase Cost</Label>
+                <Label>Purchase Cost ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.purchase_cost} onChange={(e) => set("purchase_cost", e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-1.5">
-                <Label>Retail Price</Label>
+                <Label>Retail Price ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.retail_price} onChange={(e) => set("retail_price", e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-1.5">
-                <Label>Discount Price</Label>
+                <Label>Discount Price ({symbol})</Label>
                 <Input type="number" min="0" step="0.01" value={form.discount_price} onChange={(e) => set("discount_price", e.target.value)} placeholder="Optional" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Profit margin: <span className={`font-bold ${margin >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{margin}%</span></p>
+
           </div>
 
           <div className="rounded-xl border border-border p-4 space-y-4">
