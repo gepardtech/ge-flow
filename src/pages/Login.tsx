@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Eye, EyeOff, Shield, TrendingUp, Zap } from "lucide-react";
 
 const Login = () => {
