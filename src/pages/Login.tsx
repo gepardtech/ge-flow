@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Eye, EyeOff, Shield, TrendingUp, Zap } from "lucide-react";
 
 const Login = () => {
@@ -78,6 +79,13 @@ const Login = () => {
                 {loading ? "Signing in..." : "Login"}
               </Button>
             </form>
+
+            <div className="flex items-center gap-3 my-6">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">OR</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <GoogleAuthButton redirectTo={`${window.location.origin}/dashboard`} />
 
             <p className="text-center text-sm text-muted-foreground mt-6">
               Don't have an account? <Link to="/signup" className="text-primary font-bold hover:underline">Sign Up</Link>

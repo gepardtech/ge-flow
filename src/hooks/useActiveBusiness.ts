@@ -22,6 +22,9 @@ export const useActiveBusiness = () => {
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [industryType, setIndustryType] = useState<string | null>(null);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
+  const [enabledModules, setEnabledModules] = useState<string[] | null>(null);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -43,12 +46,18 @@ export const useActiveBusiness = () => {
     if (activeRow?.category_id) {
       const { data: cat } = await supabase
         .from("business_categories")
-        .select("industry_type")
+        .select("industry_type, name, enabled_modules, enabled_features")
         .eq("id", activeRow.category_id)
         .maybeSingle();
       setIndustryType((cat?.industry_type as string) ?? null);
+      setCategoryName((cat?.name as string) ?? null);
+      setEnabledModules((cat?.enabled_modules as string[]) ?? null);
+      setEnabledFeatures((cat?.enabled_features as string[]) ?? null);
     } else {
       setIndustryType(null);
+      setCategoryName(null);
+      setEnabledModules(null);
+      setEnabledFeatures(null);
     }
     setLoading(false);
   }, []);
@@ -64,5 +73,9 @@ export const useActiveBusiness = () => {
 
   const active = businesses.find((b) => b.id === activeId) ?? null;
 
-  return { businesses, active, activeId, setActive, industryType, loading, reload: load };
+  return {
+    businesses, active, activeId, setActive,
+    industryType, categoryName, enabledModules, enabledFeatures,
+    loading, reload: load,
+  };
 };
