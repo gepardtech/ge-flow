@@ -79,6 +79,13 @@ const Login = () => {
               </Button>
             </form>
 
+            <div className="flex items-center gap-3 my-6">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">OR</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <GoogleAuthButton redirectTo={`${window.location.origin}/dashboard`} />
+
             <p className="text-center text-sm text-muted-foreground mt-6">
               Don't have an account? <Link to="/signup" className="text-primary font-bold hover:underline">Sign Up</Link>
             </p>
