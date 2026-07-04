@@ -30,6 +30,10 @@ interface Props {
 const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
   if (!invoice) return null;
 
+  const cur = invoice.currencySymbol ?? "$";
+  const taxPct = invoice.taxRate ?? 10;
+
+
   const handleDownload = () => {
     const doc = new jsPDF();
     const left = 20;
