@@ -48,6 +48,7 @@ const Cell = ({ value }: { value: string | boolean }) => {
 };
 
 const Pricing = () => {
+  const { symbol: sym } = useMoney();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   return (
