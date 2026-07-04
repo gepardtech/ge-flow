@@ -209,7 +209,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">BEST VALUE</span>
               <h3 className="text-xl font-bold mb-1">Premium Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">$99.99</p>
+                <p className="text-4xl font-bold">{sym}99.99</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
