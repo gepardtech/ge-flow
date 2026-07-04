@@ -137,6 +137,8 @@ const Checkout = () => {
       couponCode: appliedCoupon?.code,
       tax,
       total,
+      currencySymbol: sym,
+      taxRate,
     };
     setInvoice(inv);
     setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
