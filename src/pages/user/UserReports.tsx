@@ -1,7 +1,6 @@
 import { FileText } from "lucide-react";
 import UserPanelGate from "@/components/UserPanelGate";
 import DemoPanelPage from "@/components/DemoPanelPage";
-import { USER_NAV, USER_IDENTITY } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 
 const UserReports = () => {

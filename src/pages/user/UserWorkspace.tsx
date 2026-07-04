@@ -1,7 +1,6 @@
 import { Settings } from "lucide-react";
 import UserPanelGate from "@/components/UserPanelGate";
 import DemoPanelPage from "@/components/DemoPanelPage";
-import { USER_NAV, USER_IDENTITY } from "@/lib/panelNav";
 
 const UserWorkspace = () => (
   <UserPanelGate pageTitle="Workspace" module="settings">
