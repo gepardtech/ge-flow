@@ -16,6 +16,8 @@ export interface InvoiceData {
   couponCode?: string;
   tax: number;
   total: number;
+  currencySymbol?: string;
+  taxRate?: number;
 }
 
 interface Props {
@@ -27,6 +29,10 @@ interface Props {
 
 const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
   if (!invoice) return null;
+
+  const cur = invoice.currencySymbol ?? "$";
+  const taxPct = invoice.taxRate ?? 10;
+
 
   const handleDownload = () => {
     const doc = new jsPDF();
@@ -86,7 +92,7 @@ const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
     doc.setFontSize(9);
     doc.text(invoice.period, 130, y);
     doc.setFontSize(11);
-    doc.text(`$${invoice.subtotal.toFixed(2)}`, 187, y, { align: "right" });
+    doc.text(`${cur}${invoice.subtotal.toFixed(2)}`, 187, y, { align: "right" });
 
     // Totals
     y += 15;
@@ -94,17 +100,17 @@ const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
     y += 8;
     doc.setFontSize(10);
     doc.text("Subtotal", 130, y);
-    doc.text(`$${invoice.subtotal.toFixed(2)}`, 187, y, { align: "right" });
+    doc.text(`${cur}${invoice.subtotal.toFixed(2)}`, 187, y, { align: "right" });
 
     if (invoice.discount > 0) {
       y += 7;
       doc.text(`Discount (${invoice.couponCode})`, 130, y);
-      doc.text(`-$${invoice.discount.toFixed(2)}`, 187, y, { align: "right" });
+      doc.text(`-${cur}${invoice.discount.toFixed(2)}`, 187, y, { align: "right" });
     }
 
     y += 7;
-    doc.text("Tax (10%)", 130, y);
-    doc.text(`$${invoice.tax.toFixed(2)}`, 187, y, { align: "right" });
+    doc.text(`Tax (${taxPct}%)`, 130, y);
+    doc.text(`${cur}${invoice.tax.toFixed(2)}`, 187, y, { align: "right" });
 
     y += 5;
     doc.line(125, y, 190, y);
@@ -112,7 +118,7 @@ const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
     doc.text("TOTAL PAID", 130, y);
-    doc.text(`$${invoice.total.toFixed(2)}`, 187, y, { align: "right" });
+    doc.text(`${cur}${invoice.total.toFixed(2)}`, 187, y, { align: "right" });
 
     // Footer
     y = 270;
@@ -158,7 +164,7 @@ const InvoiceDialog = ({ open, onClose, onContinue, invoice }: Props) => {
             </div>
             <div className="border-t border-border pt-3 flex justify-between items-center">
               <span className="font-bold">Total Paid</span>
-              <span className="text-2xl font-bold text-primary">${invoice.total.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-primary">{cur}{invoice.total.toFixed(2)}</span>
             </div>
           </div>
 

@@ -6,20 +6,24 @@ interface Props {
   title: string;
   description: string;
   icon: LucideIcon;
-  sidebarLabel: string;
-  navItems: NavItem[];
-  identityName: string;
-  identityRole: string;
+  sidebarLabel?: string;
+  navItems?: NavItem[];
+  identityName?: string;
+  identityRole?: string;
   identityBadgeClass?: string;
-  initial: string;
+  initial?: string;
   children?: ReactNode;
+  /** When true, render only the page content (no PanelLayout wrapper).
+   *  Used when the page is already inside a gate that provides the layout. */
+  bare?: boolean;
 }
 
 const DemoPanelPage = ({
   title, description, icon: Icon, sidebarLabel, navItems,
-  identityName, identityRole, identityBadgeClass, initial, children,
+  identityName, identityRole, identityBadgeClass, initial, children, bare,
 }: Props) => {
-  const isAdmin = navItems.some((n) => n.to.startsWith("/admin"));
+  const isAdmin = (navItems ?? []).some((n) => n.to.startsWith("/admin"));
+
 
   const stats = [
     { label: "TOTAL", value: "—", change: "+0%", icon: Sparkles, accent: "hover:shadow-sky-500/15", iconBg: "bg-sky-400/15 text-sky-500" },
@@ -28,21 +32,14 @@ const DemoPanelPage = ({
     { label: "PENDING", value: "—", change: "0", icon: ArrowUpRight, accent: "hover:shadow-amber-500/15", iconBg: "bg-amber-400/15 text-amber-500" },
   ];
 
-  return (
-    <PanelLayout
-      sidebarLabel={sidebarLabel}
-      navItems={navItems}
-      identityName={identityName}
-      identityRole={identityRole}
-      identityBadgeClass={identityBadgeClass}
-      initial={initial}
-      isAdmin={isAdmin}
-    >
+  const body = (
+    <>
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -129,6 +126,22 @@ const DemoPanelPage = ({
           </div>
         </>
       )}
+    </>
+  );
+
+  if (bare) return body;
+
+  return (
+    <PanelLayout
+      sidebarLabel={sidebarLabel!}
+      navItems={navItems ?? []}
+      identityName={identityName!}
+      identityRole={identityRole!}
+      identityBadgeClass={identityBadgeClass}
+      initial={initial!}
+      isAdmin={isAdmin}
+    >
+      {body}
     </PanelLayout>
   );
 };

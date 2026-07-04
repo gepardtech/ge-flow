@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wal
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
+import { useMoney } from "@/lib/currency";
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
@@ -34,13 +35,14 @@ const Checkout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { symbol: sym, taxRate } = useMoney();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
   const data = PLAN_DATA[plan] ?? PLAN_DATA.standard;
   const subtotal = data.pricing[period] ?? data.pricing.monthly;
 
-  const tax = useMemo(() => +(Math.max(subtotal, 0) * 0.1).toFixed(2), [subtotal]);
+  const tax = useMemo(() => +(Math.max(subtotal, 0) * (taxRate / 100)).toFixed(2), [subtotal, taxRate]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -135,6 +137,8 @@ const Checkout = () => {
       couponCode: appliedCoupon?.code,
       tax,
       total,
+      currencySymbol: sym,
+      taxRate,
     };
     setInvoice(inv);
     setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
@@ -268,7 +272,7 @@ const Checkout = () => {
               </div>
 
               <Button type="submit" disabled={loading} className="cta-btn w-full h-14 rounded-full mt-8 text-sm font-bold tracking-wider gap-2 bg-primary text-primary-foreground hover:bg-primary">
-                {loading ? "PROCESSING..." : <>{ctaLabel} • ${total} <ArrowRight className="h-4 w-4" /></>}
+                {loading ? "PROCESSING..." : <>{ctaLabel} • {sym}{total} <ArrowRight className="h-4 w-4" /></>}
               </Button>
 
               <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-4 inline-flex items-center gap-2 justify-center w-full">
@@ -286,23 +290,23 @@ const Checkout = () => {
                   <p className="font-bold text-base">{data.name}</p>
                   <p className="text-[10px] font-bold tracking-wider text-primary mt-1">{PERIOD_LABEL[period]}</p>
                 </div>
-                <p className="text-2xl font-bold">${subtotal}</p>
+                <p className="text-2xl font-bold">{sym}{subtotal}</p>
               </div>
 
               <div className="border-t border-border" />
 
               <div className="space-y-2.5 py-5 text-sm">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span><span className="text-foreground font-semibold">${subtotal.toFixed(2)}</span>
+                  <span>Subtotal</span><span className="text-foreground font-semibold">{sym}{subtotal.toFixed(2)}</span>
                 </div>
                 {appliedCoupon && (
                   <div className="flex justify-between text-primary">
                     <span>Coupon ({appliedCoupon.code})</span>
-                    <span className="font-semibold">−${discount.toFixed(2)}</span>
+                    <span className="font-semibold">−{sym}{discount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Architectural Tax (10%)</span><span className="text-foreground font-semibold">${tax.toFixed(2)}</span>
+                  <span>Architectural Tax ({taxRate}%)</span><span className="text-foreground font-semibold">{sym}{tax.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -328,7 +332,7 @@ const Checkout = () => {
 
               <div className="flex items-center justify-between py-5">
                 <p className="text-base font-bold">Grand Total</p>
-                <p className="text-3xl font-bold text-primary">${total.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-primary">{sym}{total.toFixed(2)}</p>
               </div>
 
               <div className="border-t border-border" />

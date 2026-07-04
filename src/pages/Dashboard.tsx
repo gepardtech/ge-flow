@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
-import { userNavForPlan } from "@/lib/panelNav";
+import { userNavForPlanAndModules } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
+import { useBusinessModules } from "@/hooks/useBusinessModules";
 import {
   Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock, TrendingUp
 } from "lucide-react";
@@ -37,6 +38,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { plan, planId, fullName, loading: planLoading } = usePlan();
   const { active, loading: bizLoading } = useActiveBusiness();
+  const { modules } = useBusinessModules();
 
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ todaySales: 0, todayProfit: 0, totalRevenue: 0, totalProducts: 0, lowStock: 0 });
@@ -152,7 +154,7 @@ const Dashboard = () => {
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
-      navItems={userNavForPlan(planId)}
+      navItems={userNavForPlanAndModules(planId, modules)}
       identityName={`${plan.label} ${firstName}`}
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}

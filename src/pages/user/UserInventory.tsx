@@ -131,7 +131,7 @@ const UserInventory = () => {
   ];
 
   return (
-    <UserPanelGate pageTitle="Inventory">
+    <UserPanelGate pageTitle="Inventory" module="inventory">
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Inventory</h1>

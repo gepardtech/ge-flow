@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { Check, Minus } from "lucide-react";
+import { useMoney } from "@/lib/currency";
 import {
   Accordion,
   AccordionContent,
@@ -47,6 +48,7 @@ const Cell = ({ value }: { value: string | boolean }) => {
 };
 
 const Pricing = () => {
+  const { symbol: sym } = useMoney();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   return (
@@ -89,7 +91,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <p className="text-4xl font-bold mb-6">$0</p>
+              <p className="text-4xl font-bold mb-6">{sym}0</p>
               <ul className="space-y-3 mb-8 flex-1">
                 {freeFeatures.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -111,7 +113,7 @@ const Pricing = () => {
               <h3 className="text-xl font-bold mb-1">Standard</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">${billingPeriod === "monthly" ? "4.99" : "14.99"}</p>
+                <p className="text-4xl font-bold">{sym}{billingPeriod === "monthly" ? "4.99" : "14.99"}</p>
                 <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -134,7 +136,7 @@ const Pricing = () => {
               <h3 className="text-xl font-bold mb-1">Premium</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">${billingPeriod === "monthly" ? "9.99" : "24.99"}</p>
+                <p className="text-4xl font-bold">{sym}{billingPeriod === "monthly" ? "9.99" : "24.99"}</p>
                 <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -166,7 +168,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">$0</p>
+                <p className="text-4xl font-bold">{sym}0</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -187,7 +189,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">MOST POPULAR</span>
               <h3 className="text-xl font-bold mb-1">Standard Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">$49.99</p>
+                <p className="text-4xl font-bold">{sym}49.99</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -207,7 +209,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">BEST VALUE</span>
               <h3 className="text-xl font-bold mb-1">Premium Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">$99.99</p>
+                <p className="text-4xl font-bold">{sym}99.99</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
