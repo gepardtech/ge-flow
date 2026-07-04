@@ -35,13 +35,14 @@ const Checkout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { symbol: sym, taxRate, currency } = useMoney();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
   const data = PLAN_DATA[plan] ?? PLAN_DATA.standard;
   const subtotal = data.pricing[period] ?? data.pricing.monthly;
 
-  const tax = useMemo(() => +(Math.max(subtotal, 0) * 0.1).toFixed(2), [subtotal]);
+  const tax = useMemo(() => +(Math.max(subtotal, 0) * (taxRate / 100)).toFixed(2), [subtotal, taxRate]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
