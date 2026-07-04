@@ -20,9 +20,10 @@ interface Props {
 
 const DemoPanelPage = ({
   title, description, icon: Icon, sidebarLabel, navItems,
-  identityName, identityRole, identityBadgeClass, initial, children,
+  identityName, identityRole, identityBadgeClass, initial, children, bare,
 }: Props) => {
-  const isAdmin = navItems.some((n) => n.to.startsWith("/admin"));
+  const isAdmin = (navItems ?? []).some((n) => n.to.startsWith("/admin"));
+
 
   const stats = [
     { label: "TOTAL", value: "—", change: "+0%", icon: Sparkles, accent: "hover:shadow-sky-500/15", iconBg: "bg-sky-400/15 text-sky-500" },
