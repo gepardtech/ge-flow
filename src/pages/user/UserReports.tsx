@@ -9,7 +9,7 @@ const UserReports = () => {
   const w = plan.limits.reportsWindowDays;
   const window = w === "lifetime" ? "any time period (lifetime)" : `${w} days`;
   return (
-    <UserPanelGate pageTitle="Reports">
+    <UserPanelGate pageTitle="Reports" module="reports">
       <DemoPanelPage
         title="Reports"
         description={`${plan.label} plan: report window covers ${window}.`}
