@@ -38,6 +38,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { plan, planId, fullName, loading: planLoading } = usePlan();
   const { active, loading: bizLoading } = useActiveBusiness();
+  const { modules } = useBusinessModules();
 
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ todaySales: 0, todayProfit: 0, totalRevenue: 0, totalProducts: 0, lowStock: 0 });
