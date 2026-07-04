@@ -136,7 +136,7 @@ const Pricing = () => {
               <h3 className="text-xl font-bold mb-1">Premium</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">${billingPeriod === "monthly" ? "9.99" : "24.99"}</p>
+                <p className="text-4xl font-bold">{sym}{billingPeriod === "monthly" ? "9.99" : "24.99"}</p>
                 <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
