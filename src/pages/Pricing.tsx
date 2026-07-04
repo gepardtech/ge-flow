@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { Check, Minus } from "lucide-react";
+import { useMoney } from "@/lib/currency";
 import {
   Accordion,
   AccordionContent,
