@@ -91,7 +91,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <p className="text-4xl font-bold mb-6">$0</p>
+              <p className="text-4xl font-bold mb-6">{sym}0</p>
               <ul className="space-y-3 mb-8 flex-1">
                 {freeFeatures.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
