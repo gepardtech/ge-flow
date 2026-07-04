@@ -126,6 +126,22 @@ const DemoPanelPage = ({
           </div>
         </>
       )}
+    </>
+  );
+
+  if (bare) return body;
+
+  return (
+    <PanelLayout
+      sidebarLabel={sidebarLabel!}
+      navItems={navItems ?? []}
+      identityName={identityName!}
+      identityRole={identityRole!}
+      identityBadgeClass={identityBadgeClass}
+      initial={initial!}
+      isAdmin={isAdmin}
+    >
+      {body}
     </PanelLayout>
   );
 };
