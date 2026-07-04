@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wal
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
+import { useMoney } from "@/lib/currency";
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
