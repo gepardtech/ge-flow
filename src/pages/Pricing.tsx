@@ -168,7 +168,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">$0</p>
+                <p className="text-4xl font-bold">{sym}0</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
