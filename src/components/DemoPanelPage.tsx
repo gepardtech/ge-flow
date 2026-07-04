@@ -32,21 +32,14 @@ const DemoPanelPage = ({
     { label: "PENDING", value: "—", change: "0", icon: ArrowUpRight, accent: "hover:shadow-amber-500/15", iconBg: "bg-amber-400/15 text-amber-500" },
   ];
 
-  return (
-    <PanelLayout
-      sidebarLabel={sidebarLabel}
-      navItems={navItems}
-      identityName={identityName}
-      identityRole={identityRole}
-      identityBadgeClass={identityBadgeClass}
-      initial={initial}
-      isAdmin={isAdmin}
-    >
+  const body = (
+    <>
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
