@@ -16,6 +16,8 @@ export interface InvoiceData {
   couponCode?: string;
   tax: number;
   total: number;
+  currencySymbol?: string;
+  taxRate?: number;
 }
 
 interface Props {
