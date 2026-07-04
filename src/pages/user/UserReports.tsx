@@ -14,8 +14,7 @@ const UserReports = () => {
         title="Reports"
         description={`${plan.label} plan: report window covers ${window}.`}
         icon={FileText}
-        navItems={USER_NAV}
-        {...USER_IDENTITY}
+        bare
       />
     </UserPanelGate>
   );
