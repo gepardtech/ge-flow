@@ -154,7 +154,7 @@ const Dashboard = () => {
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
-      navItems={userNavForPlan(planId)}
+      navItems={userNavForPlanAndModules(planId, modules)}
       identityName={`${plan.label} ${firstName}`}
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}
