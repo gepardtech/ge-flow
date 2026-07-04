@@ -6,13 +6,16 @@ interface Props {
   title: string;
   description: string;
   icon: LucideIcon;
-  sidebarLabel: string;
-  navItems: NavItem[];
-  identityName: string;
-  identityRole: string;
+  sidebarLabel?: string;
+  navItems?: NavItem[];
+  identityName?: string;
+  identityRole?: string;
   identityBadgeClass?: string;
-  initial: string;
+  initial?: string;
   children?: ReactNode;
+  /** When true, render only the page content (no PanelLayout wrapper).
+   *  Used when the page is already inside a gate that provides the layout. */
+  bare?: boolean;
 }
 
 const DemoPanelPage = ({
