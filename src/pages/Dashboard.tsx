@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
-import { userNavForPlan } from "@/lib/panelNav";
+import { userNavForPlanAndModules } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
+import { useBusinessModules } from "@/hooks/useBusinessModules";
 import {
   Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock, TrendingUp
 } from "lucide-react";
