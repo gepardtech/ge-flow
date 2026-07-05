@@ -200,10 +200,31 @@ const UserPOS = () => {
     }
 
     setProcessing(false);
+
+    // Build the printable receipt from the finalized cart before clearing.
+    const invoiceNo = `INV-${sale.id.slice(0, 6).toUpperCase()}`;
+    setReceipt({
+      invoiceNo,
+      date: new Date(),
+      businessName: active.business_name,
+      lines: cart.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, total: l.unit * l.qty })),
+      subtotal,
+      discount: discountValue,
+      taxRate,
+      tax: gst,
+      total: grandTotal,
+      payMethod,
+      cashGiven: cashNum,
+      changeDue,
+      symbol,
+    });
+    setReceiptOpen(true);
+
     toast({ title: "Transaction complete", description: `${cart.length} item(s) · ${fmt(grandTotal)}${payMethod === "cash" ? ` · change ${fmt(changeDue)}` : ""}` });
     clearCart();
     load();
   };
+
 
   return (
     <UserPanelGate pageTitle="POS Terminal" module="pos">
