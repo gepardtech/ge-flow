@@ -116,7 +116,10 @@ const PurchaseArchitectDialog = ({ open, onOpenChange, businessId, userId, produ
       });
 
       // Increase stock and refresh pricing/batch on the product record.
-      const update: Record<string, unknown> = {
+      const update: {
+        stock_units: number; purchase_cost: number;
+        retail_price?: number; batch_number?: string; expiry_date?: string;
+      } = {
         stock_units: (p?.stock_units ?? 0) + qty,
         purchase_cost: purchasePrice,
       };
