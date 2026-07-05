@@ -123,6 +123,42 @@ const UserPOS = () => {
     else toast({ title: "No match", description: `No product for "${search}"`, variant: "destructive" });
   };
 
+  // Hardware barcode scanner support: USB/Bluetooth scanners emit keystrokes
+  // very fast and finish with Enter. We buffer rapid input globally and match
+  // it against a product barcode/SKU regardless of which field is focused.
+  const productsRef = useRef<POSProduct[]>([]);
+  const addRef = useRef<(p: POSProduct) => void>(() => {});
+  productsRef.current = products;
+  addRef.current = addToCart;
+
+  useEffect(() => {
+    let buffer = "";
+    let last = 0;
+    const onKey = (e: KeyboardEvent) => {
+      const now = Date.now();
+      if (now - last > 80) buffer = "";
+      last = now;
+      if (e.key === "Enter") {
+        const code = buffer.trim().toLowerCase();
+        buffer = "";
+        if (code.length < 3) return;
+        const hit = productsRef.current.find(
+          (p) => (p.barcode ?? "").toLowerCase() === code || (p.internal_sku ?? "").toLowerCase() === code,
+        );
+        if (hit) {
+          e.preventDefault();
+          addRef.current(hit);
+          setSearch("");
+        }
+        return;
+      }
+      if (e.key.length === 1) buffer += e.key;
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
   const subtotal = cart.reduce((s, l) => s + l.unit * l.qty, 0);
   const discountValue = Math.min(subtotal * (Number(discountPct) || 0) / 100, subtotal);
   const taxed = subtotal - discountValue;
