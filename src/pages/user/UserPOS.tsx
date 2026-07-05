@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, Search, ScanLine, Trash2, Package, Plus, Minus,
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMoney } from "@/lib/currency";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import SaleReceiptDialog, { ReceiptData } from "@/components/pos/SaleReceiptDialog";
 
 interface POSProduct {
   id: string; name: string; internal_sku: string | null; barcode: string | null;
