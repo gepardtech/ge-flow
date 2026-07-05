@@ -416,7 +416,15 @@ const UserPOS = () => {
           </div>
         </div>
       </div>
+
+      <SaleReceiptDialog
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receipt}
+        onNewCustomer={() => setReceiptOpen(false)}
+      />
     </UserPanelGate>
+
   );
 };
 
