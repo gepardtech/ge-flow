@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, Search, ScanLine, Trash2, Package, Plus, Minus,
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMoney } from "@/lib/currency";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import SaleReceiptDialog, { ReceiptData } from "@/components/pos/SaleReceiptDialog";
 
 interface POSProduct {
   id: string; name: string; internal_sku: string | null; barcode: string | null;
@@ -37,6 +38,9 @@ const UserPOS = () => {
   const [payMethod, setPayMethod] = useState<"cash" | "card">("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+
 
   const taxRate = Number(active?.default_tax ?? 0);
   const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "General";
@@ -119,6 +123,42 @@ const UserPOS = () => {
     else toast({ title: "No match", description: `No product for "${search}"`, variant: "destructive" });
   };
 
+  // Hardware barcode scanner support: USB/Bluetooth scanners emit keystrokes
+  // very fast and finish with Enter. We buffer rapid input globally and match
+  // it against a product barcode/SKU regardless of which field is focused.
+  const productsRef = useRef<POSProduct[]>([]);
+  const addRef = useRef<(p: POSProduct) => void>(() => {});
+  productsRef.current = products;
+  addRef.current = addToCart;
+
+  useEffect(() => {
+    let buffer = "";
+    let last = 0;
+    const onKey = (e: KeyboardEvent) => {
+      const now = Date.now();
+      if (now - last > 80) buffer = "";
+      last = now;
+      if (e.key === "Enter") {
+        const code = buffer.trim().toLowerCase();
+        buffer = "";
+        if (code.length < 3) return;
+        const hit = productsRef.current.find(
+          (p) => (p.barcode ?? "").toLowerCase() === code || (p.internal_sku ?? "").toLowerCase() === code,
+        );
+        if (hit) {
+          e.preventDefault();
+          addRef.current(hit);
+          setSearch("");
+        }
+        return;
+      }
+      if (e.key.length === 1) buffer += e.key;
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
   const subtotal = cart.reduce((s, l) => s + l.unit * l.qty, 0);
   const discountValue = Math.min(subtotal * (Number(discountPct) || 0) / 100, subtotal);
   const taxed = subtotal - discountValue;
@@ -160,10 +200,31 @@ const UserPOS = () => {
     }
 
     setProcessing(false);
+
+    // Build the printable receipt from the finalized cart before clearing.
+    const invoiceNo = `INV-${sale.id.slice(0, 6).toUpperCase()}`;
+    setReceipt({
+      invoiceNo,
+      date: new Date(),
+      businessName: active.business_name,
+      lines: cart.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, total: l.unit * l.qty })),
+      subtotal,
+      discount: discountValue,
+      taxRate,
+      tax: gst,
+      total: grandTotal,
+      payMethod,
+      cashGiven: cashNum,
+      changeDue,
+      symbol,
+    });
+    setReceiptOpen(true);
+
     toast({ title: "Transaction complete", description: `${cart.length} item(s) · ${fmt(grandTotal)}${payMethod === "cash" ? ` · change ${fmt(changeDue)}` : ""}` });
     clearCart();
     load();
   };
+
 
   return (
     <UserPanelGate pageTitle="POS Terminal" module="pos">
@@ -355,7 +416,15 @@ const UserPOS = () => {
           </div>
         </div>
       </div>
+
+      <SaleReceiptDialog
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receipt}
+        onNewCustomer={() => setReceiptOpen(false)}
+      />
     </UserPanelGate>
+
   );
 };
 

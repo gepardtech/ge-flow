@@ -855,6 +855,107 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_items: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          owner_user_id: string
+          product_id: string | null
+          product_name: string
+          purchase_id: string
+          purchase_price: number
+          quantity: number
+          sale_price: number
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          owner_user_id: string
+          product_id?: string | null
+          product_name: string
+          purchase_id: string
+          purchase_price?: number
+          quantity?: number
+          sale_price?: number
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          owner_user_id?: string
+          product_id?: string | null
+          product_name?: string
+          purchase_id?: string
+          purchase_price?: number
+          quantity?: number
+          sale_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          business_id: string
+          created_at: string
+          entry_date: string
+          id: string
+          invoice_ref: string | null
+          owner_user_id: string
+          status: string
+          supplier_name: string
+          total: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoice_ref?: string | null
+          owner_user_id: string
+          status?: string
+          supplier_name?: string
+          total?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoice_ref?: string | null
+          owner_user_id?: string
+          status?: string
+          supplier_name?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       refund_requests: {
         Row: {
           admin_notes: string | null
