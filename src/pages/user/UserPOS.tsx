@@ -38,6 +38,9 @@ const UserPOS = () => {
   const [payMethod, setPayMethod] = useState<"cash" | "card">("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+
 
   const taxRate = Number(active?.default_tax ?? 0);
   const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "General";
