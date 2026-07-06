@@ -44,6 +44,7 @@ const Checkout = () => {
 
   const tax = useMemo(() => +(Math.max(subtotal, 0) * (taxRate / 100)).toFixed(2), [subtotal, taxRate]);
 
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
