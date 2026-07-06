@@ -220,12 +220,20 @@ const SaleReceiptDialog = ({ open, onOpenChange, data, onNewCustomer }: Props) =
 
           {/* Actions */}
           <div className="mt-6 space-y-3">
-            <button
-              onClick={printReceipt}
-              className="w-full h-12 rounded-2xl bg-foreground text-background font-bold inline-flex items-center justify-center gap-2 hover:opacity-90 transition"
-            >
-              <Printer className="h-4 w-4" /> Print Receipt
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={printReceipt}
+                className="h-12 rounded-2xl bg-foreground text-background font-bold inline-flex items-center justify-center gap-2 hover:opacity-90 transition"
+              >
+                <Printer className="h-4 w-4" /> Print
+              </button>
+              <button
+                onClick={downloadReceipt}
+                className="h-12 rounded-2xl bg-sky-500 text-white font-bold inline-flex items-center justify-center gap-2 hover:bg-sky-600 transition"
+              >
+                <Download className="h-4 w-4" /> Download
+              </button>
+            </div>
             <button
               onClick={onNewCustomer}
               className="w-full h-12 rounded-2xl bg-muted/60 border border-border font-bold inline-flex items-center justify-center gap-2 hover:bg-muted transition"
