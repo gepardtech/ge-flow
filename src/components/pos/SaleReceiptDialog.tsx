@@ -83,12 +83,70 @@ const SaleReceiptDialog = ({ open, onOpenChange, data, onNewCustomer }: Props) =
       ${data.payMethod === "cash" ? `<div class="row"><span>Cash</span><span>${money(sym, data.cashGiven)}</span></div><div class="row"><span>Change</span><span>${money(sym, data.changeDue)}</span></div>` : ""}
       <div class="foot">Thank you for your purchase!<br/>Powered by GeFlow OS</div>
       </body></html>`;
-    const w = window.open("", "_blank", "width=360,height=640");
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 300);
+    // Print via a hidden iframe — reliable across browsers and never blocked
+    // by popup blockers (unlike window.open), so it opens the printer dialog.
+    const existing = document.getElementById("geflow-print-frame");
+    if (existing) existing.remove();
+    const frame = document.createElement("iframe");
+    frame.id = "geflow-print-frame";
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    document.body.appendChild(frame);
+    const doc = frame.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    const run = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+      setTimeout(() => frame.remove(), 1000);
+    };
+    // Wait for the iframe document to be ready before printing.
+    if (frame.contentWindow?.document.readyState === "complete") setTimeout(run, 200);
+    else frame.onload = () => setTimeout(run, 200);
+  };
+
+  const downloadReceipt = () => {
+    const line = (a: string, b: string) => `${a}${" ".repeat(Math.max(1, 32 - a.length - b.length))}${b}`;
+    const rows = data.lines
+      .map((l) => line(`${l.qty} x ${l.name}`.slice(0, 24), money(sym, l.total)))
+      .join("\n");
+    const txt = [
+      (data.businessName || "GEFLOW OS").toUpperCase(),
+      "TRANSACTION LEDGER",
+      "".padEnd(32, "-"),
+      `INVOICE #${data.invoiceNo}`,
+      `DATE: ${fmtDate(data.date)}`,
+      "".padEnd(32, "-"),
+      rows,
+      "".padEnd(32, "-"),
+      line("Subtotal", money(sym, data.subtotal)),
+      ...(data.discount > 0 ? [line("Discount", `-${money(sym, data.discount)}`)] : []),
+      line(`Tax (${data.taxRate}%)`, money(sym, data.tax)),
+      line("TOTAL", money(sym, data.total)),
+      "".padEnd(32, "-"),
+      line("Payment", data.payMethod.toUpperCase()),
+      ...(data.payMethod === "cash"
+        ? [line("Cash", money(sym, data.cashGiven)), line("Change", money(sym, data.changeDue))]
+        : []),
+      "".padEnd(32, "-"),
+      "Thank you for your purchase!",
+      "Powered by GeFlow OS",
+    ].join("\n");
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${data.invoiceNo}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
