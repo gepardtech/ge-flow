@@ -359,6 +359,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
         <AnnouncementBar audience={isAdmin ? "admins" : "users"} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
+      {!isAdmin && <AIAssistant open={aiOpen} onOpenChange={setAiOpen} />}
     </div>
   );
 };
