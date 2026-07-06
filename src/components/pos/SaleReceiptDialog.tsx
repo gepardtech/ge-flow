@@ -1,5 +1,5 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CheckCircle2, Printer, ArrowRight } from "lucide-react";
+import { CheckCircle2, Printer, ArrowRight, Download } from "lucide-react";
 
 export interface ReceiptLine {
   name: string;
