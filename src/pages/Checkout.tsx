@@ -137,7 +137,7 @@ const Checkout = () => {
     const inv: InvoiceData = {
       invoiceNumber: invoiceNo(Date.now().toString()),
       date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-      customerName: fullName,
+      customerName: resolvedName,
       customerEmail: email,
       planName: data.name,
       period: PERIOD_LABEL[period],
