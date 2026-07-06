@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, LogIn, Lock, Menu, LucideIcon } from "lucide-react";
+import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, LogIn, Lock, Menu, Sparkles, LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -10,6 +10,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import AIAssistant from "@/components/ai/AIAssistant";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 export interface NavChild { label: string; to: string; }
