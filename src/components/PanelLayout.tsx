@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, LogIn, Lock, Menu, LucideIcon } from "lucide-react";
+import { Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon, Settings, LifeBuoy, LogIn, Lock, Menu, Sparkles, LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -10,6 +10,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import AIAssistant from "@/components/ai/AIAssistant";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 export interface NavChild { label: string; to: string; }
@@ -33,6 +34,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
   const isLocked = (to: string) => lockedPaths.some((p) => to === p || to.startsWith(p + "/"));
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -262,6 +264,15 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
             />
           </div>
           <div className="flex items-center gap-1.5 ml-auto pl-2">
+            {!isAdmin && (
+              <button
+                onClick={() => setAiOpen(true)}
+                className="h-10 pl-2.5 pr-3 rounded-xl bg-gradient-to-r from-violet-500 to-sky-400 text-white flex items-center gap-1.5 text-xs font-bold transition-all hover:opacity-90 hover:scale-105 shadow-sm"
+                aria-label="Open AI Assistant"
+              >
+                <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">AI Assistant</span>
+              </button>
+            )}
             <button
               onClick={() => setTheme(isDark ? "light" : "dark")}
               className="h-10 w-10 rounded-xl hover:bg-muted flex items-center justify-center transition-all hover:scale-105"
@@ -348,6 +359,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
         <AnnouncementBar audience={isAdmin ? "admins" : "users"} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
+      {!isAdmin && <AIAssistant open={aiOpen} onOpenChange={setAiOpen} />}
     </div>
   );
 };
