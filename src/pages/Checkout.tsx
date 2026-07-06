@@ -125,7 +125,7 @@ const Checkout = () => {
       return;
     }
     const inv: InvoiceData = {
-      invoiceNumber: `GF-${Date.now().toString().slice(-8)}`,
+      invoiceNumber: invoiceNo(Date.now().toString()),
       date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
       customerName: fullName,
       customerEmail: email,
