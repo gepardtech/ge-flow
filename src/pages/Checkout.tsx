@@ -187,24 +187,46 @@ const Checkout = () => {
               <div className="border-t border-border my-6" />
 
               {/* Step 1 */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-bold">1</div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-9 w-9 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-bold">1</div>
+                <div>
                   <h2 className="text-lg font-bold">Account Identity</h2>
+                  <p className="text-xs text-muted-foreground">{authMode === "signup" ? "Create your GeFlow account to activate this plan." : "Sign in to your existing GeFlow account."}</p>
                 </div>
-                <Link to="/login" className="text-xs font-semibold text-primary hover:underline">
-                  Already have an account? Log In
-                </Link>
+              </div>
+
+              {/* Auth mode toggler */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-xl border border-border mb-5">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("signup")}
+                  className={`py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                    authMode === "signup" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  NEW ACCOUNT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  className={`py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                    authMode === "login" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  EXISTING ACCOUNT
+                </button>
               </div>
 
               <div className="space-y-4 mb-8">
-                <div>
-                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">FULL LEGAL NAME</label>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="e.g. Alex Gepard" className="h-12" />
-                </div>
+                {authMode === "signup" && (
+                  <div>
+                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">FULL LEGAL NAME</label>
+                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="e.g. Alex Gepard" className="h-12" />
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">WORK EMAIL IDENTITY</label>
+                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">{authMode === "signup" ? "WORK EMAIL IDENTITY" : "ACCOUNT EMAIL"}</label>
                     <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="alex@geflow.io" className="h-12" />
                   </div>
                   <div>
@@ -212,6 +234,11 @@ const Checkout = () => {
                     <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="••••••••" className="h-12" />
                   </div>
                 </div>
+                {authMode === "login" && (
+                  <p className="text-xs text-muted-foreground">Don't have an account?{" "}
+                    <button type="button" onClick={() => setAuthMode("signup")} className="font-semibold text-primary hover:underline">Create one</button>
+                  </p>
+                )}
               </div>
 
               {/* Step 2 */}
