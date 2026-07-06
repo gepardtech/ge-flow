@@ -34,6 +34,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
   const isLocked = (to: string) => lockedPaths.some((p) => to === p || to.startsWith(p + "/"));
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
