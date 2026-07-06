@@ -112,17 +112,26 @@ const Checkout = () => {
       }
     }
     setLoading(true);
-    const { data: signupData, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, plan, period },
-        emailRedirectTo: window.location.origin,
-      },
-    });
+    let authError = null;
+    let resolvedName = fullName;
+    if (authMode === "login") {
+      const { data: loginData, error } = await supabase.auth.signInWithPassword({ email, password });
+      authError = error;
+      resolvedName = (loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0];
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, plan, period },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      authError = error;
+    }
     setLoading(false);
-    if (error) {
-      toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
+    if (authError) {
+      toast({ title: "Checkout failed", description: authError.message, variant: "destructive" });
       return;
     }
     const inv: InvoiceData = {
