@@ -264,6 +264,15 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
             />
           </div>
           <div className="flex items-center gap-1.5 ml-auto pl-2">
+            {!isAdmin && (
+              <button
+                onClick={() => setAiOpen(true)}
+                className="h-10 pl-2.5 pr-3 rounded-xl bg-gradient-to-r from-violet-500 to-sky-400 text-white flex items-center gap-1.5 text-xs font-bold transition-all hover:opacity-90 hover:scale-105 shadow-sm"
+                aria-label="Open AI Assistant"
+              >
+                <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">AI Assistant</span>
+              </button>
+            )}
             <button
               onClick={() => setTheme(isDark ? "light" : "dark")}
               className="h-10 w-10 rounded-xl hover:bg-muted flex items-center justify-center transition-all hover:scale-105"
