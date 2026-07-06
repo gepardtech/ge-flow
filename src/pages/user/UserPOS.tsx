@@ -24,7 +24,7 @@ interface CartLine extends POSProduct { qty: number; unit: number; }
 const UserPOS = () => {
   const { active, industryType, categoryName, loading: bizLoading } = useActiveBusiness();
   const { all: categories } = useProductCategories(industryType, categoryName);
-  const { symbol, format: fmt } = useMoney();
+  const { symbol, format: fmt, invoiceNo: makeInvoiceNo } = useMoney();
   const { toast } = useToast();
   const navigate = useNavigate();
 
