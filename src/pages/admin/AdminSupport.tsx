@@ -625,8 +625,18 @@ const TicketDialog = ({ open, ticket, templates, onOpenChange, onUpdated }: any)
 const AnnouncementsManager = ({ items, onChange, openCreate }: any) => {
   const { toast } = useToast();
   const [edit, setEdit] = useState<Announcement | null>(null);
-  const del = async (id: string) => { await supabase.from("announcements").delete().eq("id", id); onChange(); toast({ title: "Deleted" }); };
-  const toggle = async (a: Announcement) => { await supabase.from("announcements").update({ is_active: !a.is_active }).eq("id", a.id); onChange(); };
+  const del = async (id: string) => {
+    const { error } = await supabase.from("announcements").delete().eq("id", id);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    onChange(); toast({ title: "Deleted" });
+  };
+  const toggle = async (a: Announcement) => {
+    const next = !a.is_active;
+    const { error } = await supabase.from("announcements").update({ is_active: next }).eq("id", a.id);
+    if (error) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: next ? "Announcement activated" : "Announcement paused" });
+    onChange();
+  };
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       {items.length === 0 ? <div className="p-12 text-center"><p className="text-muted-foreground text-sm">No announcements yet.</p><Button onClick={openCreate} className="mt-3 bg-sky-400 hover:bg-sky-500 text-white"><Plus className="h-4 w-4 mr-2" /> Create First</Button></div> :
