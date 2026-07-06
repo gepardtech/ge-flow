@@ -35,7 +35,7 @@ const Checkout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { symbol: sym, taxRate } = useMoney();
+  const { symbol: sym, taxRate, invoiceNo } = useMoney();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
