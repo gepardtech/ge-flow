@@ -202,7 +202,7 @@ const UserPOS = () => {
     setProcessing(false);
 
     // Build the printable receipt from the finalized cart before clearing.
-    const invoiceNo = `INV-${sale.id.slice(0, 6).toUpperCase()}`;
+    const invoiceNo = makeInvoiceNo(sale.id);
     setReceipt({
       invoiceNo,
       date: new Date(),
