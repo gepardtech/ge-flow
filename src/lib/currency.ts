@@ -17,9 +17,16 @@ export const useMoney = () => {
   const code = (settings?.base_currency as string) ?? "USD";
   const sym = currencySymbol(code);
   const taxRate = Number(settings?.universal_tax ?? 0);
+  const invoicePrefix = ((settings?.invoice_prefix as string) ?? "INV").trim().replace(/-+$/, "") || "INV";
 
   const format = (n: number) =>
     `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
-  return { currency: code, symbol: sym, taxRate, format };
+  /** Build an invoice number using the platform prefix, e.g. GF-8FA3C1. */
+  const invoiceNo = (seed?: string) => {
+    const tail = (seed ?? Date.now().toString()).replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase();
+    return `${invoicePrefix}-${tail}`;
+  };
+
+  return { currency: code, symbol: sym, taxRate, invoicePrefix, invoiceNo, format };
 };
