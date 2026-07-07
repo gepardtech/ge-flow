@@ -95,6 +95,22 @@ const UserPurchases = () => {
     URL.revokeObjectURL(url);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    setDeleting(true);
+    // purchase_items are removed automatically via cascade.
+    const { error } = await supabase.from("purchases").delete().eq("id", deleteRow.id);
+    if (error) {
+      toast({ title: "Could not delete", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Purchase record removed" });
+      setRows((prev) => prev.filter((r) => r.id !== deleteRow.id));
+    }
+    setDeleteRow(null);
+    setDeleting(false);
+  };
+
+
   const shortId = (id: string) => `PUR-${id.slice(0, 4).toUpperCase()}`;
   const dateLabel = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }).toUpperCase();
 
