@@ -32,6 +32,8 @@ const UserPurchases = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [architectOpen, setArchitectOpen] = useState(false);
   const [ledger, setLedger] = useState<PurchaseRecord | null>(null);
+  const [deleteRow, setDeleteRow] = useState<PurchaseRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!active) { setLoading(false); return; }
