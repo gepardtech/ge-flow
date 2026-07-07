@@ -227,7 +227,10 @@ const UserPurchases = () => {
                     <td className="px-6 py-4 font-extrabold">{fmt(Number(r.total))}</td>
                     <td className="px-6 py-4"><span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full uppercase ${statusPill(r.status)}`}>{r.status}</span></td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => setLedger(r)} className="inline-flex items-center gap-2 text-sm font-bold text-sky-500 hover:text-sky-600 transition"><Eye className="h-4 w-4" /> View Ledger</button>
+                      <div className="inline-flex items-center gap-3">
+                        <button onClick={() => setLedger(r)} className="inline-flex items-center gap-2 text-sm font-bold text-sky-500 hover:text-sky-600 transition"><Eye className="h-4 w-4" /> View Ledger</button>
+                        <button onClick={() => setDeleteRow(r)} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-500 hover:text-rose-600 transition"><Trash2 className="h-4 w-4" /> Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
