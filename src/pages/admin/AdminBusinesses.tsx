@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import {
   Search, Filter, Building2, TrendingUp, Zap, Ban, MoreVertical, Eye, BarChart3,
-  ArrowUpDown, ShieldOff, ShieldCheck, RotateCcw, Loader2,
+  ShieldOff, RotateCcw, Loader2,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -36,6 +36,13 @@ interface BusinessRow {
 }
 interface OwnerInfo { full_name: string | null; email: string | null; plan: string; }
 interface CategoryInfo { name: string; industry_type: string; }
+interface BizStats {
+  liveProducts: number;
+  totalProducts: number;
+  totalEarning: number;
+  aiUsage: number;
+  lastActivity: string | null;
+}
 
 const PLAN_PRICES: Record<string, number> = { free: 0, standard: 29, premium: 79, unlimited: 149, lifetime: 299 };
 const PLAN_STYLES: Record<string, string> = {
@@ -59,12 +66,29 @@ const AdminBusinesses = () => {
   const [planFilter, setPlanFilter] = useState("all");
   const [view, setView] = useState<BusinessRow | null>(null);
   const [analytics, setAnalytics] = useState<BusinessRow | null>(null);
-  const [planChange, setPlanChange] = useState<BusinessRow | null>(null);
-  const [planValue, setPlanValue] = useState("free");
   const [suspendBiz, setSuspendBiz] = useState<BusinessRow | null>(null);
   const [resetBiz, setResetBiz] = useState<BusinessRow | null>(null);
+  const [stats, setStats] = useState<BizStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
+
+  const fetchStats = useCallback(async (businessId: string) => {
+    setStats(null);
+    setStatsLoading(true);
+    const { data, error } = await supabase.functions.invoke("admin-business-ops", {
+      body: { action: "stats", businessId },
+    });
+    if (error || data?.error) {
+      toast({ title: "Could not load analytics", description: error?.message ?? data?.error, variant: "destructive" });
+    } else {
+      setStats(data as BizStats);
+    }
+    setStatsLoading(false);
+  }, [toast]);
+
+  const openView = (r: BusinessRow) => { setView(r); fetchStats(r.id); };
+  const openAnalytics = (r: BusinessRow) => { setAnalytics(r); fetchStats(r.id); };
 
   const load = useCallback(async () => {
     const [{ data, error }, { data: profs }, { data: catsData }] = await Promise.all([
@@ -126,29 +150,32 @@ const AdminBusinesses = () => {
   const premiumHubs = rows.filter((r) => ["premium", "unlimited", "lifetime"].includes(owners[r.owner_user_id]?.plan ?? "")).length;
   const suspendedOrg = rows.filter((r) => r.status === "suspended").length;
 
-  const submitPlanChange = async () => {
-    if (!planChange) return;
-    setBusy(true);
-    const { error } = await supabase.from("profiles").update({ plan: planValue }).eq("user_id", planChange.owner_user_id);
-    if (!error) toast({ title: "Plan updated", description: `${planChange.business_name} owner → ${planValue}.` });
-    else toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    setPlanChange(null); setBusy(false);
-  };
   const submitSuspend = async () => {
     if (!suspendBiz) return;
     setBusy(true);
-    const next = suspendBiz.status === "suspended" ? "active" : "suspended";
-    const { error } = await supabase.from("businesses").update({ status: next }).eq("id", suspendBiz.id);
-    if (!error) toast({ title: next === "suspended" ? "Business suspended" : "Business activated" });
-    else toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    const { data, error } = await supabase.functions.invoke("admin-business-ops", {
+      body: { action: "suspend", businessId: suspendBiz.id },
+    });
+    if (!error && !data?.error) {
+      toast({ title: "Business suspended", description: `${suspendBiz.business_name} and all its data were removed.` });
+      load();
+    } else {
+      toast({ title: "Suspension failed", description: error?.message ?? data?.error, variant: "destructive" });
+    }
     setSuspendBiz(null); setBusy(false);
   };
   const submitReset = async () => {
     if (!resetBiz) return;
     setBusy(true);
-    const { error } = await supabase.from("businesses").update({ listed_products: 0, usage: 0 }).eq("id", resetBiz.id);
-    if (!error) toast({ title: "Business data reset", description: "Inventory & POS counters cleared." });
-    else toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    const { data, error } = await supabase.functions.invoke("admin-business-ops", {
+      body: { action: "reset", businessId: resetBiz.id },
+    });
+    if (!error && !data?.error) {
+      toast({ title: "Business data reset", description: "Products, sales, purchases and stock were cleared." });
+      load();
+    } else {
+      toast({ title: "Reset failed", description: error?.message ?? data?.error, variant: "destructive" });
+    }
     setResetBiz(null); setBusy(false);
   };
 
@@ -294,12 +321,11 @@ const AdminBusinesses = () => {
                         <button className="h-8 w-8 rounded-lg hover:bg-muted inline-flex items-center justify-center transition"><MoreVertical className="h-4 w-4" /></button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem onClick={() => setView(r)}><Eye className="h-4 w-4 mr-2" /> View Identity</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setAnalytics(r)}><BarChart3 className="h-4 w-4 mr-2" /> Preview Analytics</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setPlanChange(r); setPlanValue(r._plan); }}><ArrowUpDown className="h-4 w-4 mr-2" /> Upgrade / Downgrade</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openView(r)}><Eye className="h-4 w-4 mr-2" /> View Identity</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAnalytics(r)}><BarChart3 className="h-4 w-4 mr-2" /> Preview / Analytics</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setSuspendBiz(r)}>
-                          {r.status === "suspended" ? (<><ShieldCheck className="h-4 w-4 mr-2 text-emerald-500" /> Activate Business</>) : (<><ShieldOff className="h-4 w-4 mr-2 text-amber-500" /> Suspend Business</>)}
+                        <DropdownMenuItem onClick={() => setSuspendBiz(r)} className="text-amber-500 focus:text-amber-500">
+                          <ShieldOff className="h-4 w-4 mr-2" /> Suspend Business
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setResetBiz(r)} className="text-rose-500 focus:text-rose-500">
                           <RotateCcw className="h-4 w-4 mr-2" /> Reset Business Data
@@ -328,72 +354,65 @@ const AdminBusinesses = () => {
           </DialogHeader>
           {view && (
             <div className="space-y-3 text-sm">
+              <Row label="Name" value={view.business_name} />
               <Row label="Owner" value={owners[view.owner_user_id]?.full_name || "Unnamed"} />
               <Row label="Email" value={owners[view.owner_user_id]?.email || "—"} />
-              <Row label="Address" value={view.business_address || "—"} />
-              <Row label="Category" value={view.category_id ? cats[view.category_id]?.name ?? "—" : "Uncategorized"} />
-              <Row label="Industry" value={view.category_id ? cats[view.category_id]?.industry_type ?? "—" : "—"} />
-              <Row label="Currency" value={view.currency} />
-              <Row label="Registered" value={format(new Date(view.created_at), "MMM d, yyyy")} />
+              <Row label="Created" value={format(new Date(view.created_at), "MMM d, yyyy · h:mm a")} />
+              <Row
+                label="Lifetime Products"
+                value={statsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (stats?.totalProducts ?? 0)}
+              />
+              <Row
+                label="Lifetime Earning"
+                value={statsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : money(stats?.totalEarning ?? 0, view.currency)}
+              />
               <Row label="Status" value={<span className="capitalize">{view.status}</span>} />
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Preview Analytics */}
+      {/* Preview / Analytics */}
       <Dialog open={!!analytics} onOpenChange={(o) => !o && setAnalytics(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{analytics?.business_name} — Analytics</DialogTitle>
-            <DialogDescription>Live performance snapshot.</DialogDescription>
+            <DialogDescription>Live performance snapshot for this business account.</DialogDescription>
           </DialogHeader>
           {analytics && (
-            <div className="grid grid-cols-2 gap-3">
-              <Stat label="Listed Products" value={analytics.listed_products ?? 0} />
-              <Stat label="Plan MRR" value={`$${PLAN_PRICES[owners[analytics.owner_user_id]?.plan ?? "free"] ?? 0}`} />
-              <Stat label="Inventory Health" value={`${Math.min(100, 60 + (analytics.listed_products ?? 0))}%`} />
-              <Stat label="AI Insights" value={analytics.usage ?? 0} />
-            </div>
+            statsLoading ? (
+              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Stat label="Live Products" value={stats?.liveProducts ?? 0} />
+                <Stat label="Total Earning" value={money(stats?.totalEarning ?? 0, analytics.currency)} />
+                <Stat label="AI Insights" value={`${stats?.aiUsage ?? 0} uses`} />
+                <Stat
+                  label="Last Activity"
+                  value={stats?.lastActivity ? format(new Date(stats.lastActivity), "MMM d, h:mm a") : "No activity"}
+                />
+              </div>
+            )
           )}
           <DialogFooter><button onClick={() => setAnalytics(null)} className="h-10 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-bold">Close</button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Plan change */}
-      <Dialog open={!!planChange} onOpenChange={(o) => !o && setPlanChange(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Change Plan Tier</DialogTitle>
-            <DialogDescription>This updates the owner's plan instantly. Premium features sync in realtime.</DialogDescription>
-          </DialogHeader>
-          <Select value={planValue} onValueChange={setPlanValue}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{PLANS.map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
-          </Select>
-          <DialogFooter className="gap-2">
-            <button onClick={() => setPlanChange(null)} className="h-10 px-4 rounded-xl border border-border text-sm font-bold">Cancel</button>
-            <button onClick={submitPlanChange} disabled={busy} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-bold inline-flex items-center gap-2">
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Apply Plan
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Suspend */}
+      {/* Suspend = full teardown */}
       <AlertDialog open={!!suspendBiz} onOpenChange={(o) => !o && setSuspendBiz(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{suspendBiz?.status === "suspended" ? "Reactivate this business?" : "Suspend this business?"}</AlertDialogTitle>
+            <AlertDialogTitle>Suspend &amp; delete this business?</AlertDialogTitle>
             <AlertDialogDescription>
-              {suspendBiz?.status === "suspended"
-                ? "The owner will regain access immediately."
-                : "The owner will lose access until reactivated."}
+              This permanently removes <span className="font-bold">{suspendBiz?.business_name}</span> and everything tied to it —
+              products, sales, purchases, stock records and its registration. The owner will no longer be able to access it.
+              This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={submitSuspend} disabled={busy}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Confirm</AlertDialogAction>
+            <AlertDialogAction onClick={submitSuspend} disabled={busy} className="bg-rose-500 hover:bg-rose-600">{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Suspend Business</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -404,7 +423,8 @@ const AdminBusinesses = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset business data?</AlertDialogTitle>
             <AlertDialogDescription>
-              Clears inventory and POS counters for <span className="font-bold">{resetBiz?.business_name}</span>. This cannot be undone.
+              Deletes all products, sales, purchases and stock movements for <span className="font-bold">{resetBiz?.business_name}</span>,
+              returning it to a fresh, empty account. The owner's login, plan and business registration stay intact. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -416,6 +436,15 @@ const AdminBusinesses = () => {
     </PanelLayout>
   );
 };
+
+const money = (n: number, currency?: string) => {
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(n);
+  } catch {
+    return `${currency || "$"} ${n.toFixed(2)}`;
+  }
+};
+
 
 const Row = ({ label, value }: { label: string; value: any }) => (
   <div className="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">

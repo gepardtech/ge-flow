@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   ShoppingBag, Download, Plus, DollarSign, Boxes, Building2, Clock,
-  Search, Filter, Eye, Package, RefreshCw, Loader2,
+  Search, Eye, Package, RefreshCw, Loader2, Trash2,
 } from "lucide-react";
 import UserPanelGate from "@/components/UserPanelGate";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PurchaseArchitectDialog, { PurchaseProduct } from "@/components/purchases/PurchaseArchitectDialog";
 import PurchaseLedgerDialog, { PurchaseRecord } from "@/components/purchases/PurchaseLedgerDialog";
 
@@ -28,6 +32,8 @@ const UserPurchases = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [architectOpen, setArchitectOpen] = useState(false);
   const [ledger, setLedger] = useState<PurchaseRecord | null>(null);
+  const [deleteRow, setDeleteRow] = useState<PurchaseRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!active) { setLoading(false); return; }
@@ -88,6 +94,22 @@ const UserPurchases = () => {
     a.href = url; a.download = `purchases-${Date.now()}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
+
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    setDeleting(true);
+    // purchase_items are removed automatically via cascade.
+    const { error } = await supabase.from("purchases").delete().eq("id", deleteRow.id);
+    if (error) {
+      toast({ title: "Could not delete", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Purchase record removed" });
+      setRows((prev) => prev.filter((r) => r.id !== deleteRow.id));
+    }
+    setDeleteRow(null);
+    setDeleting(false);
+  };
+
 
   const shortId = (id: string) => `PUR-${id.slice(0, 4).toUpperCase()}`;
   const dateLabel = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }).toUpperCase();
@@ -205,7 +227,10 @@ const UserPurchases = () => {
                     <td className="px-6 py-4 font-extrabold">{fmt(Number(r.total))}</td>
                     <td className="px-6 py-4"><span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full uppercase ${statusPill(r.status)}`}>{r.status}</span></td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => setLedger(r)} className="inline-flex items-center gap-2 text-sm font-bold text-sky-500 hover:text-sky-600 transition"><Eye className="h-4 w-4" /> View Ledger</button>
+                      <div className="inline-flex items-center gap-3">
+                        <button onClick={() => setLedger(r)} className="inline-flex items-center gap-2 text-sm font-bold text-sky-500 hover:text-sky-600 transition"><Eye className="h-4 w-4" /> View Ledger</button>
+                        <button onClick={() => setDeleteRow(r)} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-500 hover:text-rose-600 transition"><Trash2 className="h-4 w-4" /> Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -225,7 +250,30 @@ const UserPurchases = () => {
           onSaved={load}
         />
       )}
-      <PurchaseLedgerDialog purchase={ledger} onOpenChange={(v) => !v && setLedger(null)} />
+      <PurchaseLedgerDialog
+        purchase={ledger}
+        onOpenChange={(v) => !v && setLedger(null)}
+        businessName={active?.business_name ?? ""}
+        taxRate={Number(active?.default_tax ?? 0)}
+      />
+
+      <AlertDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this purchase record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes <span className="font-bold">{deleteRow ? shortId(deleteRow.id) : ""}</span> and its line items from the ledger.
+              Stock levels already applied from this purchase are not reversed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-rose-500 hover:bg-rose-600">
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Delete Record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </UserPanelGate>
   );
 };

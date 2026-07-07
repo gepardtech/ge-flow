@@ -82,7 +82,7 @@ async function buildContext(supabase: any, businessId: string) {
 }
 
 async function callGemini(system: string, messages: ChatMsg[]): Promise<string> {
-  const key = Deno.env.get("Gemini");
+  const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new Error("no-gemini-key");
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
@@ -104,7 +104,7 @@ async function callGemini(system: string, messages: ChatMsg[]): Promise<string> 
 }
 
 async function callOpenAI(system: string, messages: ChatMsg[]): Promise<string> {
-  const key = Deno.env.get("ChatGPT");
+  const key = Deno.env.get("OPENAI_API_KEY");
   if (!key) throw new Error("no-openai-key");
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -120,6 +120,25 @@ async function callOpenAI(system: string, messages: ChatMsg[]): Promise<string> 
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content ?? "";
   if (!text) throw new Error("openai-empty");
+  return text;
+}
+
+// Managed Lovable AI fallback — always available, no user key required.
+async function callGateway(system: string, messages: ChatMsg[]): Promise<string> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("no-gateway-key");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "system", content: system }, ...messages],
+    }),
+  });
+  if (!res.ok) throw new Error(`gateway-${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content ?? "";
+  if (!text) throw new Error("gateway-empty");
   return text;
 }
 
@@ -170,12 +189,25 @@ Deno.serve(async (req) => {
         reply = await callOpenAI(system, messages);
         usedModel = "chatgpt";
       } catch (openaiErr) {
-        console.error("OpenAI failed:", String(openaiErr));
-        return new Response(
-          JSON.stringify({ error: "AI engines are unavailable right now. Please try again shortly." }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        console.error("OpenAI failed, falling back to managed AI gateway:", String(openaiErr));
+        try {
+          reply = await callGateway(system, messages);
+          usedModel = "gateway";
+        } catch (gatewayErr) {
+          console.error("All AI engines failed:", String(gatewayErr));
+          return new Response(
+            JSON.stringify({ error: "AI engines are unavailable right now. Please try again shortly." }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
       }
+    }
+
+    // Track AI usage per business (drives the admin "AI Insights" metric).
+    if (businessId) {
+      try {
+        await supabase.rpc("increment_business_ai_usage", { _business_id: businessId });
+      } catch (_) { /* non-fatal */ }
     }
 
     return new Response(JSON.stringify({ reply, model: usedModel }), {
