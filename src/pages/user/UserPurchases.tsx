@@ -250,7 +250,30 @@ const UserPurchases = () => {
           onSaved={load}
         />
       )}
-      <PurchaseLedgerDialog purchase={ledger} onOpenChange={(v) => !v && setLedger(null)} />
+      <PurchaseLedgerDialog
+        purchase={ledger}
+        onOpenChange={(v) => !v && setLedger(null)}
+        businessName={active?.business_name ?? ""}
+        taxRate={Number(active?.default_tax ?? 0)}
+      />
+
+      <AlertDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this purchase record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes <span className="font-bold">{deleteRow ? shortId(deleteRow.id) : ""}</span> and its line items from the ledger.
+              Stock levels already applied from this purchase are not reversed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-rose-500 hover:bg-rose-600">
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Delete Record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </UserPanelGate>
   );
 };
