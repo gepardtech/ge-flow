@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   ShoppingBag, Download, Plus, DollarSign, Boxes, Building2, Clock,
-  Search, Filter, Eye, Package, RefreshCw, Loader2,
+  Search, Eye, Package, RefreshCw, Loader2, Trash2,
 } from "lucide-react";
 import UserPanelGate from "@/components/UserPanelGate";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PurchaseArchitectDialog, { PurchaseProduct } from "@/components/purchases/PurchaseArchitectDialog";
 import PurchaseLedgerDialog, { PurchaseRecord } from "@/components/purchases/PurchaseLedgerDialog";
 

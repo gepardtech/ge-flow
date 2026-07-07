@@ -1411,6 +1411,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_business_ai_usage: {
+        Args: { _business_id: string }
+        Returns: undefined
+      }
       validate_coupon: {
         Args: { _code: string; _plan: string; _subtotal: number }
         Returns: {
