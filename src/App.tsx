@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import SetupBusiness from "./pages/SetupBusiness";
 import PlatformSettingsProvider from "./components/PlatformSettingsProvider";
 import AdminGuard from "./components/AdminGuard";
+import AuthGuard from "./components/AuthGuard";
 import AdminBillingCoupons from "./pages/admin/AdminBillingCoupons";
 
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -73,7 +74,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<AdminGuard><Admin /></AdminGuard>} />
           <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
           <Route path="/admin/businesses" element={<AdminGuard><AdminBusinesses /></AdminGuard>} />
           <Route path="/admin/business-categories" element={<AdminGuard><AdminBusinessCategories /></AdminGuard>} />
@@ -89,21 +90,21 @@ const App = () => (
           <Route path="/admin/support" element={<AdminGuard><AdminSupport /></AdminGuard>} />
           <Route path="/admin/plan-limits" element={<AdminGuard><AdminPlanLimits /></AdminGuard>} />
           <Route path="/admin/settings" element={<AdminGuard><AdminSettings /></AdminGuard>} />
-          <Route path="/setup/business" element={<SetupBusiness />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/inventory" element={<UserInventory />} />
-          <Route path="/dashboard/low-stock" element={<UserLowStock />} />
-          <Route path="/dashboard/businesses" element={<UserBusinesses />} />
-          <Route path="/dashboard/out-of-stock" element={<UserOutOfStock />} />
-          <Route path="/dashboard/pos" element={<UserPOS />} />
-          <Route path="/dashboard/purchases" element={<UserPurchases />} />
-          <Route path="/dashboard/reports" element={<UserReports />} />
-          <Route path="/dashboard/analytics" element={<UserAnalytics />} />
-          <Route path="/dashboard/team" element={<UserTeam />} />
-          <Route path="/dashboard/subscription" element={<UserSubscription />} />
-          <Route path="/dashboard/announcements" element={<UserAnnouncements />} />
-          <Route path="/dashboard/support" element={<UserSupport />} />
-          <Route path="/dashboard/workspace" element={<UserWorkspace />} />
+          <Route path="/setup/business" element={<AuthGuard><SetupBusiness /></AuthGuard>} />
+          <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
+          <Route path="/dashboard/inventory" element={<AuthGuard><UserInventory /></AuthGuard>} />
+          <Route path="/dashboard/low-stock" element={<AuthGuard><UserLowStock /></AuthGuard>} />
+          <Route path="/dashboard/businesses" element={<AuthGuard><UserBusinesses /></AuthGuard>} />
+          <Route path="/dashboard/out-of-stock" element={<AuthGuard><UserOutOfStock /></AuthGuard>} />
+          <Route path="/dashboard/pos" element={<AuthGuard><UserPOS /></AuthGuard>} />
+          <Route path="/dashboard/purchases" element={<AuthGuard><UserPurchases /></AuthGuard>} />
+          <Route path="/dashboard/reports" element={<AuthGuard><UserReports /></AuthGuard>} />
+          <Route path="/dashboard/analytics" element={<AuthGuard><UserAnalytics /></AuthGuard>} />
+          <Route path="/dashboard/team" element={<AuthGuard><UserTeam /></AuthGuard>} />
+          <Route path="/dashboard/subscription" element={<AuthGuard><UserSubscription /></AuthGuard>} />
+          <Route path="/dashboard/announcements" element={<AuthGuard><UserAnnouncements /></AuthGuard>} />
+          <Route path="/dashboard/support" element={<AuthGuard><UserSupport /></AuthGuard>} />
+          <Route path="/dashboard/workspace" element={<AuthGuard><UserWorkspace /></AuthGuard>} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<Refund />} />
