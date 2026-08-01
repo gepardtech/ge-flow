@@ -310,6 +310,14 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
                     ))
                   )}
                 </div>
+                <div className="p-3 border-t border-border">
+                  <button
+                    onClick={() => navigate("/dashboard/announcements")}
+                    className="w-full h-9 rounded-xl bg-sky-400 hover:bg-sky-500 text-white text-xs font-bold transition-colors"
+                  >
+                    View all announcements
+                  </button>
+                </div>
               </PopoverContent>
             </Popover>
 
