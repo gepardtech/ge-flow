@@ -16,19 +16,27 @@ const SOCIALS = [
   { Icon: Mail, href: "mailto:gepardwebs@gmail.com", label: "Email" },
 ];
 
-const Footer = () => (
+const Footer = () => {
+  const { settings } = usePlatformSettings();
+  return (
   <footer className="border-t border-border bg-background py-16">
     <div className="container mx-auto px-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
         {/* Brand */}
         <div className="col-span-2 md:col-span-1">
-          <div className="flex items-center gap-2 mb-4">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" className="text-primary">
-              <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
-              <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
-            </svg>
-            <span className="font-bold text-lg text-primary">GeFlow</span>
-          </div>
+          <Link to="/" className="flex items-center gap-2 mb-4">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt={settings?.app_name ?? "GeFlow"} className="h-8 max-w-[150px] object-contain" />
+            ) : (
+              <>
+                <svg width="24" height="24" viewBox="0 0 28 28" fill="none" className="text-primary">
+                  <path d="M14 2L4 8v12l10 6 10-6V8L14 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                  <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
+                </svg>
+                <span className="font-bold text-lg text-primary">{settings?.app_name ?? "GeFlow"}</span>
+              </>
+            )}
+          </Link>
           <p className="text-muted-foreground text-sm leading-relaxed mb-4">
             GeFlow is a modern business operating system designed to manage inventory, sales, and profit tracking in real time.
           </p>
