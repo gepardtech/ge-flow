@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Facebook, Instagram, Mail } from "lucide-react";
+import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 
 const PinterestIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -109,6 +110,7 @@ const Footer = () => {
       </div>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;
