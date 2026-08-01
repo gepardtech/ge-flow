@@ -86,7 +86,18 @@ const Footer = () => (
       </div>
 
       <div className="border-t border-border pt-6 text-center text-muted-foreground text-sm">
-        © {new Date().getFullYear()} GeFlow. All rights reserved. Powered by Gesariz Tech.
+        © {new Date().getFullYear()}{" "}
+        <Link to="/" className="font-semibold text-foreground hover:text-primary transition-colors">GeFlow AI</Link>
+        . All rights reserved. Powered by{" "}
+        <a
+          href="https://gepardtechs.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-foreground hover:text-primary transition-colors"
+        >
+          Gepard Techs
+        </a>
+        .
       </div>
     </div>
   </footer>
