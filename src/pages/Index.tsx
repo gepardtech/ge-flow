@@ -32,6 +32,8 @@ const premiumFeatures = ["Unlimited items", "Everything in Standard", "Batch & e
 
 const Index = () => {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
+  const { price } = useMoney({ scope: "platform" });
+  const { priceOf, featuresOf, byKey, badgeOf } = usePricingPlans();
 
   return (
     <Layout>
