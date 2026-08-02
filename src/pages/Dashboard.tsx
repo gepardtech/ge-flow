@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { userNavForPlanAndModules } from "@/lib/panelNav";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { usePlan } from "@/hooks/usePlan";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { useBusinessModules } from "@/hooks/useBusinessModules";
@@ -154,7 +155,7 @@ const Dashboard = () => {
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
-      navItems={userNavForPlanAndModules(planId, modules)}
+      navItems={userNavForPlanAndModules(planId, modules, isFeatureEnabled)}
       identityName={`${plan.label} ${firstName}`}
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}
