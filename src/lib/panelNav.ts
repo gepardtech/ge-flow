@@ -68,10 +68,15 @@ export const userNavForPlan = (planId: PlanId): NavItem[] =>
  * modules for the active business category. When `modules` is null (no business
  * category resolved yet) module gating is skipped so account pages stay usable.
  */
-export const userNavForPlanAndModules = (planId: PlanId, modules: string[] | null): NavItem[] =>
+export const userNavForPlanAndModules = (
+  planId: PlanId,
+  modules: string[] | null,
+  isFeatureEnabled: (code?: string | null) => boolean = () => true,
+): NavItem[] =>
   USER_NAV.filter((item) => {
     if (item.plans && !item.plans.includes(planId)) return false;
     if (item.module && modules !== null && !modules.includes(item.module)) return false;
+    if (item.module && !isFeatureEnabled(item.module)) return false;
     return true;
   });
 

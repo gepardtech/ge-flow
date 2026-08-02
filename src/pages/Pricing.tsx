@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { Check, Minus } from "lucide-react";
 import { useMoney } from "@/lib/currency";
+import { usePricingPlans } from "@/hooks/usePricingPlans";
 import {
   Accordion,
   AccordionContent,
@@ -48,7 +49,8 @@ const Cell = ({ value }: { value: string | boolean }) => {
 };
 
 const Pricing = () => {
-  const { symbol: sym } = useMoney();
+  const { price } = useMoney({ scope: "platform" });
+  const { priceOf, featuresOf, byKey, badgeOf } = usePricingPlans();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   return (
@@ -91,9 +93,9 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <p className="text-4xl font-bold mb-6">{sym}0</p>
+              <p className="text-4xl font-bold mb-6">{price(priceOf("free", billingPeriod))}</p>
               <ul className="space-y-3 mb-8 flex-1">
-                {freeFeatures.map((f) => (
+                {featuresOf("free", freeFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -113,11 +115,11 @@ const Pricing = () => {
               <h3 className="text-xl font-bold mb-1">Standard</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">{sym}{billingPeriod === "monthly" ? "4.99" : "14.99"}</p>
+                <p className="text-4xl font-bold">{price(priceOf("standard", billingPeriod))}</p>
                 <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
-                {standardFeatures.map((f) => (
+                {featuresOf("standard", standardFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -136,11 +138,11 @@ const Pricing = () => {
               <h3 className="text-xl font-bold mb-1">Premium</h3>
               <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">{sym}{billingPeriod === "monthly" ? "9.99" : "24.99"}</p>
+                <p className="text-4xl font-bold">{price(priceOf("premium", billingPeriod))}</p>
                 <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
-                {premiumFeatures.map((f) => (
+                {featuresOf("premium", premiumFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -168,7 +170,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
               <h3 className="text-xl font-bold mb-1">Free Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{sym}0</p>
+                <p className="text-4xl font-bold">{price(priceOf("free", "lifetime"))}</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -189,7 +191,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">MOST POPULAR</span>
               <h3 className="text-xl font-bold mb-1">Standard Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{sym}49.99</p>
+                <p className="text-4xl font-bold">{price(priceOf("standard", "lifetime"))}</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -209,7 +211,7 @@ const Pricing = () => {
               <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">BEST VALUE</span>
               <h3 className="text-xl font-bold mb-1">Premium Lifetime</h3>
               <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{sym}99.99</p>
+                <p className="text-4xl font-bold">{price(priceOf("premium", "lifetime"))}</p>
                 <span className="text-sm text-muted-foreground">one-time</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
