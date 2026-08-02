@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import CTASection from "@/components/CTASection";
+import { useMoney } from "@/lib/currency";
+import { usePricingPlans } from "@/hooks/usePricingPlans";
 import heroLaptop from "@/assets/hero-laptop.jpg";
 import aboutOffice from "@/assets/about-office.jpg";
 import {
