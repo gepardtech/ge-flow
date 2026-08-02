@@ -4,6 +4,7 @@ import PanelLayout from "@/components/PanelLayout";
 import { userNavForPlanAndModules } from "@/lib/panelNav";
 import { usePlan } from "@/hooks/usePlan";
 import { useBusinessModules } from "@/hooks/useBusinessModules";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 import { isRouteLocked } from "@/lib/plans";
@@ -28,11 +29,12 @@ interface Props {
 const UserPanelGate = ({ children, pageTitle, module }: Props) => {
   const { plan, planId, fullName, loading } = usePlan();
   const { modules, loading: modulesLoading } = useBusinessModules();
+  const { isEnabled, loading: featuresLoading } = usePlatformFeatures(planId);
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { settings, loading: settingsLoading } = usePlatformSettings();
   const location = useLocation();
 
-  if (loading || modulesLoading || adminLoading || settingsLoading) {
+  if (loading || modulesLoading || featuresLoading || adminLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Loading workspace...
@@ -49,12 +51,12 @@ const UserPanelGate = ({ children, pageTitle, module }: Props) => {
   const firstName = fullName?.split(" ")[0] || "Operator";
   const initial = firstName.charAt(0).toUpperCase();
   const locked = isRouteLocked(planId, location.pathname);
-  const moduleBlocked = !!module && modules !== null && !modules.includes(module);
+  const moduleBlocked = !!module && ((modules !== null && !modules.includes(module)) || !isEnabled(module));
 
   return (
     <PanelLayout
       sidebarLabel="BUSINESS WORKSPACE"
-      navItems={userNavForPlanAndModules(planId, modules)}
+      navItems={userNavForPlanAndModules(planId, modules, isEnabled)}
       identityName={`${plan.label} ${firstName}`}
       identityRole={`${plan.label.toUpperCase()} PLAN`}
       identityBadgeClass={plan.badgeClass}
