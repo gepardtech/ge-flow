@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
 import { useMoney } from "@/lib/currency";
+import { usePricingPlans } from "@/hooks/usePricingPlans";
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
@@ -35,12 +36,13 @@ const Checkout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { symbol: sym, taxRate, invoiceNo } = useMoney();
+  const { symbol: sym, taxRate, invoiceNo } = useMoney({ scope: "platform" });
+  const { priceOf, featuresOf, byKey } = usePricingPlans();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
   const data = PLAN_DATA[plan] ?? PLAN_DATA.standard;
-  const subtotal = data.pricing[period] ?? data.pricing.monthly;
+  const subtotal = priceOf(plan, period, data.pricing[period] ?? data.pricing.monthly);
 
   const tax = useMemo(() => +(Math.max(subtotal, 0) * (taxRate / 100)).toFixed(2), [subtotal, taxRate]);
 
