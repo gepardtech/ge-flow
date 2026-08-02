@@ -61,12 +61,12 @@ export const usePricingPlans = () => {
     return fb ? ({ plan_key: key, features: [], is_active: true, ...fb } as PricingPlanRow) : null;
   };
 
-  const priceOf = (key: string, cycle: BillingCycle): number => {
+  const priceOf = (key: string, cycle: BillingCycle, fallback = 0): number => {
     const p = byKey(key);
-    if (!p) return 0;
-    if (cycle === "yearly") return Number(p.yearly_price ?? 0);
-    if (cycle === "lifetime") return Number(p.lifetime_price ?? 0);
-    return Number(p.monthly_price ?? 0);
+    if (!p) return fallback;
+    if (cycle === "yearly") return Number(p.yearly_price ?? fallback);
+    if (cycle === "lifetime") return Number(p.lifetime_price ?? fallback);
+    return Number(p.monthly_price ?? fallback);
   };
 
   const featuresOf = (key: string, fallback: string[] = []): string[] => {
