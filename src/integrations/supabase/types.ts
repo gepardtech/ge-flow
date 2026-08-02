@@ -798,6 +798,45 @@ export type Database = {
         }
         Relationships: []
       }
+      public_feature_modules: {
+        Row: {
+          description: string | null
+          function_group: string
+          global_active: boolean
+          id: string
+          module_code: string
+          name: string
+          plan_free: boolean
+          plan_premium: boolean
+          plan_standard: boolean
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          function_group: string
+          global_active?: boolean
+          id: string
+          module_code: string
+          name: string
+          plan_free?: boolean
+          plan_premium?: boolean
+          plan_standard?: boolean
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          function_group?: string
+          global_active?: boolean
+          id?: string
+          module_code?: string
+          name?: string
+          plan_free?: boolean
+          plan_premium?: boolean
+          plan_standard?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       public_settings: {
         Row: {
           app_name: string | null
