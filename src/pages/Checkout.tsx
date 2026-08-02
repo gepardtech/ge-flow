@@ -326,10 +326,10 @@ const Checkout = () => {
 
               <div className="flex items-start justify-between py-5">
                 <div>
-                  <p className="font-bold text-base">{data.name}</p>
+                  <p className="font-bold text-base">{byKey(plan)?.name ?? data.name}</p>
                   <p className="text-[10px] font-bold tracking-wider text-primary mt-1">{PERIOD_LABEL[period]}</p>
                 </div>
-                <p className="text-2xl font-bold">{sym}{subtotal}</p>
+                <p className="text-2xl font-bold">{sym}{subtotal.toFixed(2)}</p>
               </div>
 
               <div className="border-t border-border" />
