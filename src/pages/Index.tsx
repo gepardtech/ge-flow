@@ -177,13 +177,13 @@ const Index = () => {
           <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {/* Free */}
             <div className="glass-card p-7 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-              <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-3">FOREVER FREE</span>
-              <h3 className="text-xl font-bold mb-1">Free</h3>
-              <p className="text-sm text-muted-foreground mb-4">Always free</p>
-              <p className="text-4xl font-bold mb-1">$0</p>
+              <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-3">{badgeOf("free", billingPeriod) ?? "FOREVER FREE"}</span>
+              <h3 className="text-xl font-bold mb-1">{byKey("free")?.name ?? "Free"}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{byKey("free")?.tagline ?? "Always free"}</p>
+              <p className="text-4xl font-bold mb-1">{price(priceOf("free", billingPeriod))}</p>
               <p className="text-xs text-muted-foreground mb-6">No card needed</p>
               <ul className="space-y-3 mb-8 flex-1">
-                {freePlanFeatures.map((f) => (
+                {featuresOf("free", freePlanFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -196,17 +196,17 @@ const Index = () => {
 
             {/* Standard */}
             <div className={`glass-card p-7 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ${billingPeriod === "monthly" ? "border-primary/40 shadow-lg" : ""}`}>
-              {billingPeriod === "monthly" ? (
-                <span className="inline-block text-xs font-semibold text-primary-foreground bg-primary px-3 py-1 rounded-full self-start mb-3">MOST POPULAR</span>
+              {badgeOf("standard", billingPeriod) || billingPeriod === "monthly" ? (
+                <span className="inline-block text-xs font-semibold text-primary-foreground bg-primary px-3 py-1 rounded-full self-start mb-3">{badgeOf("standard", billingPeriod) ?? "MOST POPULAR"}</span>
               ) : <div className="h-[26px] mb-3" />}
-              <h3 className="text-xl font-bold mb-1">Standard</h3>
-              <p className="text-sm text-muted-foreground mb-4">For growing retailers</p>
+              <h3 className="text-xl font-bold mb-1">{byKey("standard")?.name ?? "Standard"}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{byKey("standard")?.tagline ?? "For growing retailers"}</p>
               <p className="text-4xl font-bold text-primary mb-1">
-                ${billingPeriod === "monthly" ? "4.99" : "14.99"}
+                {price(priceOf("standard", billingPeriod))}
               </p>
               <p className="text-xs text-muted-foreground mb-6">per {billingPeriod === "monthly" ? "month" : "year"}</p>
               <ul className="space-y-3 mb-8 flex-1">
-                {standardFeatures.map((f) => (
+                {featuresOf("standard", standardFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -219,19 +219,19 @@ const Index = () => {
 
             {/* Premium */}
             <div className={`glass-card p-7 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ${billingPeriod === "yearly" ? "border-primary/40 shadow-lg" : ""}`}>
-              {billingPeriod === "yearly" ? (
-                <span className="inline-block text-xs font-semibold text-secondary-foreground bg-secondary px-3 py-1 rounded-full self-start mb-3">20% OFF</span>
+              {badgeOf("premium", billingPeriod) || billingPeriod === "yearly" ? (
+                <span className="inline-block text-xs font-semibold text-secondary-foreground bg-secondary px-3 py-1 rounded-full self-start mb-3">{badgeOf("premium", billingPeriod) ?? "20% OFF"}</span>
               ) : <div className="h-[26px] mb-3" />}
-              <h3 className="text-xl font-bold mb-1">Premium</h3>
-              <p className="text-sm text-muted-foreground mb-4">For advanced operations</p>
+              <h3 className="text-xl font-bold mb-1">{byKey("premium")?.name ?? "Premium"}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{byKey("premium")?.tagline ?? "For advanced operations"}</p>
               <p className="text-4xl font-bold mb-1">
                 <span className={billingPeriod === "yearly" ? "text-primary" : ""}>
-                  ${billingPeriod === "monthly" ? "9.99" : "24.99"}
+                  {price(priceOf("premium", billingPeriod))}
                 </span>
               </p>
               <p className="text-xs text-muted-foreground mb-6">per {billingPeriod === "monthly" ? "month" : "year"}</p>
               <ul className="space-y-3 mb-8 flex-1">
-                {premiumFeatures.map((f) => (
+                {featuresOf("premium", premiumFeatures).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
                   </li>
@@ -241,6 +241,7 @@ const Index = () => {
                 <Link to={`/checkout?plan=premium&period=${billingPeriod}`}>Choose Plan</Link>
               </Button>
             </div>
+
           </div>
         </div>
       </section>
