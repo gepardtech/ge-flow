@@ -40,6 +40,7 @@ const Dashboard = () => {
   const { plan, planId, fullName, loading: planLoading } = usePlan();
   const { active, loading: bizLoading } = useActiveBusiness();
   const { modules } = useBusinessModules();
+  const { isEnabled: isFeatureEnabled } = usePlatformFeatures(planId);
 
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ todaySales: 0, todayProfit: 0, totalRevenue: 0, totalProducts: 0, lowStock: 0 });
