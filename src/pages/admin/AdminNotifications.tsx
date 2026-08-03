@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
-import { adminNav } from "@/lib/panelNav";
+import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
   Bell, Loader2, Mail, MailOpen, LifeBuoy, Megaphone, CheckCheck, Search, Filter,
 } from "lucide-react";
@@ -86,15 +86,7 @@ const AdminNotifications = () => {
   const unread = items.filter((i) => i.unread).length;
 
   return (
-    <PanelLayout
-      sidebarLabel="CONTROL CENTER"
-      navItems={adminNav}
-      identityName="Administrator"
-      identityRole="SUPER ADMIN"
-      identityBadgeClass="bg-violet-500/10 text-violet-500"
-      initial="A"
-      isAdmin
-    >
+    <PanelLayout navItems={ADMIN_NAV} {...ADMIN_IDENTITY} isAdmin>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-1">Notifications</h1>
