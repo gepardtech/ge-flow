@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import SetupBusiness from "./pages/SetupBusiness";
 import PlatformSettingsProvider from "./components/PlatformSettingsProvider";
 import AdminGuard from "./components/AdminGuard";
+import I18nProvider from "./components/I18nProvider";
 import AuthGuard from "./components/AuthGuard";
 import AdminBillingCoupons from "./pages/admin/AdminBillingCoupons";
 
@@ -40,6 +41,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPlanLimits from "./pages/admin/AdminPlanLimits";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 
 import UserInventory from "./pages/user/UserInventory";
 import UserLowStock from "./pages/user/UserLowStock";
@@ -53,6 +55,7 @@ import UserTeam from "./pages/user/UserTeam";
 import UserSubscription from "./pages/user/UserSubscription";
 import UserWorkspace from "./pages/user/UserWorkspace";
 import UserAnnouncements from "./pages/user/UserAnnouncements";
+import UserNotifications from "./pages/user/UserNotifications";
 import UserSupport from "./pages/user/UserSupport";
 
 const queryClient = new QueryClient();
@@ -64,6 +67,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PlatformSettingsProvider>
+      <I18nProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -89,6 +93,7 @@ const App = () => (
           <Route path="/admin/analytics" element={<AdminGuard><AdminAnalytics /></AdminGuard>} />
           <Route path="/admin/support" element={<AdminGuard><AdminSupport /></AdminGuard>} />
           <Route path="/admin/plan-limits" element={<AdminGuard><AdminPlanLimits /></AdminGuard>} />
+          <Route path="/admin/notifications" element={<AdminGuard><AdminNotifications /></AdminGuard>} />
           <Route path="/admin/settings" element={<AdminGuard><AdminSettings /></AdminGuard>} />
           <Route path="/setup/business" element={<AuthGuard><SetupBusiness /></AuthGuard>} />
           <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
@@ -103,6 +108,7 @@ const App = () => (
           <Route path="/dashboard/team" element={<AuthGuard><UserTeam /></AuthGuard>} />
           <Route path="/dashboard/subscription" element={<AuthGuard><UserSubscription /></AuthGuard>} />
           <Route path="/dashboard/announcements" element={<AuthGuard><UserAnnouncements /></AuthGuard>} />
+          <Route path="/dashboard/announcements/notifications" element={<AuthGuard><UserNotifications /></AuthGuard>} />
           <Route path="/dashboard/support" element={<AuthGuard><UserSupport /></AuthGuard>} />
           <Route path="/dashboard/workspace" element={<AuthGuard><UserWorkspace /></AuthGuard>} />
           <Route path="/about" element={<About />} />
@@ -113,6 +119,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </I18nProvider>
       </PlatformSettingsProvider>
     </TooltipProvider>
     </ThemeProvider>

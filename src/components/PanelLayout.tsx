@@ -310,13 +310,21 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
                     ))
                   )}
                 </div>
-                <div className="p-3 border-t border-border">
+                <div className="p-3 border-t border-border space-y-2">
                   <button
-                    onClick={() => navigate("/dashboard/announcements")}
+                    onClick={() => navigate(isAdmin ? "/admin/notifications" : "/dashboard/announcements/notifications")}
                     className="w-full h-9 rounded-xl bg-sky-400 hover:bg-sky-500 text-white text-xs font-bold transition-colors"
                   >
-                    View all announcements
+                    View all notifications
                   </button>
+                  {!isAdmin && (
+                    <button
+                      onClick={() => navigate("/dashboard/announcements")}
+                      className="w-full h-9 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-colors"
+                    >
+                      View announcements
+                    </button>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>
