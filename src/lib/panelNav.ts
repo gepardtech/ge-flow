@@ -2,7 +2,7 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
-  SlidersHorizontal, Megaphone, TriangleAlert,
+  SlidersHorizontal, Megaphone, TriangleAlert, Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PlanId } from "@/lib/plans";
