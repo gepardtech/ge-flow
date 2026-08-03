@@ -11,12 +11,61 @@ export const currencySymbol = (code?: string | null) =>
   CURRENCY_SYMBOLS[(code ?? "USD").toUpperCase()] ?? `${(code ?? "USD").toUpperCase()} `;
 
 const LS_KEY = "geflow.activeBusinessId";
+const RATES_KEY = "geflow.fxRates";
+
+/* ------------------------------------------------------------------ *
+ * Live FX rates (USD base) fetched from the currency-rates function.
+ * Platform prices are authored in USD, so whenever the admin switches
+ * the base currency every public/plan price is converted live.
+ * ------------------------------------------------------------------ */
+type Rates = Record<string, number>;
+let rates: Rates = (() => {
+  try {
+    const raw = localStorage.getItem(RATES_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed?.rates && Date.now() - parsed.at < 6 * 60 * 60 * 1000) return parsed.rates as Rates;
+  } catch { /* ignore */ }
+  return { USD: 1 };
+})();
+let ratesStarted = false;
+const rateSubs = new Set<() => void>();
+const emitRates = () => rateSubs.forEach((fn) => fn());
+
+const loadRates = async () => {
+  try {
+    const { data, error } = await supabase.functions.invoke("currency-rates");
+    if (!error && data?.rates && Object.keys(data.rates).length > 1) {
+      rates = data.rates as Rates;
+      localStorage.setItem(RATES_KEY, JSON.stringify({ at: Date.now(), rates }));
+      emitRates();
+    }
+  } catch { /* offline — keep cached rates */ }
+};
+
+const startRates = () => {
+  if (ratesStarted) return;
+  ratesStarted = true;
+  loadRates();
+};
+
+/** Live USD -> code rate (1 when unknown). */
+export const fxRate = (code: string) => {
+  const r = rates[(code ?? "USD").toUpperCase()];
+  return Number.isFinite(r) && r > 0 ? r : 1;
+};
+
+const useRates = () => {
+  const [, force] = useState(0);
+  useEffect(() => {
+    startRates();
+    const fn = () => force((n) => n + 1);
+    rateSubs.add(fn);
+    return () => { rateSubs.delete(fn); };
+  }, []);
+};
 
 /* ------------------------------------------------------------------ *
  * Shared active-business currency store.
- * The workspace currency comes from the business category the admin
- * assigned (businesses.currency), so changing a category's currency in
- * the admin panel propagates to the user panel live.
  * ------------------------------------------------------------------ */
 type BizMoney = { currency: string | null; taxRate: number | null };
 let cache: BizMoney = { currency: null, taxRate: null };
@@ -83,9 +132,10 @@ export const useMoney = (options: MoneyOptions = {}) => {
   const { scope = "auto" } = options;
   const { settings } = usePlatformSettings();
   const biz = useBusinessMoney();
+  useRates();
 
-  const platformCode = (settings?.base_currency as string) ?? "USD";
-  const code = scope === "platform" ? platformCode : (biz.currency ?? platformCode);
+  const platformCode = ((settings?.base_currency as string) ?? "USD").toUpperCase();
+  const code = scope === "platform" ? platformCode : (biz.currency ?? platformCode).toUpperCase();
   const sym = currencySymbol(code);
 
   const platformTax = Number(settings?.universal_tax ?? 0);
@@ -93,12 +143,22 @@ export const useMoney = (options: MoneyOptions = {}) => {
 
   const invoicePrefix = ((settings?.invoice_prefix as string) ?? "INV").trim().replace(/-+$/, "") || "INV";
 
-  const format = (n: number) =>
-    `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  /**
+   * Plan/platform amounts are authored in USD — convert them to the currently
+   * selected currency at the live rate. Business-scoped amounts (products,
+   * sales, purchases) are already stored in the business currency.
+   */
+  const rate = scope === "platform" ? fxRate(code) : 1;
+  const convert = (n: number) => Number(n || 0) * rate;
 
-  /** Price formatting with fixed 2 decimals (pricing tables, checkout). */
+  const decimals = rate >= 50 ? 0 : 2;
+
+  const format = (n: number) =>
+    `${sym}${convert(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+  /** Price formatting with fixed decimals (pricing tables, checkout). */
   const price = (n: number) =>
-    `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${sym}${convert(n).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
   /** Build an invoice number using the platform prefix, e.g. GF-8FA3C1. */
   const invoiceNo = (seed?: string) => {
@@ -106,5 +166,5 @@ export const useMoney = (options: MoneyOptions = {}) => {
     return `${invoicePrefix}-${tail}`;
   };
 
-  return { currency: code, symbol: sym, taxRate, invoicePrefix, invoiceNo, format, price };
+  return { currency: code, symbol: sym, taxRate, rate, convert, invoicePrefix, invoiceNo, format, price };
 };
