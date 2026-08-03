@@ -2,7 +2,7 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
-  SlidersHorizontal, Megaphone, TriangleAlert,
+  SlidersHorizontal, Megaphone, TriangleAlert, Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PlanId } from "@/lib/plans";
@@ -38,6 +38,7 @@ export const ADMIN_NAV: NavItem[] = [
   { label: "Feature Control", to: "/admin/features", icon: Eye },
   { label: "Plan Limits", to: "/admin/plan-limits", icon: SlidersHorizontal },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3 },
+  { label: "Notifications", to: "/admin/notifications", icon: Bell },
   { label: "Support", to: "/admin/support", icon: LifeBuoy },
   { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
@@ -54,7 +55,13 @@ export const USER_NAV: NavItem[] = [
   { label: "My Businesses", to: "/dashboard/businesses", icon: Building2 },
   { label: "Team Hub", to: "/dashboard/team", icon: Users, plans: ["standard", "premium", "lifetime"], module: "team" },
   { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard },
-  { label: "Announcements", to: "/dashboard/announcements", icon: Megaphone },
+  {
+    label: "Announcements", to: "/dashboard/announcements", icon: Megaphone,
+    children: [
+      { label: "All Updates", to: "/dashboard/announcements" },
+      { label: "Notifications", to: "/dashboard/announcements/notifications" },
+    ],
+  },
   { label: "Support", to: "/dashboard/support", icon: LifeBuoy },
   { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon, module: "settings" },
 ];

@@ -36,7 +36,7 @@ const Checkout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { symbol: sym, taxRate, invoiceNo } = useMoney({ scope: "platform" });
+  const { symbol: sym, taxRate, invoiceNo, price: fx } = useMoney({ scope: "platform" });
   const { priceOf, featuresOf, byKey } = usePricingPlans();
 
   const plan = (params.get("plan") as Plan) || "standard";
@@ -311,7 +311,7 @@ const Checkout = () => {
               </div>
 
               <Button type="submit" disabled={loading} className="cta-btn w-full h-14 rounded-full mt-8 text-sm font-bold tracking-wider gap-2 bg-primary text-primary-foreground hover:bg-primary">
-                {loading ? "PROCESSING..." : <>{ctaLabel} • {sym}{total} <ArrowRight className="h-4 w-4" /></>}
+                {loading ? "PROCESSING..." : <>{ctaLabel} • {fx(Number(total))} <ArrowRight className="h-4 w-4" /></>}
               </Button>
 
               <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-4 inline-flex items-center gap-2 justify-center w-full">
@@ -329,23 +329,23 @@ const Checkout = () => {
                   <p className="font-bold text-base">{byKey(plan)?.name ?? data.name}</p>
                   <p className="text-[10px] font-bold tracking-wider text-primary mt-1">{PERIOD_LABEL[period]}</p>
                 </div>
-                <p className="text-2xl font-bold">{sym}{subtotal.toFixed(2)}</p>
+                <p className="text-2xl font-bold">{fx(subtotal)}</p>
               </div>
 
               <div className="border-t border-border" />
 
               <div className="space-y-2.5 py-5 text-sm">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span><span className="text-foreground font-semibold">{sym}{subtotal.toFixed(2)}</span>
+                  <span>Subtotal</span><span className="text-foreground font-semibold">{fx(subtotal)}</span>
                 </div>
                 {appliedCoupon && (
                   <div className="flex justify-between text-primary">
                     <span>Coupon ({appliedCoupon.code})</span>
-                    <span className="font-semibold">−{sym}{discount.toFixed(2)}</span>
+                    <span className="font-semibold">−{fx(discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Architectural Tax ({taxRate}%)</span><span className="text-foreground font-semibold">{sym}{tax.toFixed(2)}</span>
+                  <span>Architectural Tax ({taxRate}%)</span><span className="text-foreground font-semibold">{fx(tax)}</span>
                 </div>
               </div>
 
@@ -371,7 +371,7 @@ const Checkout = () => {
 
               <div className="flex items-center justify-between py-5">
                 <p className="text-base font-bold">Grand Total</p>
-                <p className="text-3xl font-bold text-primary">{sym}{total.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-primary">{fx(Number(total))}</p>
               </div>
 
               <div className="border-t border-border" />
