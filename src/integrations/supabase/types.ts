@@ -158,7 +158,7 @@ export type Database = {
           business_name: string
           category_id?: string | null
           created_at?: string
-          currency?: string
+          currency: string
           default_tax?: number
           id?: string
           last_active?: string
