@@ -587,6 +587,17 @@ const TicketDialog = ({ open, ticket, templates, onOpenChange, onUpdated }: any)
     onUpdated();
   };
 
+  const saveMeta = async () => {
+    if (!ticket) return;
+    const updates: any = { status, priority };
+    if (status === "resolved" && !ticket.resolved_at) updates.resolved_at = new Date().toISOString();
+    await supabase.from("support_tickets").update(updates).eq("id", ticket.id);
+    toast({ title: "Ticket updated" });
+    onUpdated();
+  };
+
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-0 gap-0 flex flex-col border-0">
