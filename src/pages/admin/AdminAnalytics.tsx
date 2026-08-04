@@ -170,7 +170,7 @@ const AdminAnalytics = () => {
                     </defs>
                     <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} allowDecimals={false} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Area dataKey="users" stroke="#38bdf8" fill="url(#gUsers)" strokeWidth={2.5} name="Users" />
                     <Area dataKey="orgs" stroke="#e879f9" fill="url(#gOrgs)" strokeWidth={2.5} name="Orgs" />
                   </AreaChart>
@@ -187,7 +187,7 @@ const AdminAnalytics = () => {
                     <Pie data={planDist} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3} stroke="none">
                       {planDist.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -224,7 +224,7 @@ const AdminAnalytics = () => {
                   <BarChart data={featureAdoption} layout="vertical" margin={{ left: 20 }}>
                     <XAxis type="number" hide domain={[0, 100]} />
                     <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} width={90} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: number) => `${v}%`} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} formatter={(v: number) => `${v}%`} />
                     <Bar dataKey="value" fill="#38bdf8" radius={[0, 6, 6, 0]} barSize={18} name="Adoption" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -245,7 +245,7 @@ const AdminAnalytics = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: number) => `${v} ms`} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} formatter={(v: number) => `${v} ms`} />
                     <Line dataKey="latency" stroke="#10b981" strokeWidth={2.5} dot={false} name="Latency" />
                   </LineChart>
                 </ResponsiveContainer>

@@ -357,7 +357,7 @@ const AdminSupport = () => {
                     <defs><linearGradient id="vv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.6} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0} /></linearGradient></defs>
                     <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Area dataKey="value" stroke="#38bdf8" fill="url(#vv)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -371,7 +371,7 @@ const AdminSupport = () => {
                   <BarChart data={issueCats}>
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                       {issueCats.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Bar>
