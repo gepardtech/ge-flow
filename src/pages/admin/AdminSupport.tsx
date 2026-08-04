@@ -589,37 +589,121 @@ const TicketDialog = ({ open, ticket, templates, onOpenChange, onUpdated }: any)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{ticket?.subject}</DialogTitle>
-          <DialogDescription>{ticket?.ticket_number} • {ticket?.owner?.full_name ?? ticket?.owner?.email}</DialogDescription>
+      <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-0 gap-0 flex flex-col border-0">
+        {/* HEADER */}
+        <DialogHeader className="px-5 md:px-8 py-4 border-b border-border bg-card shrink-0 text-left">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-sky-400/15 text-sky-500 flex items-center justify-center shrink-0">
+              <LifeBuoy className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg md:text-xl font-bold truncate">{ticket?.subject}</DialogTitle>
+              <DialogDescription className="text-xs">
+                {ticket?.ticket_number} • {ticket?.owner?.full_name ?? ticket?.owner?.email ?? "Unknown user"} •{" "}
+                {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : ""}
+              </DialogDescription>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full ${priorityClass(priority || ticket?.priority)}`}>
+                {(priority || ticket?.priority || "").toUpperCase()}
+              </span>
+              <span className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full ${statusClass(status || ticket?.status)}`}>
+                {(status || ticket?.status || "").replace("_", " ").toUpperCase()}
+              </span>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Lab label="STATUS"><Select value={status} onValueChange={setStatus}><SelectTrigger className="h-9 bg-muted/40 border-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="in_progress">In Progress</SelectItem><SelectItem value="waiting">Waiting</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent></Select></Lab>
-          <Lab label="PRIORITY"><Select value={priority} onValueChange={setPriority}><SelectTrigger className="h-9 bg-muted/40 border-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="urgent">Urgent</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem></SelectContent></Select></Lab>
-        </div>
-        <div className="bg-muted/40 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2">
-          {messages.length === 0 ? <p className="text-xs text-center text-muted-foreground py-6">No messages yet — first reply will start the thread.</p> :
-            messages.map((m) => (
-              <div key={m.id} className={`p-2.5 rounded-lg text-sm ${m.is_admin ? "bg-sky-400/15 ml-8" : "bg-card mr-8"}`}>
-                <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-1">{m.is_admin ? "ADMIN" : "USER"} • {new Date(m.created_at).toLocaleString()}</p>
-                <p className="whitespace-pre-wrap">{m.body}</p>
+
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+          {/* CONVERSATION */}
+          <div className="flex-1 min-w-0 flex flex-col bg-muted/20">
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
+              {messages.length === 0 ? (
+                <p className="text-sm text-center text-muted-foreground py-16">No messages yet — your first reply starts the thread.</p>
+              ) : (
+                messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.is_admin ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[85%] md:max-w-[65%] rounded-2xl px-4 py-3 border shadow-sm ${
+                      m.is_admin ? "bg-sky-500 text-white border-sky-500 rounded-br-sm" : "bg-card text-foreground border-border rounded-bl-sm"
+                    }`}>
+                      <p className={`text-[10px] font-bold tracking-widest mb-1.5 ${m.is_admin ? "text-white/70" : "text-muted-foreground"}`}>
+                        {m.is_admin ? "SUPPORT TEAM" : "CUSTOMER"} • {new Date(m.created_at).toLocaleString()}
+                      </p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* COMPOSER */}
+            <div className="border-t border-border bg-card px-4 md:px-8 py-4 space-y-3 shrink-0">
+              <Select onValueChange={(id) => { const t = templates.find((x: any) => x.id === id); if (t) setReply(t.body); }}>
+                <SelectTrigger className="h-9 w-full sm:w-[260px] bg-muted/40 border-0 text-xs"><SelectValue placeholder="Apply reply template..." /></SelectTrigger>
+                <SelectContent>{templates.map((t: Template) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}</SelectContent>
+              </Select>
+              <div className="flex items-end gap-3">
+                <textarea
+                  rows={3}
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  placeholder="Write a reply to the customer..."
+                  className="flex-1 p-3 bg-muted/40 rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sky-400/40 resize-none"
+                />
+                <Button onClick={send} disabled={!reply.trim()} className="h-11 px-5 bg-sky-500 hover:bg-sky-600 text-white">
+                  <Send className="h-4 w-4 mr-2" /> Send
+                </Button>
               </div>
-            ))
-          }
+            </div>
+          </div>
+
+          {/* SIDEBAR */}
+          <aside className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card p-5 space-y-4 overflow-y-auto">
+            <p className="text-[10px] font-bold tracking-widest text-muted-foreground">TICKET CONTROLS</p>
+            <Lab label="STATUS">
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="h-9 bg-muted/40 border-0"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem><SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="waiting">Waiting</SelectItem><SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </Lab>
+            <Lab label="PRIORITY">
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="h-9 bg-muted/40 border-0"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="urgent">Urgent</SelectItem><SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </Lab>
+            <Button variant="outline" className="w-full" onClick={saveMeta}>Save changes</Button>
+
+            <div className="pt-4 border-t border-border space-y-2 text-sm">
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-2">CUSTOMER</p>
+              <Row k="Name" v={ticket?.owner?.full_name ?? "—"} />
+              <Row k="Email" v={ticket?.owner?.email ?? "—"} />
+              <Row k="Plan" v={(ticket?.owner?.plan ?? "free").toUpperCase()} />
+              <Row k="Category" v={ticket?.category ?? "—"} />
+              <Row k="Source" v={ticket?.source ?? "panel"} />
+              <Row k="Messages" v={String(messages.length)} />
+              <Row k="Updated" v={ticket?.updated_at ? new Date(ticket.updated_at).toLocaleString() : "—"} />
+            </div>
+          </aside>
         </div>
-        <div className="flex items-center gap-2 mt-2">
-          <Select onValueChange={(id) => { const t = templates.find((x: any) => x.id === id); if (t) setReply(t.body); }}>
-            <SelectTrigger className="h-10 w-[220px] bg-muted/40 border-0"><SelectValue placeholder="Apply template..." /></SelectTrigger>
-            <SelectContent>{templates.map((t: Template) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <textarea rows={4} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your reply..." className="w-full p-3 bg-muted/40 rounded-lg text-sm mt-2" />
-        <Button onClick={send} className="w-full bg-sky-400 hover:bg-sky-500 text-white"><Send className="h-4 w-4 mr-2" /> Send Reply</Button>
       </DialogContent>
     </Dialog>
   );
 };
+
+const Row = ({ k, v }: { k: string; v: string }) => (
+  <div className="flex items-start justify-between gap-3">
+    <span className="text-xs text-muted-foreground">{k}</span>
+    <span className="text-xs font-semibold text-right break-all">{v}</span>
+  </div>
+);
 
 // ---------- ANNOUNCEMENTS MANAGER ----------
 const AnnouncementsManager = ({ items, onChange, openCreate }: any) => {
