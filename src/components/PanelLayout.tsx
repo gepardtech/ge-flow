@@ -302,28 +302,32 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
                     <p className="p-6 text-center text-xs text-muted-foreground">No notifications</p>
                   ) : (
                     notifications.map((n) => (
-                      <div key={n.id} className={`p-3 border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${n.unread ? "bg-sky-400/5" : ""}`}>
+                      <Link
+                        key={n.id}
+                        to={isAdmin ? "/admin/notifications" : "/dashboard/announcements/notifications"}
+                        className={`block p-3 border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${n.unread ? "bg-sky-400/5" : ""}`}
+                      >
                         <p className="text-sm font-semibold">{n.title}</p>
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.description}</p>
                         <p className="text-[10px] text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                      </div>
+                      </Link>
                     ))
                   )}
                 </div>
                 <div className="p-3 border-t border-border space-y-2">
-                  <button
-                    onClick={() => navigate(isAdmin ? "/admin/notifications" : "/dashboard/announcements/notifications")}
-                    className="w-full h-9 rounded-xl bg-sky-400 hover:bg-sky-500 text-white text-xs font-bold transition-colors"
+                  <Link
+                    to={isAdmin ? "/admin/notifications" : "/dashboard/announcements/notifications"}
+                    className="w-full h-9 rounded-xl bg-sky-400 hover:bg-sky-500 text-white text-xs font-bold transition-colors flex items-center justify-center"
                   >
                     View all notifications
-                  </button>
+                  </Link>
                   {!isAdmin && (
-                    <button
-                      onClick={() => navigate("/dashboard/announcements")}
-                      className="w-full h-9 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-colors"
+                    <Link
+                      to="/dashboard/announcements"
+                      className="w-full h-9 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-colors flex items-center justify-center"
                     >
                       View announcements
-                    </button>
+                    </Link>
                   )}
                 </div>
               </PopoverContent>

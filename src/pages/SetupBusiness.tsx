@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Building2, CheckCircle2, ArrowRight, ArrowLeft, Loader2, Rocket } from "lucide-react";
 import { getPlan, normalizePlan } from "@/lib/plans";
+import { CURRENCY_SYMBOLS } from "@/lib/currency";
 
-interface Category { id: string; name: string; industry_type: string; }
+interface Category { id: string; name: string; industry_type: string; currency: string; }
 
 const Step = ({ n, label, active, done }: { n: number; label: string; active: boolean; done: boolean }) => (
   <div className="flex items-center gap-3 flex-1">
@@ -34,6 +35,7 @@ const SetupBusiness = () => {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -41,7 +43,7 @@ const SetupBusiness = () => {
       if (!u) { navigate("/login"); return; }
       const [{ data: p }, { data: cats }, { count }] = await Promise.all([
         supabase.from("profiles").select("full_name, email, plan").eq("user_id", u.id).maybeSingle(),
-        supabase.from("business_categories").select("id, name, industry_type").eq("status", "active").order("name"),
+        supabase.from("business_categories").select("id, name, industry_type, currency").eq("status", "active").order("name"),
         supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_user_id", u.id),
       ]);
       setUser({ id: u.id, email: u.email ?? null, fullName: p?.full_name ?? null, plan: p?.plan ?? "free" });
@@ -64,6 +66,7 @@ const SetupBusiness = () => {
       business_name: name.trim(),
       business_address: address.trim() || null,
       category_id: categoryId,
+      currency: currency || categories.find((c) => c.id === categoryId)?.currency || "USD",
     });
     setBusy(false);
     if (error) { toast({ title: "Could not create business", description: error.message, variant: "destructive" }); return; }
@@ -130,13 +133,25 @@ const SetupBusiness = () => {
                 </div>
                 <div>
                   <label className="text-sm font-semibold mb-2 block">Business Category *</label>
-                  <Select value={categoryId} onValueChange={setCategoryId}>
+                  <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setCurrency(categories.find((c) => c.id === v)?.currency ?? "USD"); }}>
                     <SelectTrigger className="h-11"><SelectValue placeholder={categories.length ? "Choose a category" : "No active categories yet"} /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} <span className="text-muted-foreground ml-1">· {c.industry_type}</span></SelectItem>)}
                     </SelectContent>
                   </Select>
                   {categories.length === 0 && <p className="text-xs text-muted-foreground mt-2">An admin needs to publish a business category before you can continue.</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Operating Currency *</label>
+                  <Select value={currency} onValueChange={setCurrency} disabled={!categoryId}>
+                    <SelectTrigger className="h-11"><SelectValue placeholder={categoryId ? "Choose currency" : "Select a category first"} /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CURRENCY_SYMBOLS).map(([code, sym]) => (
+                        <SelectItem key={code} value={code}>{code} <span className="text-muted-foreground ml-1">{sym}</span></SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">Defaults to the currency set by your business category — you can change it any time from My Businesses.</p>
                 </div>
               </div>
             )}

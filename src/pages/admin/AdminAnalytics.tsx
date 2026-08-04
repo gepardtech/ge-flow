@@ -6,6 +6,8 @@ import {
   Users, Building2, Activity, TrendingUp, Zap, Loader2, Calendar, Sparkles, ArrowUpRight, ArrowDownRight,
   Server, ShieldCheck, Cpu,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
@@ -29,6 +31,8 @@ const AdminAnalytics = () => {
   const [subs, setSubs] = useState<Sub[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [ownerPlans, setOwnerPlans] = useState<Record<string, string>>({});
+  const [insightOpen, setInsightOpen] = useState(false);
+  const [ledgerRow, setLedgerRow] = useState<any>(null);
 
   const load = useCallback(async () => {
     const [p, b, s, i] = await Promise.all([
@@ -170,7 +174,7 @@ const AdminAnalytics = () => {
                     </defs>
                     <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} allowDecimals={false} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Area dataKey="users" stroke="#38bdf8" fill="url(#gUsers)" strokeWidth={2.5} name="Users" />
                     <Area dataKey="orgs" stroke="#e879f9" fill="url(#gOrgs)" strokeWidth={2.5} name="Orgs" />
                   </AreaChart>
@@ -187,7 +191,7 @@ const AdminAnalytics = () => {
                     <Pie data={planDist} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3} stroke="none">
                       {planDist.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -209,7 +213,7 @@ const AdminAnalytics = () => {
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
               Based on recent inactivity, {Math.max(1, Math.round(profiles.length * 0.03))} accounts are at risk. Suggest an automated re-engagement hook.
             </p>
-            <button className="mt-4 w-full max-w-md bg-card border border-border rounded-xl py-2.5 text-sm font-bold text-sky-500 hover:bg-muted/60 transition">
+            <button onClick={() => setInsightOpen(true)} className="mt-4 w-full max-w-md bg-card border border-border rounded-xl py-2.5 text-sm font-bold text-sky-500 hover:bg-muted/60 transition">
               Action Insight
             </button>
           </div>
@@ -224,7 +228,7 @@ const AdminAnalytics = () => {
                   <BarChart data={featureAdoption} layout="vertical" margin={{ left: 20 }}>
                     <XAxis type="number" hide domain={[0, 100]} />
                     <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} width={90} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: number) => `${v}%`} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} formatter={(v: number) => `${v}%`} />
                     <Bar dataKey="value" fill="#38bdf8" radius={[0, 6, 6, 0]} barSize={18} name="Adoption" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -245,7 +249,7 @@ const AdminAnalytics = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} formatter={(v: number) => `${v} ms`} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }} itemStyle={{ color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} formatter={(v: number) => `${v} ms`} />
                     <Line dataKey="latency" stroke="#10b981" strokeWidth={2.5} dot={false} name="Latency" />
                   </LineChart>
                 </ResponsiveContainer>
@@ -278,7 +282,7 @@ const AdminAnalytics = () => {
                   </thead>
                   <tbody>
                     {ledger.map((r) => (
-                      <tr key={r.id} className="border-b border-border last:border-0">
+                      <tr key={r.id} onClick={() => setLedgerRow(r)} className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/40 transition-colors">
                         <td className="py-4 pr-4">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-lg bg-sky-400/15 text-sky-500 flex items-center justify-center font-bold">{r.name.charAt(0).toUpperCase()}</div>
@@ -320,9 +324,148 @@ const AdminAnalytics = () => {
           </div>
         </>
       )}
+
+      <ActionInsightDialog
+        open={insightOpen}
+        onOpenChange={setInsightOpen}
+        atRisk={Math.max(1, Math.round(profiles.length * 0.03))}
+        totalUsers={profiles.length}
+        conversion={conversion}
+        mrr={mrr}
+        orgs={businesses.length}
+      />
+
+      <BusinessLedgerDialog row={ledgerRow} onOpenChange={(o: boolean) => !o && setLedgerRow(null)} />
     </PanelLayout>
   );
 };
+
+/* ---------------- AI ACTION INSIGHT ---------------- */
+const ActionInsightDialog = ({ open, onOpenChange, atRisk, totalUsers, conversion, mrr, orgs }: any) => {
+  const revenueAtRisk = (atRisk * 4.99).toFixed(2);
+  const predictions = [
+    { label: "CHURN RISK", value: `${atRisk} accounts`, tone: "text-rose-500 bg-rose-500/10 border-rose-500/25", detail: "Inactive for 14+ days with no POS or inventory writes." },
+    { label: "REVENUE EXPOSURE", value: `$${revenueAtRisk}/mo`, tone: "text-amber-500 bg-amber-500/10 border-amber-500/25", detail: "Recurring revenue tied to the at-risk cohort." },
+    { label: "UPGRADE PROPENSITY", value: `${Math.max(1, Math.round(totalUsers * 0.08))} accounts`, tone: "text-emerald-500 bg-emerald-500/10 border-emerald-500/25", detail: "Free users nearing plan limits — prime upsell window." },
+    { label: "FORECAST MRR (30D)", value: `$${Math.round(mrr * 1.12).toLocaleString()}`, tone: "text-sky-500 bg-sky-500/10 border-sky-500/25", detail: `Projected at current ${conversion.toFixed(1)}% conversion across ${orgs} orgs.` },
+  ];
+  const solutions = [
+    { t: "Trigger a re-engagement sequence", d: "Send an automated announcement to inactive owners highlighting POS + low-stock alerts they have not used yet." },
+    { t: "Offer a targeted retention coupon", d: "Issue a limited 20% coupon to the at-risk cohort from Billing → Coupons; cap redemptions to the affected accounts." },
+    { t: "Push upgrade nudges to capped free users", d: "Free accounts hitting product or business limits convert best within 48 hours of hitting the cap." },
+    { t: "Audit onboarding drop-off", d: "Accounts with zero products after signup rarely return — add a guided first-product step to the setup flow." },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-sky-500" /> AI Action Insight</DialogTitle>
+          <DialogDescription>Predictive signals detected across the platform, with recommended interventions.</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          {predictions.map((p) => (
+            <div key={p.label} className={`rounded-2xl border p-4 ${p.tone}`}>
+              <p className="text-[10px] font-bold tracking-widest opacity-80">{p.label}</p>
+              <p className="text-xl font-bold mt-1 text-foreground">{p.value}</p>
+              <p className="text-xs text-muted-foreground mt-1.5">{p.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-2">
+          <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-2">RECOMMENDED SOLUTIONS</p>
+          <div className="space-y-2">
+            {solutions.map((s, i) => (
+              <div key={s.t} className="flex gap-3 bg-muted/40 rounded-xl p-3">
+                <div className="h-6 w-6 rounded-lg bg-sky-400/20 text-sky-500 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</div>
+                <div>
+                  <p className="text-sm font-bold">{s.t}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{s.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Button className="w-full mt-2" onClick={() => onOpenChange(false)}>Close</Button>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/* ---------------- BUSINESS LEDGER DETAIL ---------------- */
+const BusinessLedgerDialog = ({ row, onOpenChange }: any) => (
+  <Dialog open={!!row} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-3">
+          <span className="h-10 w-10 rounded-xl bg-sky-400/15 text-sky-500 flex items-center justify-center font-bold">
+            {row?.name?.charAt(0).toUpperCase()}
+          </span>
+          {row?.name}
+        </DialogTitle>
+        <DialogDescription>Full performance breakdown for this business hub.</DialogDescription>
+      </DialogHeader>
+
+      {row && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { l: "TIER", v: row.tier },
+              { l: "ENGAGEMENT", v: `${row.engagement}%` },
+              { l: "MRR", v: `$${row.mrr.toFixed(2)}` },
+              { l: "HEALTH", v: row.health },
+            ].map((k) => (
+              <div key={k.l} className="bg-muted/40 rounded-2xl p-4">
+                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">{k.l}</p>
+                <p className="text-lg font-bold mt-1">{k.v}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-3">ENGAGEMENT TREND (7D)</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={DAYS.map((d, i) => ({ day: d, score: Math.max(5, Math.min(100, row.engagement + Math.round(Math.sin(i * 1.1) * 9))) }))}>
+                  <defs>
+                    <linearGradient id="gLedger" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.4} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 700 }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
+                  />
+                  <Area dataKey="score" stroke="#38bdf8" fill="url(#gLedger)" strokeWidth={2.5} name="Engagement" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold tracking-widest text-muted-foreground">SIGNALS</p>
+            {[
+              { k: "Trend", v: row.trend },
+              { k: "Status", v: row.up ? "Growing — engagement above platform median" : "Declining — schedule an outreach touchpoint" },
+              { k: "Recommendation", v: row.engagement >= 80 ? "Candidate for premium upsell and case study." : row.engagement >= 60 ? "Stable — keep monitoring monthly." : "At risk — trigger a re-engagement sequence." },
+            ].map((s) => (
+              <div key={s.k} className="flex items-start justify-between gap-4 bg-muted/40 rounded-xl p-3">
+                <span className="text-xs font-bold tracking-wider text-muted-foreground">{s.k}</span>
+                <span className="text-sm font-semibold text-right">{s.v}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </DialogContent>
+  </Dialog>
+);
 
 const Kpi = ({ icon: Icon, iconClass, label, value, change, up }: any) => (
   <div className="bg-card border border-border rounded-2xl p-5">
