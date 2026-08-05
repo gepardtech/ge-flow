@@ -47,7 +47,12 @@ const fromGemini = async (codes: string[]): Promise<Record<string, number>> => {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const wanted = ['USD', 'EUR', 'GBP', 'PKR', 'AED', 'INR', 'CAD', 'AUD', 'JPY', 'CNY', 'SAR'];
+  const wanted = [
+    'USD', 'EUR', 'GBP', 'PKR', 'INR', 'AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR',
+    'TRY', 'EGP', 'NGN', 'ZAR', 'KES', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK',
+    'DKK', 'PLN', 'CZK', 'RUB', 'CNY', 'JPY', 'KRW', 'HKD', 'SGD', 'MYR', 'IDR',
+    'THB', 'PHP', 'VND', 'BDT', 'LKR', 'AFN', 'BRL', 'MXN', 'ARS',
+  ];
 
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) {
     return new Response(JSON.stringify({ base: 'USD', rates: cache.rates, cached: true }), {
