@@ -65,7 +65,7 @@ const AIAssistant = ({ open, onOpenChange }: Props) => {
         setMessages((m) => [...m, { role: "assistant", content: data.reply as string }]);
       }
     } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "⚠️ I couldn't reach the AI engines right now. Please try again in a moment." }]);
+      setMessages((m) => [...m, { role: "assistant", content: "⚠️ I couldn't reach GeCore AI right now. Please try again in a moment." }]);
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -188,7 +188,7 @@ const AIAssistant = ({ open, onOpenChange }: Props) => {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground text-center mt-2">GeFlow AI reads your live business data · Powered by Gemini &amp; ChatGPT</p>
+          <p className="text-[10px] text-muted-foreground text-center mt-2">GeFlow AI reads your live business data · Powered by GeCore AI</p>
         </div>
       </DialogContent>
     </Dialog>

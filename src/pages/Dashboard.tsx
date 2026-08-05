@@ -6,14 +6,14 @@ import { userNavForPlanAndModules } from "@/lib/panelNav";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { usePlan } from "@/hooks/usePlan";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
+import { useMoney } from "@/lib/currency";
 import { useBusinessModules } from "@/hooks/useBusinessModules";
 import {
   Package, ShoppingCart, FileText, BarChart3, Plus, Sparkles, AlertTriangle, Clock, TrendingUp
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-const money = (n: number, currency = "USD") =>
-  new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(n || 0);
+
 
 interface DayPoint { day: string; sales: number; profit: number; }
 interface Operation { id: string; type: string; amount: number; meta: string; status: string; }
@@ -49,7 +49,7 @@ const Dashboard = () => {
   const [topItems, setTopItems] = useState<TopItem[]>([]);
   const [alerts, setAlerts] = useState<{ title: string; sub: string; tone: "amber" | "rose" }[]>([]);
 
-  const currency = active?.currency || "USD";
+  const { format: money } = useMoney();
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -182,9 +182,9 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <Stat label="TODAY SALES" value={money(kpis.todaySales, currency)} iconClass="bg-blue-500/15 text-blue-500" icon={ShoppingCart} onClick={() => navigate("/dashboard/analytics")} />
-        <Stat label="TODAY PROFIT" value={money(kpis.todayProfit, currency)} iconClass="bg-emerald-500/15 text-emerald-500" icon={TrendingUp} onClick={() => navigate("/dashboard/analytics")} />
-        <Stat label="TOTAL REVENUE" value={money(kpis.totalRevenue, currency)} iconClass="bg-purple-500/15 text-purple-500" icon={BarChart3} onClick={() => navigate("/dashboard/analytics")} />
+        <Stat label="TODAY SALES" value={money(kpis.todaySales)} iconClass="bg-blue-500/15 text-blue-500" icon={ShoppingCart} onClick={() => navigate("/dashboard/analytics")} />
+        <Stat label="TODAY PROFIT" value={money(kpis.todayProfit)} iconClass="bg-emerald-500/15 text-emerald-500" icon={TrendingUp} onClick={() => navigate("/dashboard/analytics")} />
+        <Stat label="TOTAL REVENUE" value={money(kpis.totalRevenue)} iconClass="bg-purple-500/15 text-purple-500" icon={BarChart3} onClick={() => navigate("/dashboard/analytics")} />
         <Stat label="TOTAL PRODUCTS" value={kpis.totalProducts.toLocaleString()} delta="" iconClass="bg-amber-500/15 text-amber-500" icon={Package} onClick={() => navigate("/dashboard/inventory")} />
         <Stat label="LOW STOCK" value={kpis.lowStock} delta={kpis.lowStock > 0 ? "ALERT" : "OK"} deltaClass={kpis.lowStock > 0 ? "text-rose-500" : "text-emerald-500"} iconClass="bg-rose-500/15 text-rose-500" icon={AlertTriangle} onClick={() => navigate("/dashboard/low-stock")} />
       </div>
@@ -290,7 +290,7 @@ const Dashboard = () => {
                     {op.type === "Sale" ? <ShoppingCart className="h-4 w-4" /> : <Package className="h-4 w-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm">{op.type} • {op.type === "Sale" ? money(op.amount, currency) : `${op.amount} units`}</p>
+                    <p className="font-bold text-sm">{op.type} • {op.type === "Sale" ? money(op.amount) : `${op.amount} units`}</p>
                     <p className="text-[11px] text-muted-foreground tracking-wider">{op.meta}</p>
                   </div>
                   <span className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full ${op.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>
@@ -320,7 +320,7 @@ const Dashboard = () => {
                     <p className="text-[10px] text-muted-foreground tracking-wider">{item.units} UNITS SOLD</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-emerald-500">{money(item.profit, currency)}</p>
+                    <p className="text-xs font-bold text-emerald-500">{money(item.profit)}</p>
                     <p className="text-[10px] text-muted-foreground tracking-wider">PROFIT</p>
                   </div>
                 </div>
