@@ -6,7 +6,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
  * Fallback: Lovable AI (Gemini) asked for the current rate.
  * Results are cached in-memory for 1 hour per isolate.
  */
-const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_TTL_MS = 15 * 60 * 1000;
 let cache: { at: number; rates: Record<string, number> } | null = null;
 
 const fromGemini = async (codes: string[]): Promise<Record<string, number>> => {
