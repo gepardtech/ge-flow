@@ -65,7 +65,7 @@ const FEATURES = [
   { id: "ingredient", label: "Ingredient Tracking" },
   { id: "asset", label: "Asset Tracking" },
 ];
-const CURRENCIES = ["USD", "EUR", "GBP", "PKR", "INR", "AED", "SAR", "AUD", "CAD"];
+const CURRENCIES = CURRENCY_CODES;
 
 interface FormState {
   name: string;
