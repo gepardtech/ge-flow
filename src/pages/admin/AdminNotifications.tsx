@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
@@ -8,7 +9,7 @@ import {
 
 type Kind = "message" | "ticket" | "announcement";
 interface Item {
-  id: string; kind: Kind; title: string; description: string; createdAt: string; unread: boolean;
+  id: string; kind: Kind; title: string; description: string; createdAt: string; unread: boolean; to: string;
 }
 
 const kindMeta: Record<Kind, { icon: typeof Bell; label: string; cls: string }> = {
@@ -36,17 +37,17 @@ const AdminNotifications = () => {
         id: `msg-${d.id}`, kind: "message" as Kind,
         title: `New message from ${d.name}`,
         description: `${d.email} — ${d.message ?? ""}`,
-        createdAt: d.created_at, unread: !d.is_read,
+        createdAt: d.created_at, unread: !d.is_read, to: "/admin/support",
       })),
       ...(tickets.data ?? []).map((t: any) => ({
         id: `tkt-${t.id}`, kind: "ticket" as Kind,
         title: `${t.ticket_number} · ${t.subject}`,
         description: `Priority ${t.priority} · Status ${t.status}`,
-        createdAt: t.created_at, unread: t.status === "open",
+        createdAt: t.created_at, unread: t.status === "open", to: "/admin/support",
       })),
       ...(anns.data ?? []).filter((a: any) => a.audience === "all" || a.audience === "admins").map((a: any) => ({
         id: `ann-${a.id}`, kind: "announcement" as Kind,
-        title: a.title, description: a.body, createdAt: a.created_at, unread: false,
+        title: a.title, description: a.body, createdAt: a.created_at, unread: false, to: "/admin/settings",
       })),
     ].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
@@ -148,7 +149,7 @@ const AdminNotifications = () => {
               const Icon = meta.icon;
               return (
                 <li key={n.id}>
-                  <button onClick={() => markRead(n)}
+                  <Link to={n.to} onClick={() => markRead(n)}
                     className={`w-full text-left p-4 flex gap-4 hover:bg-muted/40 transition-colors ${n.unread ? "bg-sky-400/5" : ""}`}>
                     <div className={`h-10 w-10 rounded-xl border flex items-center justify-center flex-shrink-0 ${meta.cls}`}>
                       <Icon className="h-4 w-4" />
@@ -163,7 +164,7 @@ const AdminNotifications = () => {
                       <p className="text-[10px] text-muted-foreground mt-1.5">{new Date(n.createdAt).toLocaleString()}</p>
                     </div>
                     {n.unread ? <Mail className="h-4 w-4 text-sky-500 flex-shrink-0" /> : <MailOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                  </button>
+                  </Link>
                 </li>
               );
             })}
