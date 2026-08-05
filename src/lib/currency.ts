@@ -1,29 +1,28 @@
 import { useEffect, useState } from "react";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { CURRENCY_SYMBOLS } from "@/lib/currencies";
 
-export const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: "$", EUR: "€", GBP: "£", PKR: "₨", AED: "د.إ", INR: "₹",
-  CAD: "C$", AUD: "A$", JPY: "¥", CNY: "¥", SAR: "﷼",
-};
+export { CURRENCY_SYMBOLS };
 
 export const currencySymbol = (code?: string | null) =>
   CURRENCY_SYMBOLS[(code ?? "USD").toUpperCase()] ?? `${(code ?? "USD").toUpperCase()} `;
 
 const LS_KEY = "geflow.activeBusinessId";
 const RATES_KEY = "geflow.fxRates";
+const RATES_TTL = 30 * 60 * 1000; // 30 minutes
 
 /* ------------------------------------------------------------------ *
  * Live FX rates (USD base) fetched from the currency-rates function.
- * Platform prices are authored in USD, so whenever the admin switches
- * the base currency every public/plan price is converted live.
+ * Money is stored in each record's original currency; the display layer
+ * converts live so switching a currency updates every price instantly.
  * ------------------------------------------------------------------ */
 type Rates = Record<string, number>;
 let rates: Rates = (() => {
   try {
     const raw = localStorage.getItem(RATES_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed?.rates && Date.now() - parsed.at < 6 * 60 * 60 * 1000) return parsed.rates as Rates;
+    if (parsed?.rates && Date.now() - parsed.at < RATES_TTL) return parsed.rates as Rates;
   } catch { /* ignore */ }
   return { USD: 1 };
 })();
@@ -46,12 +45,21 @@ const startRates = () => {
   if (ratesStarted) return;
   ratesStarted = true;
   loadRates();
+  setInterval(loadRates, RATES_TTL);
 };
 
 /** Live USD -> code rate (1 when unknown). */
 export const fxRate = (code: string) => {
   const r = rates[(code ?? "USD").toUpperCase()];
   return Number.isFinite(r) && r > 0 ? r : 1;
+};
+
+/** Convert an amount between any two supported currencies at live rates. */
+export const fxConvert = (amount: number, from: string, to: string) => {
+  const f = fxRate(from);
+  const t = fxRate(to);
+  if (!f) return Number(amount || 0);
+  return (Number(amount || 0) / f) * t;
 };
 
 const useRates = () => {
@@ -66,27 +74,33 @@ const useRates = () => {
 
 /* ------------------------------------------------------------------ *
  * Shared active-business currency store.
+ * `baseCurrency` is the currency the business data was recorded in;
+ * `currency` is what the owner/admin wants to see it in today.
  * ------------------------------------------------------------------ */
-type BizMoney = { currency: string | null; taxRate: number | null };
-let cache: BizMoney = { currency: null, taxRate: null };
+type BizMoney = { currency: string | null; baseCurrency: string | null; taxRate: number | null };
+let cache: BizMoney = { currency: null, baseCurrency: null, taxRate: null };
 let started = false;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((fn) => fn());
 
 const loadBusinessMoney = async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) { cache = { currency: null, taxRate: null }; emit(); return; }
+  if (!user) { cache = { currency: null, baseCurrency: null, taxRate: null }; emit(); return; }
   const { data } = await supabase
     .from("businesses")
-    .select("id, currency, default_tax, created_at")
+    .select("id, currency, base_currency, default_tax, created_at")
     .eq("owner_user_id", user.id)
     .order("created_at", { ascending: true });
   const rows = data ?? [];
   const saved = localStorage.getItem(LS_KEY);
   const row = rows.find((r: any) => r.id === saved) ?? rows[0];
   cache = row
-    ? { currency: (row as any).currency ?? null, taxRate: Number((row as any).default_tax ?? 0) }
-    : { currency: null, taxRate: null };
+    ? {
+        currency: (row as any).currency ?? null,
+        baseCurrency: (row as any).base_currency ?? (row as any).currency ?? null,
+        taxRate: Number((row as any).default_tax ?? 0),
+      }
+    : { currency: null, baseCurrency: null, taxRate: null };
   emit();
 };
 
@@ -95,11 +109,14 @@ const startBusinessMoney = () => {
   started = true;
   loadBusinessMoney();
   window.addEventListener("geflow:business-changed", loadBusinessMoney);
+  supabase.auth.onAuthStateChange(() => loadBusinessMoney());
   supabase
     .channel(`business_currency_rt_${Math.random().toString(36).slice(2)}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, () => loadBusinessMoney())
     .on("postgres_changes", { event: "*", schema: "public", table: "business_categories" }, () => loadBusinessMoney())
     .subscribe();
+  // Safety net so a change is never more than a few seconds stale.
+  setInterval(loadBusinessMoney, 15000);
 };
 
 /** Currency + tax of the active business (null when signed out / no business). */
@@ -144,14 +161,15 @@ export const useMoney = (options: MoneyOptions = {}) => {
   const invoicePrefix = ((settings?.invoice_prefix as string) ?? "INV").trim().replace(/-+$/, "") || "INV";
 
   /**
-   * Plan/platform amounts are authored in USD — convert them to the currently
-   * selected currency at the live rate. Business-scoped amounts (products,
-   * sales, purchases) are already stored in the business currency.
+   * Platform/plan amounts are authored in USD. Business amounts are stored in
+   * the business's base currency. Either way we convert live to `code`, so a
+   * currency switch instantly re-prices every screen at today's FX rate.
    */
-  const rate = scope === "platform" ? fxRate(code) : 1;
+  const from = scope === "platform" ? "USD" : (biz.baseCurrency ?? code).toUpperCase();
+  const rate = fxRate(code) / (fxRate(from) || 1);
   const convert = (n: number) => Number(n || 0) * rate;
 
-  const decimals = rate >= 50 ? 0 : 2;
+  const decimals = rate >= 50 || fxRate(code) >= 50 ? 0 : 2;
 
   const format = (n: number) =>
     `${sym}${convert(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
