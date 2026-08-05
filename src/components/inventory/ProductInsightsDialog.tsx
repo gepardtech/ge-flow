@@ -1,3 +1,4 @@
+import { useMoney } from "@/lib/currency";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ interface Props {
 interface SaleItemRow { quantity: number; unit_price: number; unit_cost: number; created_at: string }
 
 const ProductInsightsDialog = ({ open, onOpenChange, product, mode }: Props) => {
+  const { format: fmt } = useMoney();
   const [rows, setRows] = useState<SaleItemRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,8 +71,8 @@ const ProductInsightsDialog = ({ open, onOpenChange, product, mode }: Props) => 
   const stats = mode === "analytics"
     ? [
         { label: "Units Sold", value: unitsSold, icon: Package, color: "text-sky-500 bg-sky-500/15" },
-        { label: "Revenue", value: `$${revenue.toFixed(2)}`, icon: DollarSign, color: "text-emerald-500 bg-emerald-500/15" },
-        { label: "Profit", value: `$${profit.toFixed(2)}`, icon: TrendingUp, color: "text-violet-500 bg-violet-500/15" },
+        { label: "Revenue", value: fmt(revenue), icon: DollarSign, color: "text-emerald-500 bg-emerald-500/15" },
+        { label: "Profit", value: fmt(profit), icon: TrendingUp, color: "text-violet-500 bg-violet-500/15" },
         { label: "Orders", value: orders, icon: Gauge, color: "text-amber-500 bg-amber-500/15" },
       ]
     : [
