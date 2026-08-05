@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CURRENCIES } from "@/lib/currencies";
 import { supabase } from "@/integrations/supabase/client";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
@@ -216,11 +217,9 @@ const AdminSettings = () => {
                 <Select value={form.base_currency ?? "USD"} onValueChange={(v) => set("base_currency", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">USD — US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR — Euro</SelectItem>
-                    <SelectItem value="GBP">GBP — British Pound</SelectItem>
-                    <SelectItem value="PKR">PKR — Pakistani Rupee</SelectItem>
-                    <SelectItem value="AED">AED — UAE Dirham</SelectItem>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>

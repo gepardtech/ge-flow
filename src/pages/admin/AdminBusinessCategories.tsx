@@ -65,6 +65,8 @@ const FEATURES = [
   { id: "ingredient", label: "Ingredient Tracking" },
   { id: "asset", label: "Asset Tracking" },
 ];
+import { CURRENCY_CODES, currencyLabel } from "@/lib/currencies";
+
 const CURRENCIES = CURRENCY_CODES;
 
 interface FormState {
@@ -434,7 +436,7 @@ const AdminBusinessCategories = () => {
                   <label className="text-xs font-bold mb-1.5 block">Currency</label>
                   <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
