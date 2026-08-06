@@ -54,9 +54,9 @@ const Checkout = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [card, setCard] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
+  const [resolvedName, setResolvedName] = useState("");
+  const [hasBusiness, setHasBusiness] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
   const [paypalEmail, setPaypalEmail] = useState("");
