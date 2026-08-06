@@ -42,6 +42,7 @@ const Checkout = () => {
   const { toast } = useToast();
   const { symbol: sym, taxRate, invoiceNo, price: fx } = useMoney({ scope: "platform" });
   const { priceOf, featuresOf, byKey } = usePricingPlans();
+  const { paypalClientId } = usePaymentGateways();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
@@ -418,6 +419,7 @@ const Checkout = () => {
         </div>
       </section>
       <InvoiceDialog open={showInvoice} onClose={() => setShowInvoice(false)} onContinue={handleContinue} invoice={invoice} />
+      </PayPalScriptProvider>
     </Layout>
   );
 };
