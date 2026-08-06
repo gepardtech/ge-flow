@@ -183,10 +183,25 @@ const Checkout = () => {
     if (isAdminEmail) { navigate("/admin"); return; }
     navigate(hasBusiness ? "/dashboard" : "/setup/business");
   };
-
+  const payProps = {
+    plan,
+    cycle: period,
+    amount: Number(total),
+    couponCode: appliedCoupon?.code ?? null,
+    ensureAuth,
+    onSuccess: handleSuccess,
+  };
 
   return (
     <Layout>
+      <PayPalScriptProvider
+        options={{
+          clientId: paypalClientId ?? "test",
+          currency: "USD",
+          intent: "capture",
+          components: "buttons,card-fields",
+        }}
+      >
       <section className="py-10 md:py-16">
         <div className="container mx-auto px-4 max-w-6xl">
           <Link to="/pricing" className="inline-flex items-center gap-2 text-sm font-semibold text-foreground/80 hover:text-primary transition-colors mb-8">
@@ -195,7 +210,8 @@ const Checkout = () => {
 
           <div className="grid lg:grid-cols-[1fr_400px] gap-6">
             {/* LEFT — Form */}
-            <form onSubmit={handleSubmit} className="premium-card p-6 md:p-10">
+            <form onSubmit={(e) => e.preventDefault()} className="premium-card p-6 md:p-10">
+
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">Secure Checkout</h1>
