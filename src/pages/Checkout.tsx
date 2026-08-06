@@ -100,50 +100,65 @@ const Checkout = () => {
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (paymentMethod === "card") {
-      if (!card.trim() || !expiry.trim() || !cvc.trim()) {
-        toast({ title: "Missing payment details", description: "Please complete card information.", variant: "destructive" });
-        return;
-      }
-    } else {
-      if (!paypalEmail.trim()) {
-        toast({ title: "PayPal email required", description: "Please enter your PayPal email.", variant: "destructive" });
-        return;
-      }
+  /**
+   * Creates (or signs into) the Supabase account before the PayPal order is
+   * created, so the transaction is always tied to a real user record.
+   */
+  const ensureAuth = async (): Promise<boolean> => {
+    const { data: { user: current } } = await supabase.auth.getUser();
+    if (current && current.email?.toLowerCase() === email.trim().toLowerCase()) {
+      setResolvedName((current.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      return true;
+    }
+    if (!email.trim() || password.length < 6 || (authMode === "signup" && !fullName.trim())) {
+      toast({ title: "Account details required", description: "Complete your account fields to continue.", variant: "destructive" });
+      return false;
     }
     setLoading(true);
-    let authError = null;
-    let resolvedName = fullName;
     if (authMode === "login") {
       const { data: loginData, error } = await supabase.auth.signInWithPassword({ email, password });
-      authError = error;
-      resolvedName = (loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0];
-    } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName, plan, period },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      authError = error;
+      setLoading(false);
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0]);
+      return true;
+    }
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, plan, period }, emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      // Account already exists → sign in with the same credentials.
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (loginError) {
+        toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      return true;
+    }
+    if (!signUpData.session) {
+      // Email confirmation is on — sign in so the payment can be authorised.
+      await supabase.auth.signInWithPassword({ email, password });
     }
     setLoading(false);
-    if (authError) {
-      toast({ title: "Checkout failed", description: authError.message, variant: "destructive" });
-      return;
-    }
+    setResolvedName(fullName || email.split("@")[0]);
+    return true;
+  };
+
+  const handleSuccess = (result: CaptureResult) => {
     const inv: InvoiceData = {
-      invoiceNumber: invoiceNo(Date.now().toString()),
+      invoiceNumber: result.invoiceNumber || invoiceNo(Date.now().toString()),
       date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-      customerName: resolvedName,
+      customerName: resolvedName || fullName || email.split("@")[0],
       customerEmail: email,
       planName: data.name,
       period: PERIOD_LABEL[period],
-      paymentMethod: paymentMethod === "card" ? `Card •••• ${card.slice(-4) || "****"}` : `PayPal (${paypalEmail})`,
+      paymentMethod: result.method,
       subtotal,
       discount,
       couponCode: appliedCoupon?.code,
@@ -153,17 +168,18 @@ const Checkout = () => {
       taxRate,
     };
     setInvoice(inv);
+    setHasBusiness(!!result.hasBusiness);
     setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
     setShowInvoice(true);
-    toast({ title: "Payment successful!", description: `${data.name} activated.` });
+    toast({ title: "Payment successful!", description: `${data.name} activated on your account.` });
   };
 
   const handleContinue = () => {
     setShowInvoice(false);
-    if (invoice) {
-      navigate(isAdminEmail ? "/admin" : "/dashboard");
-    }
+    if (isAdminEmail) { navigate("/admin"); return; }
+    navigate(hasBusiness ? "/dashboard" : "/setup/business");
   };
+
 
   return (
     <Layout>
