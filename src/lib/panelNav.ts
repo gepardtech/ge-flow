@@ -1,5 +1,5 @@
 import {
-  Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3,
+  Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3, Wallet,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
   SlidersHorizontal, Megaphone, TriangleAlert, Bell,
@@ -35,6 +35,7 @@ export const ADMIN_NAV: NavItem[] = [
       { label: "Coupon Codes", to: "/admin/billing/coupons" },
     ],
   },
+  { label: "Payment", to: "/admin/payments", icon: Wallet },
   { label: "Feature Control", to: "/admin/features", icon: Eye },
   { label: "Plan Limits", to: "/admin/plan-limits", icon: SlidersHorizontal },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3 },
