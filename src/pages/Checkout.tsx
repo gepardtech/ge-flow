@@ -292,51 +292,36 @@ const Checkout = () => {
                   </button>
                 </div>
 
-                {paymentMethod === "card" ? (
+                {!paypalClientId ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    Online payments are being configured. Please try again shortly.
+                  </p>
+                ) : paymentMethod === "card" ? (
+                  <PayPalCardSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} />
+                ) : (
                   <>
                     <div>
-                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CREDIT OR DEBIT CARD</label>
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
                       <div className="relative">
-                        <CreditCard className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
-                        <Input value={card} onChange={(e) => setCard(e.target.value)} placeholder="0000 0000 0000 0000" className="h-12 pl-11 tracking-wider" maxLength={19} />
+                        <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
+                        <Input
+                          type="email"
+                          value={paypalEmail}
+                          onChange={(e) => setPaypalEmail(e.target.value)}
+                          placeholder="you@paypal.com"
+                          className="h-12 pl-11"
+                        />
                       </div>
+                      <p className="text-xs text-muted-foreground mt-3">A secure PayPal window opens to verify your account and confirm the payment.</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">EXPIRY DATE</label>
-                        <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM / YY" className="h-12" maxLength={7} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CVC CODE</label>
-                        <Input value={cvc} onChange={(e) => setCvc(e.target.value)} placeholder="•••" className="h-12" maxLength={4} />
-                      </div>
-                    </div>
+                    <PayPalWalletSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} payerEmail={paypalEmail} />
+                    <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-2 inline-flex items-center gap-2 justify-center w-full">
+                      <ShieldCheck className="h-3.5 w-3.5" /> PCI-DSS COMPLIANT • SSL ENCRYPTED
+                    </p>
                   </>
-                ) : (
-                  <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
-                    <div className="relative">
-                      <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
-                      <Input
-                        type="email"
-                        value={paypalEmail}
-                        onChange={(e) => setPaypalEmail(e.target.value)}
-                        placeholder="you@paypal.com"
-                        className="h-12 pl-11"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-3">You'll be redirected to PayPal to securely complete your payment after creating your account.</p>
-                  </div>
                 )}
               </div>
 
-              <Button type="submit" disabled={loading} className="cta-btn w-full h-14 rounded-full mt-8 text-sm font-bold tracking-wider gap-2 bg-primary text-primary-foreground hover:bg-primary">
-                {loading ? "PROCESSING..." : <>{ctaLabel} • {fx(Number(total))} <ArrowRight className="h-4 w-4" /></>}
-              </Button>
-
-              <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-4 inline-flex items-center gap-2 justify-center w-full">
-                <ShieldCheck className="h-3.5 w-3.5" /> PCI-DSS COMPLIANT • SSL ENCRYPTED
-              </p>
             </form>
 
             {/* RIGHT — Summary */}
