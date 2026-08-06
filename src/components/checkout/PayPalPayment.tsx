@@ -116,7 +116,7 @@ export const PayPalCardSection = ({ plan, cycle, amount, couponCode, ensureAuth,
       }}
       onError={(err) => {
         setBusy(false);
-        toast({ title: "Payment failed", description: String((err as Error)?.message ?? err), variant: "destructive" });
+        toast({ title: "Payment failed", description: String((err as any)?.message ?? err), variant: "destructive" });
       }}
       style={{ input: { "font-size": "15px", "font-family": "inherit", padding: "12px" } }}
     >
@@ -167,7 +167,7 @@ export const PayPalWalletSection = ({ plan, cycle, amount, couponCode, ensureAut
           }
         }}
         onError={(err) => {
-          toast({ title: "PayPal error", description: String((err as Error)?.message ?? err), variant: "destructive" });
+          toast({ title: "PayPal error", description: String((err as any)?.message ?? err), variant: "destructive" });
         }}
       />
       {payerEmail ? (
