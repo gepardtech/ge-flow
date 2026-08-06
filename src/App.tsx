@@ -32,6 +32,7 @@ import AdminBusinesses from "./pages/admin/AdminBusinesses";
 import AdminBusinessCategories from "./pages/admin/AdminBusinessCategories";
 import AdminProductCategories from "./pages/admin/AdminProductCategories";
 import AdminBilling from "./pages/admin/AdminBilling";
+import AdminPayments from "./pages/admin/AdminPayments";
 import AdminBillingSubscriptions from "./pages/admin/AdminBillingSubscriptions";
 import AdminBillingPricing from "./pages/admin/AdminBillingPricing";
 import AdminBillingInvoices from "./pages/admin/AdminBillingInvoices";
@@ -91,6 +92,7 @@ const App = () => (
           <Route path="/admin/billing/coupons" element={<AdminGuard><AdminBillingCoupons /></AdminGuard>} />
           <Route path="/admin/features" element={<AdminGuard><AdminFeatures /></AdminGuard>} />
           <Route path="/admin/analytics" element={<AdminGuard><AdminAnalytics /></AdminGuard>} />
+          <Route path="/admin/payments" element={<AdminGuard><AdminPayments /></AdminGuard>} />
           <Route path="/admin/support" element={<AdminGuard><AdminSupport /></AdminGuard>} />
           <Route path="/admin/plan-limits" element={<AdminGuard><AdminPlanLimits /></AdminGuard>} />
           <Route path="/admin/notifications" element={<AdminGuard><AdminNotifications /></AdminGuard>} />

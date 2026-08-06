@@ -9,6 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
 import { useMoney } from "@/lib/currency";
 import { usePricingPlans } from "@/hooks/usePricingPlans";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { usePaymentGateways } from "@/hooks/usePaymentGateways";
+import { PayPalCardSection, PayPalWalletSection, CaptureResult } from "@/components/checkout/PayPalPayment";
+
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
@@ -38,6 +42,7 @@ const Checkout = () => {
   const { toast } = useToast();
   const { symbol: sym, taxRate, invoiceNo, price: fx } = useMoney({ scope: "platform" });
   const { priceOf, featuresOf, byKey } = usePricingPlans();
+  const { paypalClientId } = usePaymentGateways();
 
   const plan = (params.get("plan") as Plan) || "standard";
   const period = (params.get("period") as Period) || "monthly";
@@ -50,9 +55,9 @@ const Checkout = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [card, setCard] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
+  const [resolvedName, setResolvedName] = useState("");
+  const [hasBusiness, setHasBusiness] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
   const [paypalEmail, setPaypalEmail] = useState("");
@@ -100,50 +105,65 @@ const Checkout = () => {
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (paymentMethod === "card") {
-      if (!card.trim() || !expiry.trim() || !cvc.trim()) {
-        toast({ title: "Missing payment details", description: "Please complete card information.", variant: "destructive" });
-        return;
-      }
-    } else {
-      if (!paypalEmail.trim()) {
-        toast({ title: "PayPal email required", description: "Please enter your PayPal email.", variant: "destructive" });
-        return;
-      }
+  /**
+   * Creates (or signs into) the Supabase account before the PayPal order is
+   * created, so the transaction is always tied to a real user record.
+   */
+  const ensureAuth = async (): Promise<boolean> => {
+    const { data: { user: current } } = await supabase.auth.getUser();
+    if (current && current.email?.toLowerCase() === email.trim().toLowerCase()) {
+      setResolvedName((current.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      return true;
+    }
+    if (!email.trim() || password.length < 6 || (authMode === "signup" && !fullName.trim())) {
+      toast({ title: "Account details required", description: "Complete your account fields to continue.", variant: "destructive" });
+      return false;
     }
     setLoading(true);
-    let authError = null;
-    let resolvedName = fullName;
     if (authMode === "login") {
       const { data: loginData, error } = await supabase.auth.signInWithPassword({ email, password });
-      authError = error;
-      resolvedName = (loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0];
-    } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName, plan, period },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      authError = error;
+      setLoading(false);
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0]);
+      return true;
+    }
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, plan, period }, emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      // Account already exists → sign in with the same credentials.
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (loginError) {
+        toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      return true;
+    }
+    if (!signUpData.session) {
+      // Email confirmation is on — sign in so the payment can be authorised.
+      await supabase.auth.signInWithPassword({ email, password });
     }
     setLoading(false);
-    if (authError) {
-      toast({ title: "Checkout failed", description: authError.message, variant: "destructive" });
-      return;
-    }
+    setResolvedName(fullName || email.split("@")[0]);
+    return true;
+  };
+
+  const handleSuccess = (result: CaptureResult) => {
     const inv: InvoiceData = {
-      invoiceNumber: invoiceNo(Date.now().toString()),
+      invoiceNumber: result.invoiceNumber || invoiceNo(Date.now().toString()),
       date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-      customerName: resolvedName,
+      customerName: resolvedName || fullName || email.split("@")[0],
       customerEmail: email,
       planName: data.name,
       period: PERIOD_LABEL[period],
-      paymentMethod: paymentMethod === "card" ? `Card •••• ${card.slice(-4) || "****"}` : `PayPal (${paypalEmail})`,
+      paymentMethod: result.method,
       subtotal,
       discount,
       couponCode: appliedCoupon?.code,
@@ -153,20 +173,36 @@ const Checkout = () => {
       taxRate,
     };
     setInvoice(inv);
+    setHasBusiness(!!result.hasBusiness);
     setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
     setShowInvoice(true);
-    toast({ title: "Payment successful!", description: `${data.name} activated.` });
+    toast({ title: "Payment successful!", description: `${data.name} activated on your account.` });
   };
 
   const handleContinue = () => {
     setShowInvoice(false);
-    if (invoice) {
-      navigate(isAdminEmail ? "/admin" : "/dashboard");
-    }
+    if (isAdminEmail) { navigate("/admin"); return; }
+    navigate(hasBusiness ? "/dashboard" : "/setup/business");
+  };
+  const payProps = {
+    plan,
+    cycle: period,
+    amount: Number(total),
+    couponCode: appliedCoupon?.code ?? null,
+    ensureAuth,
+    onSuccess: handleSuccess,
   };
 
   return (
     <Layout>
+      <PayPalScriptProvider
+        options={{
+          clientId: paypalClientId ?? "test",
+          currency: "USD",
+          intent: "capture",
+          components: "buttons,card-fields",
+        }}
+      >
       <section className="py-10 md:py-16">
         <div className="container mx-auto px-4 max-w-6xl">
           <Link to="/pricing" className="inline-flex items-center gap-2 text-sm font-semibold text-foreground/80 hover:text-primary transition-colors mb-8">
@@ -175,7 +211,8 @@ const Checkout = () => {
 
           <div className="grid lg:grid-cols-[1fr_400px] gap-6">
             {/* LEFT — Form */}
-            <form onSubmit={handleSubmit} className="premium-card p-6 md:p-10">
+            <form onSubmit={(e) => e.preventDefault()} className="premium-card p-6 md:p-10">
+
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">Secure Checkout</h1>
@@ -272,51 +309,36 @@ const Checkout = () => {
                   </button>
                 </div>
 
-                {paymentMethod === "card" ? (
+                {!paypalClientId ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    Online payments are being configured. Please try again shortly.
+                  </p>
+                ) : paymentMethod === "card" ? (
+                  <PayPalCardSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} />
+                ) : (
                   <>
                     <div>
-                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CREDIT OR DEBIT CARD</label>
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
                       <div className="relative">
-                        <CreditCard className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
-                        <Input value={card} onChange={(e) => setCard(e.target.value)} placeholder="0000 0000 0000 0000" className="h-12 pl-11 tracking-wider" maxLength={19} />
+                        <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
+                        <Input
+                          type="email"
+                          value={paypalEmail}
+                          onChange={(e) => setPaypalEmail(e.target.value)}
+                          placeholder="you@paypal.com"
+                          className="h-12 pl-11"
+                        />
                       </div>
+                      <p className="text-xs text-muted-foreground mt-3">A secure PayPal window opens to verify your account and confirm the payment.</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">EXPIRY DATE</label>
-                        <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM / YY" className="h-12" maxLength={7} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">CVC CODE</label>
-                        <Input value={cvc} onChange={(e) => setCvc(e.target.value)} placeholder="•••" className="h-12" maxLength={4} />
-                      </div>
-                    </div>
+                    <PayPalWalletSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} payerEmail={paypalEmail} />
+                    <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-2 inline-flex items-center gap-2 justify-center w-full">
+                      <ShieldCheck className="h-3.5 w-3.5" /> PCI-DSS COMPLIANT • SSL ENCRYPTED
+                    </p>
                   </>
-                ) : (
-                  <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
-                    <div className="relative">
-                      <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
-                      <Input
-                        type="email"
-                        value={paypalEmail}
-                        onChange={(e) => setPaypalEmail(e.target.value)}
-                        placeholder="you@paypal.com"
-                        className="h-12 pl-11"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-3">You'll be redirected to PayPal to securely complete your payment after creating your account.</p>
-                  </div>
                 )}
               </div>
 
-              <Button type="submit" disabled={loading} className="cta-btn w-full h-14 rounded-full mt-8 text-sm font-bold tracking-wider gap-2 bg-primary text-primary-foreground hover:bg-primary">
-                {loading ? "PROCESSING..." : <>{ctaLabel} • {fx(Number(total))} <ArrowRight className="h-4 w-4" /></>}
-              </Button>
-
-              <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-4 inline-flex items-center gap-2 justify-center w-full">
-                <ShieldCheck className="h-3.5 w-3.5" /> PCI-DSS COMPLIANT • SSL ENCRYPTED
-              </p>
             </form>
 
             {/* RIGHT — Summary */}
@@ -397,6 +419,7 @@ const Checkout = () => {
         </div>
       </section>
       <InvoiceDialog open={showInvoice} onClose={() => setShowInvoice(false)} onContinue={handleContinue} invoice={invoice} />
+      </PayPalScriptProvider>
     </Layout>
   );
 };

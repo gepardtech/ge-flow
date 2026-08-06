@@ -423,6 +423,180 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_gateways: {
+        Row: {
+          created_at: string
+          credentials: Json
+          enabled: boolean
+          gateway_key: string
+          id: string
+          mode: string
+          name: string
+          public_config: Json
+          sort_order: number
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          credentials?: Json
+          enabled?: boolean
+          gateway_key: string
+          id?: string
+          mode?: string
+          name: string
+          public_config?: Json
+          sort_order?: number
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          credentials?: Json
+          enabled?: boolean
+          gateway_key?: string
+          id?: string
+          mode?: string
+          name?: string
+          public_config?: Json
+          sort_order?: number
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      payment_settings: {
+        Row: {
+          allow_partial_refunds: boolean
+          auto_send_invoices: boolean
+          company_address: string | null
+          created_at: string
+          enable_refunds: boolean
+          fraud_detection: boolean
+          id: string
+          include_branding: boolean
+          invoice_footer: string | null
+          multi_gateway_failover: boolean
+          notify_user_on_failure: boolean
+          payout_account: string | null
+          payout_currency: string
+          payout_method: string
+          payout_min_amount: number
+          payout_schedule: string
+          refund_window_days: number
+          retry_count: number
+          retry_failed: boolean
+          retry_interval_hours: number
+          sandbox_mode: boolean
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_partial_refunds?: boolean
+          auto_send_invoices?: boolean
+          company_address?: string | null
+          created_at?: string
+          enable_refunds?: boolean
+          fraud_detection?: boolean
+          id?: string
+          include_branding?: boolean
+          invoice_footer?: string | null
+          multi_gateway_failover?: boolean
+          notify_user_on_failure?: boolean
+          payout_account?: string | null
+          payout_currency?: string
+          payout_method?: string
+          payout_min_amount?: number
+          payout_schedule?: string
+          refund_window_days?: number
+          retry_count?: number
+          retry_failed?: boolean
+          retry_interval_hours?: number
+          sandbox_mode?: boolean
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_partial_refunds?: boolean
+          auto_send_invoices?: boolean
+          company_address?: string | null
+          created_at?: string
+          enable_refunds?: boolean
+          fraud_detection?: boolean
+          id?: string
+          include_branding?: boolean
+          invoice_footer?: string | null
+          multi_gateway_failover?: boolean
+          notify_user_on_failure?: boolean
+          payout_account?: string | null
+          payout_currency?: string
+          payout_method?: string
+          payout_min_amount?: number
+          payout_schedule?: string
+          refund_window_days?: number
+          retry_count?: number
+          retry_failed?: boolean
+          retry_interval_hours?: number
+          sandbox_mode?: boolean
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          cycle: string
+          id: string
+          method: string | null
+          payer_email: string | null
+          plan: string
+          provider: string
+          provider_capture_id: string | null
+          provider_order_id: string | null
+          raw: Json | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          cycle?: string
+          id?: string
+          method?: string | null
+          payer_email?: string | null
+          plan?: string
+          provider?: string
+          provider_capture_id?: string | null
+          provider_order_id?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          cycle?: string
+          id?: string
+          method?: string | null
+          payer_email?: string | null
+          plan?: string
+          provider?: string
+          provider_capture_id?: string | null
+          provider_order_id?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       plan_limits: {
         Row: {
           created_at: string
@@ -836,6 +1010,39 @@ export type Database = {
           plan_free?: boolean
           plan_premium?: boolean
           plan_standard?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      public_payment_gateways: {
+        Row: {
+          enabled: boolean
+          gateway_key: string
+          id: string
+          mode: string
+          name: string
+          public_client_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          gateway_key: string
+          id: string
+          mode?: string
+          name: string
+          public_client_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          gateway_key?: string
+          id?: string
+          mode?: string
+          name?: string
+          public_client_id?: string | null
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

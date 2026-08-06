@@ -226,3 +226,6 @@
 .theme-toggle.dark-active::after {
   transform: translateX(24px);
 }
+
+.paypal-field { min-height: 3rem; display: flex; align-items: center; }
+.paypal-field > div, .paypal-field iframe { width: 100%; }
