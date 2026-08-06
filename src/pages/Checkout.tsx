@@ -9,6 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
 import { useMoney } from "@/lib/currency";
 import { usePricingPlans } from "@/hooks/usePricingPlans";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { usePaymentGateways } from "@/hooks/usePaymentGateways";
+import { PayPalCardSection, PayPalWalletSection, CaptureResult } from "@/components/checkout/PayPalPayment";
+
 
 type Plan = "standard" | "premium";
 type Period = "monthly" | "yearly" | "lifetime";
