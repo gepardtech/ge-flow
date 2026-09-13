@@ -14,6 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_models: {
+        Row: {
+          capabilities: string[]
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          model_id: string
+          model_type: string
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          capabilities?: string[]
+          created_at?: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          model_id: string
+          model_type?: string
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          capabilities?: string[]
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          model_id?: string
+          model_type?: string
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_models_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_provider_keys: {
+        Row: {
+          created_at: string
+          encrypted_key: string | null
+          id: string
+          is_active: boolean
+          key_name: string
+          key_source: string
+          masked_key: string | null
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_key?: string | null
+          id?: string
+          is_active?: boolean
+          key_name: string
+          key_source?: string
+          masked_key?: string | null
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_key?: string | null
+          id?: string
+          is_active?: boolean
+          key_name?: string
+          key_source?: string
+          masked_key?: string | null
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_provider_keys_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_providers: {
+        Row: {
+          created_at: string
+          description: string | null
+          health_status: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          last_health_check: string | null
+          name: string
+          provider_type: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          health_status?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_health_check?: string | null
+          name: string
+          provider_type?: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          health_status?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_health_check?: string | null
+          name?: string
+          provider_type?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           audience: string
@@ -62,6 +195,90 @@ export type Database = {
           title?: string
           updated_at?: string
           variant?: string
+        }
+        Relationships: []
+      }
+      api_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          error_code: string | null
+          id: string
+          latency_ms: number
+          model: string
+          provider: string
+          request_id: string
+          status: string
+          task_type: string
+          usage_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number
+          model: string
+          provider: string
+          request_id: string
+          status: string
+          task_type: string
+          usage_tokens?: number | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number
+          model?: string
+          provider?: string
+          request_id?: string
+          status?: string
+          task_type?: string
+          usage_tokens?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          business_id: string
+          created_at: string
+          day: string
+          id: string
+          model: string
+          provider: string
+          total_latency_ms: number
+          total_requests: number
+          total_tokens: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          day?: string
+          id?: string
+          model: string
+          provider: string
+          total_latency_ms?: number
+          total_requests?: number
+          total_tokens?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          day?: string
+          id?: string
+          model?: string
+          provider?: string
+          total_latency_ms?: number
+          total_requests?: number
+          total_tokens?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -136,6 +353,56 @@ export type Database = {
           },
         ]
       }
+      business_staff: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          invitation_token: string | null
+          invited_by: string
+          invited_email: string
+          permissions: Json
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          invitation_token?: string | null
+          invited_by: string
+          invited_email: string
+          permissions?: Json
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          invitation_token?: string | null
+          invited_by?: string
+          invited_email?: string
+          permissions?: Json
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_staff_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           base_currency: string | null
@@ -149,6 +416,7 @@ export type Database = {
           last_active: string
           listed_products: number
           owner_user_id: string
+          payment_methods: Json
           status: string
           stock_alert_limit: number
           updated_at: string
@@ -166,6 +434,7 @@ export type Database = {
           last_active?: string
           listed_products?: number
           owner_user_id: string
+          payment_methods?: Json
           status?: string
           stock_alert_limit?: number
           updated_at?: string
@@ -183,6 +452,7 @@ export type Database = {
           last_active?: string
           listed_products?: number
           owner_user_id?: string
+          payment_methods?: Json
           status?: string
           stock_alert_limit?: number
           updated_at?: string
@@ -333,6 +603,56 @@ export type Database = {
         }
         Relationships: []
       }
+      held_orders: {
+        Row: {
+          business_id: string
+          cart_data: Json
+          created_at: string
+          customer_name: string | null
+          customer_note: string | null
+          customer_phone: string | null
+          id: string
+          item_count: number
+          owner_user_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          cart_data: Json
+          created_at?: string
+          customer_name?: string | null
+          customer_note?: string | null
+          customer_phone?: string | null
+          id?: string
+          item_count?: number
+          owner_user_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          cart_data?: Json
+          created_at?: string
+          customer_name?: string | null
+          customer_note?: string | null
+          customer_phone?: string | null
+          id?: string
+          item_count?: number
+          owner_user_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "held_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -419,6 +739,122 @@ export type Database = {
           page_assignments?: string[]
           question?: string
           sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_logs: {
+        Row: {
+          id: string
+          recipient: string
+          sent_at: string
+          status: string
+          subject: string
+          template_id: string | null
+          template_name: string | null
+          type: string | null
+        }
+        Insert: {
+          id?: string
+          recipient: string
+          sent_at?: string
+          status?: string
+          subject: string
+          template_id?: string | null
+          template_name?: string | null
+          type?: string | null
+        }
+        Update: {
+          id?: string
+          recipient?: string
+          sent_at?: string
+          status?: string
+          subject?: string
+          template_id?: string | null
+          template_name?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          emails_delivered: number
+          id: string
+          last_email_sent_at: string | null
+          source: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          emails_delivered?: number
+          id?: string
+          last_email_sent_at?: string | null
+          source?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          emails_delivered?: number
+          id?: string
+          last_email_sent_at?: string | null
+          source?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      newsletter_templates: {
+        Row: {
+          body: string
+          created_at: string
+          cta_text: string | null
+          cta_url: string | null
+          headline: string | null
+          id: string
+          is_active: boolean
+          name: string
+          preview_text: string | null
+          subject: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          headline?: string | null
+          id: string
+          is_active?: boolean
+          name: string
+          preview_text?: string | null
+          subject: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          headline?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          preview_text?: string | null
+          subject?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -626,6 +1062,27 @@ export type Database = {
           limit_value?: number | null
           plan_key?: string
           resource_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_general_settings: {
+        Row: {
+          id: string
+          settings: Json
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          settings?: Json
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          settings?: Json
+          singleton?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -848,6 +1305,7 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          base_unit: string | null
           batch_number: string | null
           business_id: string
           category_id: string | null
@@ -866,10 +1324,13 @@ export type Database = {
           status: string
           stock_units: number
           subcategory_id: string | null
+          units_per_uom: number | null
+          uom: string | null
           updated_at: string
         }
         Insert: {
           barcode?: string | null
+          base_unit?: string | null
           batch_number?: string | null
           business_id: string
           category_id?: string | null
@@ -888,10 +1349,13 @@ export type Database = {
           status?: string
           stock_units?: number
           subcategory_id?: string | null
+          units_per_uom?: number | null
+          uom?: string | null
           updated_at?: string
         }
         Update: {
           barcode?: string | null
+          base_unit?: string | null
           batch_number?: string | null
           business_id?: string
           category_id?: string | null
@@ -910,6 +1374,8 @@ export type Database = {
           status?: string
           stock_units?: number
           subcategory_id?: string | null
+          units_per_uom?: number | null
+          uom?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1376,34 +1842,43 @@ export type Database = {
         Row: {
           business_id: string
           created_at: string
+          created_by: string | null
           id: string
           note: string | null
           owner_user_id: string
           product_id: string
           quantity: number
           reason: string | null
+          reference_id: string | null
+          reference_type: string | null
           type: string
         }
         Insert: {
           business_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           note?: string | null
           owner_user_id: string
           product_id: string
           quantity?: number
           reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           type?: string
         }
         Update: {
           business_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           note?: string | null
           owner_user_id?: string
           product_id?: string
           quantity?: number
           reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           type?: string
         }
         Relationships: [
