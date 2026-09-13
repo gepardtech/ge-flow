@@ -60,6 +60,9 @@ export const CURRENCY_SYMBOLS: Record<string, string> = Object.fromEntries(
   CURRENCIES.map((c) => [c.code, c.symbol]),
 );
 
+export const currencySymbol = (code?: string | null) =>
+  CURRENCY_SYMBOLS[(code ?? "USD").toUpperCase()] ?? `${(code ?? "USD").toUpperCase()} `;
+
 export const currencyLabel = (code: string) => {
   const c = CURRENCIES.find((x) => x.code === code.toUpperCase());
   return c ? `${c.code} — ${c.name}` : code.toUpperCase();

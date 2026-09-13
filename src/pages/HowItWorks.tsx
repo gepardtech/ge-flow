@@ -115,14 +115,14 @@ const HowItWorks = () => {
       {/* CTA Banner */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="bg-cta-gradient rounded-3xl p-12 md:p-16 text-center">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground mb-3">
+          <div className="relative overflow-hidden rounded-3xl p-12 md:p-16 text-center border border-primary/20 bg-gradient-to-br from-primary/15 via-secondary/15 to-primary/10 dark:from-primary/10 dark:via-secondary/10 dark:to-card dark:border-border/80 shadow-xl">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
               Ready to Scale Your Business?
             </h2>
-            <p className="text-primary-foreground/90 mb-7 max-w-md mx-auto">
+            <p className="text-muted-foreground mb-7 max-w-md mx-auto text-base">
               Join thousands of business owners simplifying their operations with GeFlow.
             </p>
-            <Button size="lg" className="bg-background text-primary hover:bg-background/90 font-semibold px-8 rounded-full" asChild>
+            <Button size="lg" className="cta-btn bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-8 rounded-full shadow-lg shadow-primary/25" asChild>
               <Link to="/signup">Get Started Free</Link>
             </Button>
           </div>

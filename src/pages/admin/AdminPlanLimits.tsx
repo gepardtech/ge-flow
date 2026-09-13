@@ -9,8 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { SlidersHorizontal, Loader2, Shield, Save, Infinity as InfinityIcon } from "lucide-react";
 
 interface Limit {
-  id: string; plan_key: string; resource_key: string; label: string;
-  limit_value: number | null; is_locked: boolean;
+  id: string;
+  plan_key: string;
+  resource_key: string;
+  label: string;
+  limit_value: number | null;
+  is_locked: boolean;
 }
 
 const PLAN_META: Record<string, { label: string; cls: string }> = {
@@ -21,6 +25,85 @@ const PLAN_META: Record<string, { label: string; cls: string }> = {
 };
 const PLAN_ORDER = ["free", "standard", "premium", "lifetime"];
 
+interface DefaultResourceDef {
+  key: string;
+  label: string;
+  defaults: Record<string, { limit_value: number | null; is_locked: boolean }>;
+}
+
+const DEFAULT_RESOURCES: DefaultResourceDef[] = [
+  {
+    key: "products",
+    label: "Products / Items Limit",
+    defaults: {
+      free: { limit_value: 50, is_locked: false },
+      standard: { limit_value: 1000, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "branches",
+    label: "Branches / Outlets Limit",
+    defaults: {
+      free: { limit_value: 1, is_locked: false },
+      standard: { limit_value: 3, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "categories",
+    label: "Business Categories Limit",
+    defaults: {
+      free: { limit_value: 1, is_locked: false },
+      standard: { limit_value: 1, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "low_stock",
+    label: "Low Stock Alert Tracking",
+    defaults: {
+      free: { limit_value: 5, is_locked: false },
+      standard: { limit_value: 25, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "out_of_stock",
+    label: "Out of Stock Ledger Items",
+    defaults: {
+      free: { limit_value: 5, is_locked: false },
+      standard: { limit_value: 25, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "reports_days",
+    label: "Report History (Days)",
+    defaults: {
+      free: { limit_value: 7, is_locked: false },
+      standard: { limit_value: 30, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+  {
+    key: "ai_requests",
+    label: "AI Assistant Requests / Month",
+    defaults: {
+      free: { limit_value: 20, is_locked: false },
+      standard: { limit_value: 200, is_locked: false },
+      premium: { limit_value: null, is_locked: false },
+      lifetime: { limit_value: null, is_locked: false },
+    },
+  },
+];
+
 const AdminPlanLimits = () => {
   const { toast } = useToast();
   const [rows, setRows] = useState<Limit[]>([]);
@@ -30,39 +113,100 @@ const AdminPlanLimits = () => {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("plan_limits").select("*");
-    setRows((data as Limit[]) ?? []);
+    let currentRows = ((data as Limit[]) ?? []);
+
+    // Ensure all standard resources exist in database
+    const missingInserts: {
+      plan_key: string;
+      resource_key: string;
+      label: string;
+      limit_value: number | null;
+      is_locked: boolean;
+    }[] = [];
+
+    DEFAULT_RESOURCES.forEach((res) => {
+      PLAN_ORDER.forEach((plan) => {
+        const found = currentRows.find(
+          (r) => r.plan_key === plan && r.resource_key === res.key
+        );
+        if (!found) {
+          const def = res.defaults[plan] || { limit_value: null, is_locked: false };
+          missingInserts.push({
+            plan_key: plan,
+            resource_key: res.key,
+            label: res.label,
+            limit_value: def.limit_value,
+            is_locked: def.is_locked,
+          });
+        }
+      });
+    });
+
+    if (missingInserts.length > 0) {
+      const { data: inserted } = await supabase
+        .from("plan_limits")
+        .insert(missingInserts)
+        .select();
+      if (inserted) {
+        currentRows = [...currentRows, ...(inserted as Limit[])];
+      }
+    }
+
+    setRows(currentRows);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("admin_plan_limits_rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "plan_limits" }, load).subscribe();
+    const ch = supabase
+      .channel(`admin_plan_limits_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "plan_limits" }, () => load())
+      .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
   const stage = (id: string, patch: Partial<Limit>) => {
     setPending((p) => ({ ...p, [id]: { ...(p[id] ?? {}), ...patch } }));
-    setRows((rs) => rs.map((r) => r.id === id ? { ...r, ...patch } : r));
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   };
 
   const save = async () => {
     const ids = Object.keys(pending);
     if (!ids.length) return;
     setSaving(true);
+    let hasError = false;
     for (const id of ids) {
-      await supabase.from("plan_limits").update(pending[id] as any).eq("id", id);
+      const { error } = await supabase
+        .from("plan_limits")
+        .update(pending[id] as any)
+        .eq("id", id);
+      if (error) {
+        hasError = true;
+        toast({ title: "Failed to update limit", description: error.message, variant: "destructive" });
+      }
     }
     setSaving(false);
-    setPending({});
-    toast({ title: "Plan limits saved", description: `${ids.length} value${ids.length > 1 ? "s" : ""} updated.` });
+    if (!hasError) {
+      setPending({});
+      toast({
+        title: "Plan limits saved successfully",
+        description: `${ids.length} quota configuration${ids.length > 1 ? "s" : ""} updated and synchronized live across user workspace.`,
+      });
+    }
   };
 
   const discard = () => { setPending({}); load(); };
 
   const resources = useMemo(() => {
     const seen: { key: string; label: string }[] = [];
-    rows.forEach((r) => { if (!seen.find((s) => s.key === r.resource_key)) seen.push({ key: r.resource_key, label: r.label }); });
+    // Prioritize DEFAULT_RESOURCES order first
+    DEFAULT_RESOURCES.forEach((d) => seen.push({ key: d.key, label: d.label }));
+    // Then any extra custom resources from DB
+    rows.forEach((r) => {
+      if (!seen.find((s) => s.key === r.resource_key)) {
+        seen.push({ key: r.resource_key, label: r.label });
+      }
+    });
     return seen;
   }, [rows]);
 

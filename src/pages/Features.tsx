@@ -14,6 +14,7 @@ import {
   Users,
   Layers,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 type Plan = "Free" | "Standard" | "Premium";
@@ -57,6 +58,12 @@ const groups: Group[] = [
         desc: "Native integration with scanning hardware for error-free stock management.",
         icon: ScanLine,
         plans: ["Standard", "Premium"],
+      },
+      {
+        title: "AI Store Assistant (Basic Level)",
+        desc: "Interactive retail assistant for quick inventory lookups, low stock triage, and daily sales summaries.",
+        icon: Sparkles,
+        plans: ["Free", "Standard", "Premium"],
       },
     ],
   },
@@ -185,16 +192,16 @@ const Features = () => (
 
     <section className="pb-24">
       <div className="container mx-auto px-4">
-        <div className="bg-cta-gradient rounded-3xl p-12 md:p-16 text-center max-w-5xl mx-auto shadow-2xl shadow-primary/20">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+        <div className="relative overflow-hidden rounded-3xl p-12 md:p-16 text-center max-w-5xl mx-auto border border-primary/20 bg-gradient-to-br from-primary/15 via-secondary/15 to-primary/10 dark:from-primary/10 dark:via-secondary/10 dark:to-card dark:border-border/80 shadow-xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Ready to Unlock More Features?
           </h2>
-          <p className="text-primary-foreground/90 max-w-xl mx-auto mb-8">
+          <p className="text-muted-foreground max-w-xl mx-auto mb-8 text-base">
             Explore our tiered plans to find the perfect fit for your needs and get access to our most advanced tools.
           </p>
           <Button
             size="lg"
-            className="cta-btn bg-background text-primary hover:bg-background font-semibold px-8 rounded-full"
+            className="cta-btn bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-8 rounded-full shadow-lg shadow-primary/25"
             asChild
           >
             <Link to="/pricing">View Pricing Plans</Link>

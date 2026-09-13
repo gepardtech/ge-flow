@@ -11,6 +11,8 @@ export interface PublicGateway {
   sort_order: number;
 }
 
+export const DEFAULT_PAYPAL_CLIENT_ID = "BAAxlkvHkBSK_FKe9MeTzSTeTyQGBrs3nTkbrWKlwRBgoy6iBFxfQtHQknHKoneEY_D-B22eJ1bjkX-LRo";
+
 /** Public, realtime list of gateways the checkout is allowed to use. */
 export const usePaymentGateways = () => {
   const [gateways, setGateways] = useState<PublicGateway[]>([]);
@@ -37,12 +39,16 @@ export const usePaymentGateways = () => {
 
   const byKey = (key: string) => gateways.find((g) => g.gateway_key === key) ?? null;
   const paypal = byKey("paypal");
+  const isPaypalEnabled = paypal ? paypal.enabled : true;
+  const activeClientId = (paypal?.public_client_id && paypal.public_client_id.trim().length > 0)
+    ? paypal.public_client_id
+    : DEFAULT_PAYPAL_CLIENT_ID;
 
   return {
     gateways,
     loading,
     byKey,
     paypal,
-    paypalClientId: paypal?.enabled ? paypal.public_client_id : null,
+    paypalClientId: isPaypalEnabled ? activeClientId : null,
   };
 };

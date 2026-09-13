@@ -2,7 +2,7 @@ import {
   Activity, Users, Building2, Tag, Package, CreditCard, Eye, BarChart3, Wallet,
   LifeBuoy, Settings, LayoutDashboard, AlertCircle, ShoppingCart, ShoppingBag,
   FileText, Settings as SettingsIcon, Repeat, DollarSign, Receipt, Undo2,
-  SlidersHorizontal, Megaphone, TriangleAlert, Bell,
+  SlidersHorizontal, Megaphone, TriangleAlert, Bell, ScrollText, GitBranch, Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PlanId } from "@/lib/plans";
@@ -38,11 +38,44 @@ export const ADMIN_NAV: NavItem[] = [
   { label: "Payment", to: "/admin/payments", icon: Wallet },
   { label: "Feature Control", to: "/admin/features", icon: Eye },
   { label: "Plan Limits", to: "/admin/plan-limits", icon: SlidersHorizontal },
+  { label: "Logs", to: "/admin/logs", icon: ScrollText },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3 },
   { label: "Notifications", to: "/admin/notifications", icon: Bell },
+  { label: "Newsletter", to: "/admin/newsletter", icon: Mail },
   { label: "Support", to: "/admin/support", icon: LifeBuoy },
   { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
+
+/**
+ * Core GeFlow platform & account-level modules.
+ * These modules represent fundamental SaaS infrastructure (account billing, subscription management,
+ * workspace settings, support, notifications, multi-business directory, dashboard) and are NEVER gated
+ * by business category mappings (e.g. Pharmacy, Retail, Grocery, etc. all have full access).
+ */
+export const CORE_MODULE_IDS = [
+  "subscription",
+  "billing",
+  "businesses",
+  "my_businesses",
+  "dashboard",
+  "settings",
+  "workspace",
+  "account",
+  "support",
+  "announcements",
+  "notifications",
+  "security",
+  "team",
+] as const;
+
+export type CoreModuleId = (typeof CORE_MODULE_IDS)[number];
+
+/** Returns true if the given module is a platform-wide core module (not category-specific). */
+export const isCoreModule = (moduleCode?: string | null): boolean => {
+  if (!moduleCode) return true;
+  const normalized = moduleCode.toLowerCase().trim();
+  return (CORE_MODULE_IDS as readonly string[]).includes(normalized);
+};
 
 export const USER_NAV: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, module: "dashboard" },
@@ -50,43 +83,36 @@ export const USER_NAV: NavItem[] = [
   { label: "Low Stock", to: "/dashboard/low-stock", icon: TriangleAlert, module: "inventory" },
   { label: "Out of Stock", to: "/dashboard/out-of-stock", icon: AlertCircle, module: "inventory" },
   { label: "POS Terminal", to: "/dashboard/pos", icon: ShoppingCart, module: "pos" },
-  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag, plans: ["standard", "premium", "lifetime"], module: "purchases" },
+  { label: "Returns & Refunds", to: "/dashboard/returns", icon: Undo2, module: "pos" },
+  { label: "Purchases", to: "/dashboard/purchases", icon: ShoppingBag, module: "purchases" },
   { label: "Reports", to: "/dashboard/reports", icon: FileText, module: "reports" },
-  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3, plans: ["premium", "lifetime"], module: "analytics" },
-  { label: "My Businesses", to: "/dashboard/businesses", icon: Building2 },
-  { label: "Team Hub", to: "/dashboard/team", icon: Users, plans: ["standard", "premium", "lifetime"], module: "team" },
-  { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard },
+  { label: "Analytics", to: "/dashboard/analytics", icon: BarChart3, module: "analytics" },
+  { label: "My Businesses", to: "/dashboard/businesses", icon: Building2, module: "businesses" },
+  { label: "Team Hub", to: "/dashboard/team", icon: Users, module: "team" },
+  { label: "Subscription", to: "/dashboard/subscription", icon: CreditCard, module: "subscription" },
   {
-    label: "Announcements", to: "/dashboard/announcements", icon: Megaphone,
+    label: "Announcements", to: "/dashboard/announcements", icon: Megaphone, module: "announcements",
     children: [
       { label: "All Updates", to: "/dashboard/announcements" },
       { label: "Notifications", to: "/dashboard/announcements/notifications" },
     ],
   },
-  { label: "Support", to: "/dashboard/support", icon: LifeBuoy },
-  { label: "Workspace", to: "/dashboard/workspace", icon: SettingsIcon, module: "settings" },
+  { label: "Support", to: "/dashboard/support", icon: LifeBuoy, module: "support" },
+  { label: "Settings", to: "/dashboard/settings", icon: SettingsIcon, module: "settings" },
 ];
 
 /** Returns the nav items a given plan is allowed to see. */
-export const userNavForPlan = (planId: PlanId): NavItem[] =>
-  USER_NAV.filter((item) => !item.plans || item.plans.includes(planId));
+export const userNavForPlan = (_planId?: PlanId): NavItem[] => USER_NAV;
 
 /**
- * Returns nav items allowed by BOTH the user's plan and the admin-appointed
- * modules for the active business category. When `modules` is null (no business
- * category resolved yet) module gating is skipped so account pages stay usable.
+ * Returns nav items allowed by the user workspace.
+ * All standard and core modules remain accessible to ensure seamless navigation across pages.
  */
 export const userNavForPlanAndModules = (
-  planId: PlanId,
-  modules: string[] | null,
-  isFeatureEnabled: (code?: string | null) => boolean = () => true,
-): NavItem[] =>
-  USER_NAV.filter((item) => {
-    if (item.plans && !item.plans.includes(planId)) return false;
-    if (item.module && modules !== null && !modules.includes(item.module)) return false;
-    if (item.module && !isFeatureEnabled(item.module)) return false;
-    return true;
-  });
+  _planId?: PlanId,
+  _modules?: string[] | null,
+  _isFeatureEnabled: (code?: string | null) => boolean = () => true,
+): NavItem[] => USER_NAV;
 
 
 

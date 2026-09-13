@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wallet, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthRedirectUrl } from "@/lib/appUrl";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
 import { useMoney } from "@/lib/currency";
@@ -12,6 +13,14 @@ import { usePricingPlans } from "@/hooks/usePricingPlans";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { PayPalCardSection, PayPalWalletSection, CaptureResult } from "@/components/checkout/PayPalPayment";
+import {
+  validateCoupon,
+  getPendingCoupon,
+  clearPendingCoupon,
+  isPendingCouponFromCta,
+  ValidatedCouponResult,
+} from "@/lib/couponHelper";
+import { Tag } from "lucide-react";
 
 
 type Plan = "standard" | "premium";
@@ -57,50 +66,228 @@ const Checkout = () => {
   const [password, setPassword] = useState("");
   const [resolvedName, setResolvedName] = useState("");
   const [hasBusiness, setHasBusiness] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Sync with current authenticated Supabase session on mount
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUser(user);
+        setEmail(user.email ?? "");
+        const userFullName = (user.user_metadata?.full_name as string) || "";
+        if (userFullName) {
+          setFullName(userFullName);
+          setResolvedName(userFullName);
+        } else {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (profile?.full_name) {
+            setFullName(profile.full_name);
+            setResolvedName(profile.full_name);
+          }
+        }
+      }
+    })();
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
   const [paypalEmail, setPaypalEmail] = useState("");
   const [coupon, setCoupon] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number; label: string } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    amount: number;
+    label: string;
+    discountType?: "percent" | "amount";
+    discountValue?: number;
+    isAnnouncementPromo?: boolean;
+  } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [isAdminEmail, setIsAdminEmail] = useState(false);
 
-  const discount = appliedCoupon?.amount ?? 0;
+  // Tracking refs to respect user intent on coupon removal and CTA auto-apply
+  const hasAutoAppliedRef = useRef(false);
+  const userRemovedCouponRef = useRef(false);
+
+  const discount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.discountType === "percent" && appliedCoupon.discountValue) {
+      return +((subtotal * appliedCoupon.discountValue) / 100).toFixed(2);
+    }
+    return Math.min(subtotal, appliedCoupon.amount);
+  }, [appliedCoupon, subtotal]);
+
   const total = useMemo(() => +(Math.max(subtotal - discount, 0) + tax).toFixed(2), [subtotal, discount, tax]);
 
-  const applyCoupon = async () => {
-    const code = coupon.trim().toUpperCase();
-    if (!code) return;
+  const applyCoupon = useCallback(async (codeToApply?: string, isAutoApply: boolean = false) => {
+    const raw = codeToApply !== undefined ? codeToApply : coupon;
+    const code = raw.trim().toUpperCase();
+    if (!code) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+
+    // Prevent re-applying the exact same code
+    if (appliedCoupon && appliedCoupon.code === code) {
+      toast({
+        title: "Coupon Already Active",
+        description: `Coupon ${code} (${appliedCoupon.label}) is already applied to this order.`,
+      });
+      return;
+    }
+
+    const previousCouponCode = appliedCoupon?.code;
+    setCoupon(code);
     setCouponLoading(true);
     setCouponError("");
-    // Validate via a secure function so the full coupon table is never exposed.
-    const { data, error } = await supabase.rpc("validate_coupon", {
-      _code: code,
-      _plan: plan,
-      _subtotal: subtotal,
-    });
-    setCouponLoading(false);
-    const result = Array.isArray(data) ? data[0] : data;
-    if (error || !result) {
+
+    try {
+      const res = await validateCoupon(code, plan, subtotal, period);
+      if (res.valid) {
+        setAppliedCoupon({
+          code: res.code,
+          amount: res.amount,
+          label: res.label,
+          discountType: res.discountType,
+          discountValue: res.discountValue,
+          isAnnouncementPromo: res.isAnnouncementPromo,
+        });
+        setCouponError("");
+        clearPendingCoupon();
+        userRemovedCouponRef.current = false;
+        
+        if (previousCouponCode && previousCouponCode !== res.code) {
+          toast({
+            title: "Coupon Replaced",
+            description: `Replaced ${previousCouponCode} with ${res.code} (${res.label}). Only one coupon can be active per order.`,
+          });
+        } else {
+          toast({
+            title: res.isAnnouncementPromo ? "Announcement Promo Applied!" : "Promo Coupon Applied!",
+            description: `${res.label} activated for your order.`,
+          });
+        }
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(res.reason || "Invalid or inactive coupon code.");
+        if (!isAutoApply) {
+          toast({
+            title: "Coupon Cannot Be Applied",
+            description: res.reason || "Invalid, expired, or inactive coupon code.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn("Coupon validation error", e);
       setAppliedCoupon(null);
-      setCouponError("Invalid or expired coupon code.");
-      return;
+      setCouponError("Unable to validate coupon code.");
+    } finally {
+      setCouponLoading(false);
     }
-    if (!result.valid) {
-      setAppliedCoupon(null);
-      setCouponError(result.reason || "Invalid or expired coupon code.");
-      return;
-    }
-    const amount = Number(result.amount) || 0;
-    const label = result.label || "";
-    setAppliedCoupon({ code, amount: +amount.toFixed(2), label });
+  }, [coupon, plan, subtotal, period, toast, appliedCoupon]);
+
+  const handleRemoveCoupon = useCallback(() => {
+    userRemovedCouponRef.current = true;
+    setAppliedCoupon(null);
+    setCoupon("");
     setCouponError("");
-    toast({ title: "Coupon applied!", description: `${label} activated.` });
-  };
+    clearPendingCoupon();
+
+    // Clean URL query parameters so coupon/from_cta isn't lingering or re-read
+    const newParams = new URLSearchParams(params);
+    newParams.delete("coupon");
+    newParams.delete("code");
+    newParams.delete("promo");
+    newParams.delete("from_cta");
+    newParams.delete("cta");
+    navigate({ search: newParams.toString() }, { replace: true });
+
+    toast({
+      title: "Coupon Removed",
+      description: "The discount has been removed from this order.",
+    });
+  }, [params, navigate, toast]);
+
+  // Re-validate coupon whenever plan, period, or subtotal changes
+  const appliedCouponCode = appliedCoupon?.code;
+  useEffect(() => {
+    if (!appliedCouponCode) return;
+    let isCancelled = false;
+
+    const revalidate = async () => {
+      const res = await validateCoupon(appliedCouponCode, plan, subtotal, period);
+      if (isCancelled) return;
+      if (res.valid) {
+        setAppliedCoupon((prev) =>
+          prev
+            ? {
+                ...prev,
+                amount: res.amount,
+                label: res.label,
+                discountType: res.discountType,
+                discountValue: res.discountValue,
+              }
+            : null
+        );
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(res.reason || "Coupon is not valid for the selected plan.");
+        toast({
+          title: "Coupon Removed",
+          description: res.reason || "This coupon does not apply to the selected plan or billing cycle.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    revalidate();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [appliedCouponCode, plan, period, subtotal, toast]);
+
+  // Apply coupon automatically ONLY when user arrives via Announcement CTA Button
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkAutoApply = async () => {
+      const isFromCta =
+        params.get("from_cta") === "1" ||
+        params.get("cta") === "1" ||
+        isPendingCouponFromCta();
+
+      const urlCoupon = (params.get("coupon") || params.get("code") || params.get("promo") || "").trim().toUpperCase();
+      const pendingCoupon = getPendingCoupon();
+      const targetCoupon = urlCoupon || pendingCoupon;
+
+      if (isFromCta && targetCoupon && !hasAutoAppliedRef.current && !userRemovedCouponRef.current) {
+        hasAutoAppliedRef.current = true;
+        if (!isCancelled && subtotal > 0) {
+          setCoupon(targetCoupon);
+          await applyCoupon(targetCoupon, true);
+        }
+      } else if (!isFromCta && urlCoupon) {
+        // User visited directly or with a URL param without CTA button:
+        // Do NOT auto-apply. Just populate the input for convenience, user has to click APPLY manually.
+        setCoupon((current) => current || urlCoupon);
+      }
+    };
+
+    checkAutoApply();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [params, subtotal, applyCoupon]);
 
 
   const ctaLabel = period === "lifetime" ? "AUTHORIZE & START NODE" : "AUTHORIZE & START TRIAL";
@@ -112,7 +299,9 @@ const Checkout = () => {
   const ensureAuth = async (): Promise<boolean> => {
     const { data: { user: current } } = await supabase.auth.getUser();
     if (current && current.email?.toLowerCase() === email.trim().toLowerCase()) {
-      setResolvedName((current.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      const name = (current.user_metadata?.full_name as string) || fullName || email.split("@")[0];
+      setResolvedName(name);
+      setCurrentUser(current);
       return true;
     }
     if (!email.trim() || password.length < 6 || (authMode === "signup" && !fullName.trim())) {
@@ -121,46 +310,109 @@ const Checkout = () => {
     }
     setLoading(true);
     if (authMode === "login") {
-      const { data: loginData, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: loginData, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       setLoading(false);
       if (error) {
         toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
         return false;
       }
-      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || email.split("@")[0]);
+      const u = loginData?.user;
+      setCurrentUser(u);
+      const resolved = (u?.user_metadata?.full_name as string) || email.split("@")[0];
+      setResolvedName(resolved);
       return true;
     }
     const { data: signUpData, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
-      options: { data: { full_name: fullName, plan, period }, emailRedirectTo: window.location.origin },
+      options: {
+        data: { full_name: fullName.trim(), plan, period },
+        emailRedirectTo: getAuthRedirectUrl("/auth/callback"),
+      },
     });
     if (error) {
       // Account already exists → sign in with the same credentials.
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       setLoading(false);
       if (loginError) {
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return false;
       }
-      setResolvedName((loginData?.user?.user_metadata?.full_name as string) || fullName || email.split("@")[0]);
+      const u = loginData?.user;
+      setCurrentUser(u);
+      const resolved = (u?.user_metadata?.full_name as string) || fullName.trim() || email.split("@")[0];
+      setResolvedName(resolved);
       return true;
     }
     if (!signUpData.session) {
       // Email confirmation is on — sign in so the payment can be authorised.
-      await supabase.auth.signInWithPassword({ email, password });
+      const { data: loginData } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (loginData?.user) setCurrentUser(loginData.user);
+    } else if (signUpData.user) {
+      setCurrentUser(signUpData.user);
     }
     setLoading(false);
-    setResolvedName(fullName || email.split("@")[0]);
+    setResolvedName(fullName.trim() || email.split("@")[0]);
     return true;
   };
 
-  const handleSuccess = (result: CaptureResult) => {
+  const handleSuccess = async (result: CaptureResult) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const activeUser = user || currentUser;
+    let userHasBusiness = !!result.hasBusiness;
+
+    if (activeUser) {
+      // Ensure user profile plan is updated in database
+      await supabase.from("profiles").upsert({
+        user_id: activeUser.id,
+        email: activeUser.email || email,
+        full_name: resolvedName || fullName || activeUser.email?.split("@")[0] || "Customer",
+        plan,
+        status: "active",
+        last_active: new Date().toISOString(),
+      } as any, { onConflict: "user_id" });
+
+      // Check if user has any existing registered businesses
+      const { count } = await supabase
+        .from("businesses")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", activeUser.id);
+      userHasBusiness = (count ?? 0) > 0;
+
+      // Calculate next billing date
+      const next = new Date();
+      if (period === "monthly") next.setMonth(next.getMonth() + 1);
+      else if (period === "yearly") next.setFullYear(next.getFullYear() + 1);
+
+      // Record subscription in database
+      await supabase.from("subscriptions").insert({
+        owner_user_id: activeUser.id,
+        tier: plan,
+        cycle: period,
+        status: "active",
+        amount: total,
+        next_billing_date: period === "lifetime" ? null : next.toISOString(),
+      } as any);
+
+      // Record invoice in database
+      const invNumber = result.invoiceNumber || invoiceNo(Date.now().toString());
+      await supabase.from("invoices").insert({
+        invoice_number: invNumber,
+        owner_user_id: activeUser.id,
+        client_name: resolvedName || fullName || activeUser.email?.split("@")[0] || "Customer",
+        billing_email: email || activeUser.email || "",
+        plan,
+        payment_method: result.method,
+        amount: total,
+        status: "paid",
+      } as any);
+    }
+
     const inv: InvoiceData = {
       invoiceNumber: result.invoiceNumber || invoiceNo(Date.now().toString()),
       date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
       customerName: resolvedName || fullName || email.split("@")[0],
-      customerEmail: email,
+      customerEmail: email || activeUser?.email || "",
       planName: data.name,
       period: PERIOD_LABEL[period],
       paymentMethod: result.method,
@@ -173,8 +425,8 @@ const Checkout = () => {
       taxRate,
     };
     setInvoice(inv);
-    setHasBusiness(!!result.hasBusiness);
-    setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com");
+    setHasBusiness(userHasBusiness);
+    setIsAdminEmail(email.toLowerCase() === "gepardwebs@gmail.com" || activeUser?.email?.toLowerCase() === "gepardwebs@gmail.com");
     setShowInvoice(true);
     toast({ title: "Payment successful!", description: `${data.name} activated on your account.` });
   };
@@ -182,7 +434,7 @@ const Checkout = () => {
   const handleContinue = () => {
     setShowInvoice(false);
     if (isAdminEmail) { navigate("/admin"); return; }
-    navigate(hasBusiness ? "/dashboard" : "/setup/business");
+    navigate("/dashboard");
   };
   const payProps = {
     plan,
@@ -266,7 +518,7 @@ const Checkout = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">{authMode === "signup" ? "WORK EMAIL IDENTITY" : "ACCOUNT EMAIL"}</label>
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="alex@geflow.io" className="h-12" />
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="alex@geflowai.com" className="h-12" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">ACCOUNT PASSWORD</label>
@@ -288,12 +540,14 @@ const Checkout = () => {
 
               <div className="bg-muted/40 rounded-2xl p-5 space-y-4">
                 {/* Payment method toggler */}
-                <div className="grid grid-cols-2 gap-2 p-1 bg-background rounded-xl border border-border">
+                <div className="grid grid-cols-2 gap-2 p-1 bg-background/90 dark:bg-card/90 rounded-xl border border-border/80 shadow-sm">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("card")}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
-                      paymentMethod === "card" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                    className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                      paymentMethod === "card"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                     }`}
                   >
                     <CreditCard className="h-4 w-4" /> PAY WITH CARD
@@ -301,8 +555,10 @@ const Checkout = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("paypal")}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all ${
-                      paymentMethod === "paypal" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                    className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold tracking-wider transition-all ${
+                      paymentMethod === "paypal"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                     }`}
                   >
                     <Wallet className="h-4 w-4" /> PAY WITH PAYPAL
@@ -316,9 +572,11 @@ const Checkout = () => {
                 ) : paymentMethod === "card" ? (
                   <PayPalCardSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} />
                 ) : (
-                  <>
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block">PAYPAL EMAIL ADDRESS</label>
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-2 block uppercase">
+                        PayPal Account Identity (Optional)
+                      </label>
                       <div className="relative">
                         <Wallet className="h-4 w-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
                         <Input
@@ -326,16 +584,21 @@ const Checkout = () => {
                           value={paypalEmail}
                           onChange={(e) => setPaypalEmail(e.target.value)}
                           placeholder="you@paypal.com"
-                          className="h-12 pl-11"
+                          className="h-12 pl-11 bg-background/80 dark:bg-muted/30 border-input"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-3">A secure PayPal window opens to verify your account and confirm the payment.</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You can specify your PayPal email or proceed directly to login in the popup window.
+                      </p>
                     </div>
-                    <PayPalWalletSection {...payProps} ctaLabel={ctaLabel} priceLabel={fx(Number(total))} payerEmail={paypalEmail} />
-                    <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-2 inline-flex items-center gap-2 justify-center w-full">
-                      <ShieldCheck className="h-3.5 w-3.5" /> PCI-DSS COMPLIANT • SSL ENCRYPTED
-                    </p>
-                  </>
+
+                    <PayPalWalletSection
+                      {...payProps}
+                      ctaLabel={ctaLabel}
+                      priceLabel={fx(Number(total))}
+                      payerEmail={paypalEmail}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -377,16 +640,39 @@ const Checkout = () => {
                 <div className="flex gap-2">
                   <Input
                     value={coupon}
-                    onChange={(e) => { setCoupon(e.target.value); setCouponError(""); }}
-                    placeholder="Enter code"
-                    className="h-10 uppercase"
+                    onChange={(e) => {
+                      setCoupon(e.target.value.toUpperCase());
+                      setCouponError("");
+                    }}
+                    placeholder={appliedCoupon ? `Applied: ${appliedCoupon.code}` : "Enter code"}
+                    className="h-10 uppercase font-mono font-bold"
                   />
-                  <Button type="button" onClick={applyCoupon} disabled={couponLoading} variant="outline" className="h-10 px-4 text-xs font-bold tracking-wider">
-                    {couponLoading ? "..." : "APPLY"}
+                  <Button
+                    type="button"
+                    onClick={() => applyCoupon()}
+                    disabled={couponLoading || !coupon.trim()}
+                    variant="outline"
+                    className="h-10 px-4 text-xs font-bold tracking-wider"
+                  >
+                    {couponLoading ? "..." : appliedCoupon ? "REPLACE" : "APPLY"}
                   </Button>
                 </div>
                 {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
-                {appliedCoupon && <p className="text-xs text-primary mt-2 font-semibold">✓ {appliedCoupon.label} applied</p>}
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between mt-2.5 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs">
+                    <span className="font-semibold text-primary flex items-center gap-1.5">
+                      <span>✓</span>
+                      <span>{appliedCoupon.label} ({appliedCoupon.code}) applied</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-muted-foreground hover:text-destructive text-xs font-semibold underline ml-2 cursor-pointer transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-border" />

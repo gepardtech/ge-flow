@@ -1,255 +1,400 @@
-import { useMemo, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ProductCategory } from "@/hooks/useProductCategories";
+import { ParsedWorkbook } from "@/lib/importer/fileParser";
+import {
+  ColumnMapping,
+  ImportResultSummary,
+  NormalizedProduct,
+} from "@/lib/importer/types";
+import { analyzeColumnMappings } from "@/lib/importer/mappingEngine";
+import { processAndValidateRows } from "@/lib/importer/validationEngine";
+import { runAIBulkProductPipeline } from "@/lib/importer/aiBulkImportPipeline";
+import {
+  detectInFileDuplicates,
+  correlateWithExistingDatabaseProducts,
+} from "@/lib/importer/duplicateEngine";
+import { executeProductImport } from "@/lib/importer/importExecutionEngine";
+import { StepUpload } from "./importer/StepUpload";
+import { StepMapping } from "./importer/StepMapping";
+import { StepReview } from "./importer/StepReview";
+import { StepImporting } from "./importer/StepImporting";
+import {
+  Upload,
+  Sparkles,
+  TableProperties,
+  CheckCircle2,
+  PackagePlus,
+  Loader2,
+  Brain,
+  ShieldCheck,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileSpreadsheet, Download, AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
+import { BusinessCatalogContext } from "@/server/ai/types";
 
-interface CatOpt { id: string; name: string; }
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   businessId: string;
   ownerUserId: string;
-  categories: CatOpt[];
+  categories: ProductCategory[];
   onSaved: () => void;
 }
 
-const REQUIRED = ["name"];
-const TEMPLATE =
-  "Name,ID,Category,Stock,Price,Discount,Status,Images\n" +
-  "Example Product,SKU-001,General,25,49.99,39.99,active,https://example.com/a.jpg|https://example.com/b.jpg\n";
+type Step = 1 | 2 | 3 | 4;
 
-// Minimal CSV parser handling quoted values.
-const parseCSV = (text: string): string[][] => {
-  const rows: string[][] = [];
-  let row: string[] = [], cell = "", inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else inQuotes = false; }
-      else cell += c;
-    } else if (c === '"') inQuotes = true;
-    else if (c === ",") { row.push(cell); cell = ""; }
-    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
-    else cell += c;
-  }
-  if (cell || row.length) { row.push(cell); rows.push(row); }
-  return rows.filter((r) => r.some((v) => v.trim() !== ""));
-};
-
-interface ParsedRow {
-  line: number;
-  raw: Record<string, string>;
-  errors: string[];
-  warnings: string[];
-}
-
-const BulkImportDialog = ({ open, onOpenChange, businessId, ownerUserId, categories, onSaved }: Props) => {
+export const BulkImportDialog = ({
+  open,
+  onOpenChange,
+  businessId,
+  ownerUserId,
+  categories,
+  onSaved,
+}: Props) => {
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [rows, setRows] = useState<ParsedRow[]>([]);
-  const [missingCols, setMissingCols] = useState<string[]>([]);
+  const { activeBusiness, industryType } = useActiveBusiness();
 
-  const valid = useMemo(() => rows.filter((r) => r.errors.length === 0), [rows]);
-  const invalid = useMemo(() => rows.filter((r) => r.errors.length > 0), [rows]);
+  const [step, setStep] = useState<Step>(1);
+  const [workbook, setWorkbook] = useState<ParsedWorkbook | null>(null);
+  const [mappings, setMappings] = useState<ColumnMapping[]>([]);
+  const [products, setProducts] = useState<NormalizedProduct[]>([]);
 
-  const reset = () => { setRows([]); setFileName(null); setMissingCols([]); };
+  // AI Pipeline Analysis State
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiProgress, setAiProgress] = useState({
+    stage: "Analyzing products...",
+    current: 0,
+    total: 0,
+    percentage: 0,
+    currentName: "",
+  });
 
-  const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "geflow_products_template.csv"; a.click();
-    URL.revokeObjectURL(url);
+  // DB Execution State
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState({
+    processed: 0,
+    total: 0,
+    currentName: "",
+    percentage: 0,
+  });
+  const [importSummary, setImportSummary] = useState<ImportResultSummary | null>(null);
+
+  const resetAll = () => {
+    setStep(1);
+    setWorkbook(null);
+    setMappings([]);
+    setProducts([]);
+    setIsAiAnalyzing(false);
+    setIsProcessing(false);
+    setProgress({ processed: 0, total: 0, currentName: "", percentage: 0 });
+    setImportSummary(null);
   };
 
-  const onFile = async (f: File | null) => {
-    if (!f) return;
-    reset();
-    const text = await f.text();
-    const table = parseCSV(text);
-    if (table.length < 2) {
-      toast({ title: "Empty or invalid CSV", description: "The file needs a header row and at least one product.", variant: "destructive" });
-      return;
-    }
-    const headers = table[0].map((h) => h.trim().toLowerCase());
-    setMissingCols(REQUIRED.filter((c) => !headers.includes(c)));
+  // Build BusinessCatalogContext for AI
+  const businessCatalogContext: BusinessCatalogContext = useMemo(() => {
+    const parents = categories.filter((c) => !c.parent_id);
+    const subcategories = categories.filter((c) => !!c.parent_id);
 
-    const catNames = new Set(categories.map((c) => c.name.toLowerCase()));
-    const parsed: ParsedRow[] = table.slice(1).map((r, idx) => {
-      const raw: Record<string, string> = {};
-      headers.forEach((h, i) => { raw[h] = (r[i] ?? "").trim(); });
-      const errors: string[] = [];
-      const warnings: string[] = [];
-      if (!raw["name"]) errors.push("Name is required");
-      if (raw["stock"] && Number.isNaN(Number(raw["stock"]))) errors.push("Stock must be a number");
-      if (raw["price"] && Number.isNaN(Number(raw["price"]))) errors.push("Price must be a number");
-      if (raw["discount"] && Number.isNaN(Number(raw["discount"]))) errors.push("Discount must be a number");
-      if (raw["status"] && !["active", "draft", "archived"].includes(raw["status"].toLowerCase())) errors.push("Status must be active, draft or archived");
-      if (raw["category"] && !catNames.has(raw["category"].toLowerCase())) warnings.push("Unknown category — imported uncategorized");
-      return { line: idx + 2, raw, errors, warnings };
+    return {
+      businessId,
+      businessName: activeBusiness?.business_name || "Active Store",
+      industryType: industryType || "general",
+      currency: activeBusiness?.currency || "PKR",
+      allowedCategories: parents.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug || c.name.toLowerCase().replace(/\s+/g, "_"),
+      })),
+      allowedSubcategories: subcategories.map((s) => ({
+        id: s.id,
+        parentId: s.parent_id || null,
+        name: s.name,
+        slug: s.slug || s.name.toLowerCase().replace(/\s+/g, "_"),
+      })),
+    };
+  }, [businessId, activeBusiness, industryType, categories]);
+
+  // Step 1: File Parsed -> Generate Initial Mappings
+  const handleFileParsed = (parsed: ParsedWorkbook) => {
+    setWorkbook(parsed);
+
+    // Extract headers and data rows based on detected header row
+    const headerRowIdx = parsed.headerDetection.headerRowIndex;
+    const rawHeaders = parsed.headerDetection.headers;
+    const sampleRows = parsed.rawGrid.slice(headerRowIdx + 1, headerRowIdx + 10);
+
+    const { mappings: initialMappings } = analyzeColumnMappings(
+      rawHeaders,
+      sampleRows
+    );
+    setMappings(initialMappings);
+    setStep(2);
+  };
+
+  // Step 2: Mappings Completed -> Run AI Product Intelligence Pipeline & Duplicate Detection
+  const handleMappingsContinue = async () => {
+    if (!workbook) return;
+
+    const headerRowIdx = workbook.headerDetection.headerRowIndex;
+    const dataRows = workbook.rawGrid.slice(headerRowIdx + 1);
+
+    setIsAiAnalyzing(true);
+    setAiProgress({
+      stage: "Initializing GeFlow AI Product Intelligence...",
+      current: 0,
+      total: dataRows.length,
+      percentage: 5,
+      currentName: "",
     });
-    setRows(parsed);
-    setFileName(f.name);
-  };
 
-  const doImport = async () => {
-    if (!valid.length) return;
-    setBusy(true);
-    const catByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
-    const payload = valid.map(({ raw: r }) => ({
-      business_id: businessId,
-      owner_user_id: ownerUserId,
-      name: r["name"],
-      internal_sku: r["id"] || null,
-      category_id: catByName.get((r["category"] || "").toLowerCase()) ?? null,
-      stock_units: parseInt(r["stock"]) || 0,
-      retail_price: Number(r["price"]) || 0,
-      discount_price: r["discount"] ? Number(r["discount"]) : null,
-      min_stock_alert: 10,
-      status: (r["status"] || "active").toLowerCase(),
-      images: r["images"] ? r["images"].split("|").map((s) => s.trim()).filter(Boolean) : [],
-    }));
+    try {
+      // 1. Run AI bulk intelligence pipeline
+      const normalized = await runAIBulkProductPipeline({
+        mappings,
+        dataRows,
+        headerRowIndex: headerRowIdx,
+        existingCategories: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          parent_id: c.parent_id || null,
+          slug: c.slug,
+        })),
+        businessContext: businessCatalogContext,
+        onProgress: (p) => {
+          setAiProgress({
+            stage: p.stage,
+            current: p.current,
+            total: p.total,
+            percentage: p.percentage,
+            currentName: p.currentName || "",
+          });
+        },
+      });
 
-    // Chunked insert so large files don't hit payload limits.
-    let inserted = 0;
-    for (let i = 0; i < payload.length; i += 200) {
-      const chunk = payload.slice(i, i + 200);
-      const { error } = await supabase.from("products").insert(chunk);
-      if (error) {
-        setBusy(false);
-        toast({ title: "Import failed", description: `${inserted} rows imported before the error: ${error.message}`, variant: "destructive" });
-        onSaved();
-        return;
-      }
-      inserted += chunk.length;
+      // 2. Detect in-file duplicates
+      const withInFileDupes = detectInFileDuplicates(normalized);
+
+      // 3. Correlate with database products for active business
+      const withDbDupes = await correlateWithExistingDatabaseProducts(
+        withInFileDupes,
+        businessId
+      );
+
+      setProducts(withDbDupes);
+      setIsAiAnalyzing(false);
+      setStep(3);
+    } catch (err: any) {
+      console.warn("AI pipeline encountered an issue, falling back to standard validator:", err);
+      // Deterministic fallback
+      const fallbackNormalized = processAndValidateRows({
+        mappings,
+        dataRows,
+        headerRowIndex: headerRowIdx,
+        existingCategories: categories,
+      });
+      const withInFile = detectInFileDuplicates(fallbackNormalized);
+      const withDb = await correlateWithExistingDatabaseProducts(withInFile, businessId);
+
+      setProducts(withDb);
+      setIsAiAnalyzing(false);
+      setStep(3);
     }
-    setBusy(false);
-    toast({ title: "Import complete", description: `${inserted} products added${invalid.length ? `, ${invalid.length} rows skipped` : ""}.` });
-    reset();
-    onSaved();
-    onOpenChange(false);
   };
+
+  // Step 3 -> Step 4: Execute Database Import
+  const handleStartImport = async (approvedProducts: NormalizedProduct[]) => {
+    setStep(4);
+    setIsProcessing(true);
+
+    try {
+      const summary = await executeProductImport({
+        products: approvedProducts,
+        businessId,
+        ownerUserId,
+        industryType,
+        onProgress: (p) => setProgress(p),
+      });
+
+      setImportSummary(summary);
+      setIsProcessing(false);
+
+      if (summary.imported > 0 || summary.updated > 0) {
+        toast({
+          title: "Import complete",
+          description: `Successfully added ${summary.imported} new products${
+            summary.updated > 0 ? ` and updated ${summary.updated}` : ""
+          }.`,
+        });
+        onSaved();
+      }
+    } catch (err: any) {
+      setIsProcessing(false);
+      toast({
+        title: "Import encountered an error",
+        description: err.message || "Failed to complete product import.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stepsHeader = [
+    { num: 1, label: "Upload File", icon: Upload },
+    { num: 2, label: "Map Columns", icon: Sparkles },
+    { num: 3, label: "AI Review & Approve", icon: TableProperties },
+    { num: 4, label: "Commit to Database", icon: PackagePlus },
+  ];
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className="h-9 w-9 rounded-xl bg-sky-400/15 text-sky-500 flex items-center justify-center">
-              <FileSpreadsheet className="h-4 w-4" />
-            </span>
-            Bulk Product Import
-          </DialogTitle>
-          <DialogDescription>
-            Upload a CSV with columns: Name, ID, Category, Stock, Price, Discount, Status, Images (pipe-separated URLs).
-          </DialogDescription>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) resetAll();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="max-w-6xl w-[96vw] max-h-[92vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="border-b border-border pb-4">
+          {/* Stepper Header */}
+          <div className="flex items-center justify-between gap-2 max-w-2xl mx-auto w-full">
+            {stepsHeader.map((s, idx) => {
+              const isCurrent = step === s.num;
+              const isDone = step > s.num;
+
+              return (
+                <div key={s.num} className="flex items-center flex-1">
+                  <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+                    <div
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        isDone
+                          ? "bg-emerald-500 text-white"
+                          : isCurrent
+                          ? "bg-sky-500 text-white shadow-md ring-2 ring-sky-500/20"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isDone ? <CheckCircle2 className="w-4 h-4" /> : s.num}
+                    </div>
+                    <span
+                      className={`text-[10px] sm:text-xs font-bold tracking-tight whitespace-nowrap ${
+                        isCurrent
+                          ? "text-foreground"
+                          : isDone
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-muted-foreground opacity-70"
+                      }`}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+
+                  {idx < stepsHeader.length - 1 && (
+                    <div
+                      className={`h-0.5 flex-1 mx-2 sm:mx-3 transition-colors ${
+                        step > s.num ? "bg-emerald-500" : "bg-border"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </DialogHeader>
 
-        <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-3 py-2">
-          <p className="text-xs text-muted-foreground">Not sure about the format? Start from our template.</p>
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />Template
-          </Button>
+        {/* Step Views */}
+        <div className="pt-2">
+          {/* AI Intelligence Progress Overlay */}
+          {isAiAnalyzing ? (
+            <div className="py-16 text-center space-y-6 max-w-md mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-sky-500/10 text-sky-500 mx-auto flex items-center justify-center animate-pulse">
+                <Brain className="w-8 h-8 animate-spin text-sky-500" style={{ animationDuration: "3s" }} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-foreground">
+                  AI Product Intelligence in Progress
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {aiProgress.stage}
+                </p>
+                {aiProgress.currentName && (
+                  <p className="text-[11px] font-mono text-sky-600 dark:text-sky-400 truncate max-w-xs mx-auto">
+                    "{aiProgress.currentName}"
+                  </p>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-1.5">
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-sky-500 transition-all duration-300 rounded-full"
+                    style={{ width: `${aiProgress.percentage}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>
+                    {aiProgress.current} / {aiProgress.total} items
+                  </span>
+                  <span className="font-bold text-foreground">{aiProgress.percentage}%</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/20 text-[11px] text-muted-foreground flex items-center gap-2 text-left">
+                <ShieldCheck className="w-4 h-4 text-sky-500 shrink-0" />
+                <span>
+                  Admin Catalog rules & business category UOMs are being validated in real-time.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {step === 1 && (
+                <StepUpload
+                  onParsed={handleFileParsed}
+                  onCancel={() => onOpenChange(false)}
+                />
+              )}
+
+              {step === 2 && (
+                <StepMapping
+                  mappings={mappings}
+                  onMappingsChange={setMappings}
+                  onBack={() => setStep(1)}
+                  onContinue={handleMappingsContinue}
+                />
+              )}
+
+              {step === 3 && (
+                <StepReview
+                  products={products}
+                  categories={categories}
+                  industryType={industryType}
+                  onProductsChange={setProducts}
+                  onBack={() => setStep(2)}
+                  onStartImport={handleStartImport}
+                />
+              )}
+
+              {step === 4 && (
+                <StepImporting
+                  isProcessing={isProcessing}
+                  progress={progress}
+                  summary={importSummary}
+                  onFinish={() => {
+                    resetAll();
+                    onOpenChange(false);
+                  }}
+                  onReset={() => resetAll()}
+                />
+              )}
+            </>
+          )}
         </div>
-
-        <input ref={fileRef} type="file" accept=".csv,text/csv" hidden
-          onChange={(e) => { onFile(e.target.files?.[0] ?? null); e.target.value = ""; }} />
-
-        {!rows.length ? (
-          <button onClick={() => fileRef.current?.click()}
-            className="w-full rounded-xl border-2 border-dashed border-border p-10 flex flex-col items-center gap-2 text-muted-foreground hover:border-sky-400 hover:text-sky-500 transition">
-            <FileSpreadsheet className="h-9 w-9" />
-            <span className="text-sm font-semibold">Click to choose a CSV file</span>
-            <span className="text-xs">UTF-8 encoded · up to ~5,000 rows</span>
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileSpreadsheet className="h-4 w-4 text-sky-500 shrink-0" />
-                <span className="text-sm font-semibold truncate">{fileName}</span>
-              </div>
-              <button onClick={reset} className="text-muted-foreground hover:text-destructive" aria-label="Remove file">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-border p-3">
-                <p className="text-[10px] font-bold tracking-widest text-muted-foreground">TOTAL ROWS</p>
-                <p className="text-xl font-bold">{rows.length}</p>
-              </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
-                <p className="text-[10px] font-bold tracking-widest text-emerald-600">READY</p>
-                <p className="text-xl font-bold text-emerald-600">{valid.length}</p>
-              </div>
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                <p className="text-[10px] font-bold tracking-widest text-destructive">SKIPPED</p>
-                <p className="text-xl font-bold text-destructive">{invalid.length}</p>
-              </div>
-            </div>
-
-            {missingCols.length > 0 && (
-              <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>Missing required column(s): {missingCols.join(", ")}</span>
-              </div>
-            )}
-
-            <div className="max-h-56 overflow-auto rounded-xl border border-border">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/60 sticky top-0">
-                  <tr className="text-left">
-                    <th className="px-3 py-2 font-bold">#</th>
-                    <th className="px-3 py-2 font-bold">Name</th>
-                    <th className="px-3 py-2 font-bold">Category</th>
-                    <th className="px-3 py-2 font-bold">Stock</th>
-                    <th className="px-3 py-2 font-bold">Price</th>
-                    <th className="px-3 py-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.slice(0, 100).map((r) => (
-                    <tr key={r.line} className={`border-t border-border ${r.errors.length ? "bg-destructive/5" : ""}`}>
-                      <td className="px-3 py-1.5 text-muted-foreground">{r.line}</td>
-                      <td className="px-3 py-1.5 font-semibold">
-                        {r.raw["name"] || <span className="text-destructive">—</span>}
-                        {r.errors.length > 0 && <span className="block text-[10px] text-destructive">{r.errors.join("; ")}</span>}
-                        {r.errors.length === 0 && r.warnings.length > 0 && (
-                          <span className="block text-[10px] text-amber-600">{r.warnings.join("; ")}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-1.5">{r.raw["category"] || "—"}</td>
-                      <td className="px-3 py-1.5">{r.raw["stock"] || "0"}</td>
-                      <td className="px-3 py-1.5">{r.raw["price"] || "0"}</td>
-                      <td className="px-3 py-1.5">{(r.raw["status"] || "active").toLowerCase()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {rows.length > 100 && <p className="text-[11px] text-muted-foreground">Showing the first 100 of {rows.length} rows.</p>}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-          <Button onClick={doImport} disabled={busy || !valid.length || missingCols.length > 0}
-            className="bg-sky-400 hover:bg-sky-500 text-white font-bold">
-            {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-            Import{valid.length ? ` ${valid.length}` : ""} Products
-          </Button>
-        </div>
-
-        {!!valid.length && !busy && (
-          <p className="flex items-center gap-1.5 text-[11px] text-emerald-600 justify-end -mt-1">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Validation passed for {valid.length} rows
-          </p>
-        )}
       </DialogContent>
     </Dialog>
   );

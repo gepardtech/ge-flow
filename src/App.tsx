@@ -11,6 +11,9 @@ import HowItWorks from "./pages/HowItWorks";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import AuthCallback from "./pages/AuthCallback";
 import Checkout from "./pages/Checkout";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
@@ -43,21 +46,32 @@ import AdminSupport from "./pages/admin/AdminSupport";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPlanLimits from "./pages/admin/AdminPlanLimits";
 import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminLogs from "./pages/admin/AdminLogs";
+import AdminNewsletter from "./pages/admin/AdminNewsletter";
+import ScrollToTop from "./components/ScrollToTop";
 
 import UserInventory from "./pages/user/UserInventory";
 import UserLowStock from "./pages/user/UserLowStock";
 import UserBusinesses from "./pages/user/UserBusinesses";
 import UserOutOfStock from "./pages/user/UserOutOfStock";
 import UserPOS from "./pages/user/UserPOS";
+import UserReturns from "./pages/user/UserReturns";
 import UserPurchases from "./pages/user/UserPurchases";
 import UserReports from "./pages/user/UserReports";
 import UserAnalytics from "./pages/user/UserAnalytics";
 import UserTeam from "./pages/user/UserTeam";
 import UserSubscription from "./pages/user/UserSubscription";
 import UserWorkspace from "./pages/user/UserWorkspace";
+import UserSettings from "./pages/user/UserSettings";
 import UserAnnouncements from "./pages/user/UserAnnouncements";
 import UserNotifications from "./pages/user/UserNotifications";
 import UserSupport from "./pages/user/UserSupport";
+import { useBusinessRealtimeSync } from "./hooks/useBusinessRealtimeSync";
+
+function BusinessSyncObserver() {
+  useBusinessRealtimeSync();
+  return null;
+}
 
 const queryClient = new QueryClient();
 
@@ -69,7 +83,9 @@ const App = () => (
       <Sonner />
       <PlatformSettingsProvider>
       <I18nProvider>
+      <BusinessSyncObserver />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/features" element={<Features />} />
@@ -78,6 +94,11 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/update-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth/confirm" element={<AuthCallback />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<AdminGuard><Admin /></AdminGuard>} />
           <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
@@ -95,24 +116,33 @@ const App = () => (
           <Route path="/admin/payments" element={<AdminGuard><AdminPayments /></AdminGuard>} />
           <Route path="/admin/support" element={<AdminGuard><AdminSupport /></AdminGuard>} />
           <Route path="/admin/plan-limits" element={<AdminGuard><AdminPlanLimits /></AdminGuard>} />
+          <Route path="/admin/logs" element={<AdminGuard><AdminLogs /></AdminGuard>} />
           <Route path="/admin/notifications" element={<AdminGuard><AdminNotifications /></AdminGuard>} />
+          <Route path="/admin/newsletter" element={<AdminGuard><AdminNewsletter /></AdminGuard>} />
           <Route path="/admin/settings" element={<AdminGuard><AdminSettings /></AdminGuard>} />
           <Route path="/setup/business" element={<AuthGuard><SetupBusiness /></AuthGuard>} />
           <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
           <Route path="/dashboard/inventory" element={<AuthGuard><UserInventory /></AuthGuard>} />
           <Route path="/dashboard/low-stock" element={<AuthGuard><UserLowStock /></AuthGuard>} />
           <Route path="/dashboard/businesses" element={<AuthGuard><UserBusinesses /></AuthGuard>} />
+          <Route path="/businesses" element={<AuthGuard><UserBusinesses /></AuthGuard>} />
           <Route path="/dashboard/out-of-stock" element={<AuthGuard><UserOutOfStock /></AuthGuard>} />
           <Route path="/dashboard/pos" element={<AuthGuard><UserPOS /></AuthGuard>} />
+          <Route path="/dashboard/returns" element={<AuthGuard><UserReturns /></AuthGuard>} />
+          <Route path="/returns" element={<AuthGuard><UserReturns /></AuthGuard>} />
           <Route path="/dashboard/purchases" element={<AuthGuard><UserPurchases /></AuthGuard>} />
           <Route path="/dashboard/reports" element={<AuthGuard><UserReports /></AuthGuard>} />
+          <Route path="/dashboard/report" element={<AuthGuard><UserReports /></AuthGuard>} />
+          <Route path="/reports" element={<AuthGuard><UserReports /></AuthGuard>} />
+          <Route path="/report" element={<AuthGuard><UserReports /></AuthGuard>} />
           <Route path="/dashboard/analytics" element={<AuthGuard><UserAnalytics /></AuthGuard>} />
           <Route path="/dashboard/team" element={<AuthGuard><UserTeam /></AuthGuard>} />
           <Route path="/dashboard/subscription" element={<AuthGuard><UserSubscription /></AuthGuard>} />
           <Route path="/dashboard/announcements" element={<AuthGuard><UserAnnouncements /></AuthGuard>} />
           <Route path="/dashboard/announcements/notifications" element={<AuthGuard><UserNotifications /></AuthGuard>} />
           <Route path="/dashboard/support" element={<AuthGuard><UserSupport /></AuthGuard>} />
-          <Route path="/dashboard/workspace" element={<AuthGuard><UserWorkspace /></AuthGuard>} />
+          <Route path="/dashboard/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
+          <Route path="/dashboard/workspace" element={<AuthGuard><UserSettings /></AuthGuard>} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<Refund />} />

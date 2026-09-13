@@ -84,23 +84,60 @@ const subs = new Set<() => void>();
 const emit = () => subs.forEach((fn) => fn());
 
 const loadBusinessMoney = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) { cache = { currency: null, baseCurrency: null, taxRate: null }; emit(); return; }
-  const { data } = await supabase
-    .from("businesses")
-    .select("id, currency, base_currency, default_tax, created_at")
-    .eq("owner_user_id", user.id)
-    .order("created_at", { ascending: true });
-  const rows = data ?? [];
-  const saved = localStorage.getItem(LS_KEY);
-  const row = rows.find((r: any) => r.id === saved) ?? rows[0];
-  cache = row
-    ? {
-        currency: (row as any).currency ?? null,
-        baseCurrency: (row as any).base_currency ?? (row as any).currency ?? null,
-        taxRate: Number((row as any).default_tax ?? 0),
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { cache = { currency: null, baseCurrency: null, taxRate: null }; emit(); return; }
+    
+    const userMeta = user.user_metadata || {};
+    const userCurrency = userMeta.user_currency || null;
+    const userTax = userMeta.user_default_tax !== undefined && userMeta.user_default_tax !== null ? Number(userMeta.user_default_tax) : null;
+
+    const { data } = await supabase
+      .from("businesses")
+      .select("id, currency, base_currency, default_tax, category_id, created_at")
+      .eq("owner_user_id", user.id)
+      .order("created_at", { ascending: true });
+    const rows = data ?? [];
+    const saved = localStorage.getItem(LS_KEY);
+    const row = rows.find((r: any) => r.id === saved) ?? rows[0];
+
+    if (row) {
+      let catCurrency: string | null = null;
+      let catTax: number | null = null;
+      if ((row as any).category_id) {
+        const { data: cat } = await supabase
+          .from("business_categories")
+          .select("currency, default_tax")
+          .eq("id", (row as any).category_id)
+          .maybeSingle();
+        if (cat) {
+          catCurrency = cat.currency ?? null;
+          catTax = cat.default_tax !== undefined && cat.default_tax !== null ? Number(cat.default_tax) : null;
+        }
       }
-    : { currency: null, baseCurrency: null, taxRate: null };
+
+      const effectiveCurrency = (row as any).currency || userCurrency || catCurrency || (row as any).base_currency || "USD";
+      const effectiveBaseCurrency = effectiveCurrency;
+      const effectiveTax = (row as any).default_tax !== undefined && (row as any).default_tax !== null
+        ? Number((row as any).default_tax)
+        : (userTax !== null ? userTax : (catTax !== null ? catTax : 0));
+
+      cache = {
+        currency: effectiveCurrency,
+        baseCurrency: effectiveBaseCurrency,
+        taxRate: effectiveTax,
+      };
+    } else {
+      const fallbackCur = userCurrency || "USD";
+      cache = {
+        currency: fallbackCur,
+        baseCurrency: fallbackCur,
+        taxRate: userTax ?? 0,
+      };
+    }
+  } catch (err) {
+    console.warn("Failed to load business currency:", err);
+  }
   emit();
 };
 
@@ -109,6 +146,8 @@ const startBusinessMoney = () => {
   started = true;
   loadBusinessMoney();
   window.addEventListener("geflow:business-changed", loadBusinessMoney);
+  window.addEventListener("geflow:business-updated", loadBusinessMoney);
+  window.addEventListener("geflow:currency-changed", loadBusinessMoney);
   supabase.auth.onAuthStateChange(() => loadBusinessMoney());
   supabase
     .channel(`business_currency_rt_${Math.random().toString(36).slice(2)}`)
@@ -117,6 +156,10 @@ const startBusinessMoney = () => {
     .subscribe();
   // Safety net so a change is never more than a few seconds stale.
   setInterval(loadBusinessMoney, 15000);
+};
+
+export const refreshBusinessMoney = async () => {
+  await loadBusinessMoney();
 };
 
 /** Currency + tax of the active business (null when signed out / no business). */
@@ -134,16 +177,16 @@ export const useBusinessMoney = (): BizMoney => {
 
 export interface MoneyOptions {
   /**
-   * "auto"     – use the active business currency when available, else platform (default)
-   * "platform" – always the platform base currency (landing pricing, checkout, invoices)
+   * "auto"     – use the active business currency for business records without USD conversion (default)
+   * "platform" – always converts from platform base USD currency (landing pricing, checkout, subscriptions)
    */
   scope?: "auto" | "platform";
 }
 
 /**
  * Reactive money + tax helpers.
- * Platform settings drive public pages; the active business category drives
- * the user workspace. Both update live without a refresh.
+ * Platform scope converts platform plan USD pricing to chosen currency.
+ * Auto / business scope formats native store data (products, POS, inventory) directly in the business currency.
  */
 export const useMoney = (options: MoneyOptions = {}) => {
   const { scope = "auto" } = options;
@@ -161,15 +204,16 @@ export const useMoney = (options: MoneyOptions = {}) => {
   const invoicePrefix = ((settings?.invoice_prefix as string) ?? "INV").trim().replace(/-+$/, "") || "INV";
 
   /**
-   * Platform/plan amounts are authored in USD. Business amounts are stored in
-   * the business's base currency. Either way we convert live to `code`, so a
-   * currency switch instantly re-prices every screen at today's FX rate.
+   * For platform scope (e.g. subscription pricing tiers authored in USD):
+   * We convert from USD to the selected currency.
+   * For business/store operations (products, inventory, POS sales, carts, purchases):
+   * Numbers are authored directly in the store's currency (e.g. 20 PKR is 20 PKR, not converted).
    */
-  const from = scope === "platform" ? "USD" : (biz.baseCurrency ?? code).toUpperCase();
-  const rate = fxRate(code) / (fxRate(from) || 1);
-  const convert = (n: number) => Number(n || 0) * rate;
+  const isPlatform = scope === "platform";
+  const rate = isPlatform ? (fxRate(code) / (fxRate("USD") || 1)) : 1;
+  const convert = (n: number) => (isPlatform ? Number(n || 0) * rate : Number(n || 0));
 
-  const decimals = rate >= 50 || fxRate(code) >= 50 ? 0 : 2;
+  const decimals = 2;
 
   const format = (n: number) =>
     `${sym}${convert(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -184,5 +228,5 @@ export const useMoney = (options: MoneyOptions = {}) => {
     return `${invoicePrefix}-${tail}`;
   };
 
-  return { currency: code, symbol: sym, taxRate, rate, convert, invoicePrefix, invoiceNo, format, price };
+  return { currency: code, symbol: sym, taxRate, rate, convert, invoicePrefix, invoiceNo, format, fmt: format, price };
 };

@@ -15,9 +15,17 @@ import {
 import BulkReplenishmentDialog, { DeficitProduct } from "@/components/inventory/BulkReplenishmentDialog";
 import StockUpdateDialog from "@/components/inventory/StockUpdateDialog";
 import type { ProductRecord } from "@/components/inventory/ProductDialog";
+import { fetchSyncedProducts, isDemoProduct } from "@/lib/businessSync";
+import { computeProductStock, isProductLowStock, formatUomPlural } from "@/lib/uomRegistry";
 
 interface LowProduct extends DeficitProduct {
-  purchase_cost: number; retail_price: number; min_stock_alert: number;
+  purchase_cost: number;
+  retail_price: number;
+  min_stock_alert: number;
+  uom?: string | null;
+  units_per_uom?: number | null;
+  base_unit?: string | null;
+  description?: string | null;
 }
 
 const UserLowStock = () => {
@@ -39,12 +47,30 @@ const UserLowStock = () => {
   const load = useCallback(async () => {
     if (!active) { setLoading(false); return; }
     setLoading(true);
-    const { data } = await supabase
+    let data: any[] | null = null;
+
+    const res = await supabase
       .from("products")
-      .select("id, name, internal_sku, barcode, category_id, purchase_cost, retail_price, stock_units, min_stock_alert")
+      .select("id, name, internal_sku, barcode, category_id, purchase_cost, retail_price, stock_units, min_stock_alert, batch_number, expiry_date, uom, units_per_uom, base_unit, description")
       .eq("business_id", active.id)
       .order("stock_units", { ascending: true });
-    const low = (data ?? []).filter((p: any) => p.stock_units > 0 && p.stock_units <= p.min_stock_alert);
+    data = res.data;
+
+    if (!data || data.length === 0 || active.is_staff) {
+      const synced = await fetchSyncedProducts(active.id, {
+        role: active.staff_role || "manager",
+        isStaff: Boolean(active.is_staff),
+        ownerUserId: active.owner_user_id,
+      });
+      if (synced && synced.length > 0) {
+        data = synced as any;
+      }
+    }
+    
+    const defaultThreshold = active.stock_alert_limit ?? 10;
+    const low = (data ?? [])
+      .filter((p: any) => !isDemoProduct(p))
+      .filter((p: any) => isProductLowStock(p, defaultThreshold));
     setRows(low as LowProduct[]);
     setLoading(false);
   }, [active]);
@@ -63,7 +89,16 @@ const UserLowStock = () => {
     const ch = supabase.channel(`lowstock-${active.id}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `business_id=eq.${active.id}` }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+
+    const onUpdate = () => load();
+    window.addEventListener("geflow:products-updated", onUpdate);
+    window.addEventListener("geflow:stock-updated", onUpdate);
+
+    return () => {
+      supabase.removeChannel(ch);
+      window.removeEventListener("geflow:products-updated", onUpdate);
+      window.removeEventListener("geflow:stock-updated", onUpdate);
+    };
   }, [active, load]);
 
   const filtered = rows.filter((r) =>
@@ -75,27 +110,27 @@ const UserLowStock = () => {
   return (
     <UserPanelGate pageTitle="Low Stock" module="inventory">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl md:text-4xl font-extrabold">Threshold Ledger</h1>
-            <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full bg-amber-500 text-white">{rows.length} WARNINGS ACTIVE</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight truncate text-foreground">Threshold Ledger</h1>
+            <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full bg-amber-500 text-white shrink-0">{rows.length} WARNINGS ACTIVE</span>
           </div>
-          <p className="text-sm italic text-muted-foreground mt-1">"Replenish before the shelf runs dry — protect every sale."</p>
+          <p className="text-xs sm:text-sm italic text-muted-foreground mt-1 truncate">"Replenish before the shelf runs dry — protect every sale."</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={load} className="h-11 rounded-xl font-bold"><RefreshCw className="h-4 w-4 mr-2" /> Sync Levels</Button>
-          <Button onClick={() => setBulkOpen(true)} disabled={rows.length === 0} className="h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold"><Layers className="h-4 w-4 mr-2" /> Bulk Replenish</Button>
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <Button variant="outline" onClick={load} className="h-9 sm:h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold"><RefreshCw className="h-4 w-4 mr-1.5" /> Sync Levels</Button>
+          <Button onClick={() => setBulkOpen(true)} disabled={rows.length === 0} className="h-9 sm:h-11 px-3.5 sm:px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold"><Layers className="h-4 w-4 mr-1.5" /> Bulk Replenish</Button>
         </div>
       </div>
 
       {/* Search + filter */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 min-w-0">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter low stock by name, barcode or SKU..." className="w-full h-12 pl-11 pr-4 bg-card border border-border rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter low stock by name, barcode or SKU..." className="w-full h-11 sm:h-12 pl-11 pr-4 bg-card border border-border/80 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
-        <button className="h-12 px-5 rounded-2xl bg-card border border-border text-sm font-bold inline-flex items-center gap-2 hover:bg-muted transition"><Filter className="h-4 w-4" /> Refine Registry</button>
+        <button className="h-11 sm:h-12 px-4 sm:px-5 rounded-2xl bg-card border border-border/80 text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-muted transition shrink-0"><Filter className="h-4 w-4" /> Refine Registry</button>
       </div>
 
       {/* Table */}
@@ -123,7 +158,10 @@ const UserLowStock = () => {
               </thead>
               <tbody>
                 {filtered.map((p) => {
-                  const critical = p.stock_units <= p.min_stock_alert / 2;
+                  const stock = computeProductStock(p.stock_units, p.name, p.description, p.uom, p.units_per_uom, p.base_unit);
+                  const rawThresh = p.min_stock_alert && p.min_stock_alert > 0 ? p.min_stock_alert : (active?.stock_alert_limit ?? 10);
+                  const critical = stock.listingStock <= rawThresh / 2 || stock.totalSubUnits <= (rawThresh * (stock.packSize || 1)) / 2;
+
                   return (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                       <td className="px-6 py-4">
@@ -137,10 +175,25 @@ const UserLowStock = () => {
                       </td>
                       <td className="px-6 py-4"><span className="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md bg-muted text-muted-foreground uppercase">{catName(p.category_id)}</span></td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`text-lg font-bold ${critical ? "text-rose-500" : "text-amber-500"}`}>{p.stock_units}</span>
-                        <p className="text-[10px] text-muted-foreground tracking-wider">UNITS</p>
+                        <span className={`text-base font-bold block ${critical ? "text-rose-500" : "text-amber-500"}`}>
+                          {stock.displayText}
+                        </span>
+                        {stock.packSize > 1 && (
+                          <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                            {stock.subText}
+                          </p>
+                        )}
                       </td>
-                      <td className="px-6 py-4 text-center font-bold">{p.min_stock_alert}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-sm block">
+                          {rawThresh} {formatUomPlural(stock.uomLabel, rawThresh)}
+                        </span>
+                        {stock.packSize > 1 && rawThresh < stock.packSize && (
+                          <span className="text-[10px] text-muted-foreground font-medium block mt-0.5">
+                            ≈ {rawThresh * stock.packSize} {formatUomPlural(stock.subUnitName, rawThresh * stock.packSize).toLowerCase()}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full ${critical ? "bg-rose-500/15 text-rose-500" : "bg-amber-500/15 text-amber-500"}`}>{critical ? "CRITICAL" : "LOW STOCK"}</span>
                       </td>
