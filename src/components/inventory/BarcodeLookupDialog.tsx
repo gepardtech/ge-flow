@@ -31,7 +31,7 @@ const BarcodeLookupDialog = ({ open, onOpenChange, mode, onResolved }: Props) =>
     const clean = barcode.trim();
     if (!clean) return;
     setLoading(true);
-    let prefill: Record<string, string> = { barcode: clean, internal_sku: `SKU-${clean.slice(-6)}` };
+    const prefill: Record<string, string> = { barcode: clean, internal_sku: `SKU-${clean.slice(-6)}` };
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(clean)}.json?fields=product_name,brands,generic_name`);
       const json = await res.json();

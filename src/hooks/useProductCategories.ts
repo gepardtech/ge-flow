@@ -31,21 +31,27 @@ export const useProductCategories = (industryType: string | null, categoryName: 
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("product_categories")
-      .select("id, name, parent_id, industry_assignments, inherit_expiry, inherit_batch, inherit_barcode, inherit_alerts, status")
-      .eq("status", "active")
-      .order("name");
-    setAll((data as ProductCategory[]) ?? []);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from("product_categories")
+        .select("id, name, parent_id, industry_assignments, inherit_expiry, inherit_batch, inherit_barcode, inherit_alerts, status")
+        .eq("status", "active")
+        .order("name");
+      setAll((data as ProductCategory[]) ?? []);
+    } catch (err) {
+      console.warn("Failed to load product categories:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // Categories appointed to this business's industry.
-  const relevant = all.filter((c) =>
-    (c.industry_assignments ?? []).some((a) => relates(a, industryType) || relates(a, categoryName)),
-  );
+  // Categories appointed to this business's industry, or all active categories if general/unassigned
+  const relevant = all.filter((c) => {
+    if (!c.industry_assignments || c.industry_assignments.length === 0) return true;
+    return c.industry_assignments.some((a) => relates(a, industryType) || relates(a, categoryName));
+  });
 
   const parents = relevant.filter((c) => !c.parent_id);
   const subcategoriesOf = (parentId: string | null) =>

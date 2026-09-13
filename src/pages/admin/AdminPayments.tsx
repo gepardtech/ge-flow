@@ -65,6 +65,9 @@ const ICONS: Record<string, typeof Wallet> = {
   paypal: Wallet, stripe: CreditCard, jazzcash: Banknote, razorpay: Plug, bank: Landmark,
 };
 
+const DEFAULT_PAYPAL_CLIENT_ID = "BAAxlkvHkBSK_FKe9MeTzSTeTyQGBrs3nTkbrWKlwRBgoy6iBFxfQtHQknHKoneEY_D-B22eJ1bjkX-LRo";
+const DEFAULT_PAYPAL_SECRET = "ENRaMOQHAN9R0m0zXhwNadzlveYSr4FHoxpM3NwytUwpOQ1ywPNHv9iZHco5GlG03r-kxYelpFSplgLK";
+
 const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="flex items-center justify-between py-2.5">
     <span className="text-sm font-semibold">{label}</span>
@@ -90,7 +93,17 @@ const AdminPayments = () => {
       supabase.from("payment_settings").select("*").limit(1).maybeSingle(),
       supabase.from("payment_transactions").select("status, amount").limit(500),
     ]);
-    setGateways((gs as unknown as Gateway[]) ?? []);
+    const list = ((gs as unknown as Gateway[]) ?? []).map((g) => {
+      if (g.gateway_key === "paypal") {
+        const pub = { ...g.public_config };
+        const cred = { ...g.credentials };
+        if (!pub.client_id) pub.client_id = DEFAULT_PAYPAL_CLIENT_ID;
+        if (!cred.secret) cred.secret = DEFAULT_PAYPAL_SECRET;
+        return { ...g, public_config: pub, credentials: cred };
+      }
+      return g;
+    });
+    setGateways(list);
     setSettings((st as unknown as Settings) ?? null);
     const rows = (tx as { status: string; amount: number }[]) ?? [];
     setStats({
@@ -284,7 +297,7 @@ const AdminPayments = () => {
                                 <Input
                                   value={g.webhook_url ?? ""}
                                   onChange={(e) => patchGateway(g.id, { webhook_url: e.target.value })}
-                                  placeholder={`https://api.geflow.io/webhooks/${g.gateway_key}`}
+                                  placeholder={`https://api.geflowai.com/webhooks/${g.gateway_key}`}
                                   className="h-11 pr-11"
                                 />
                                 <button type="button"
@@ -405,7 +418,7 @@ const AdminPayments = () => {
               <div>
                 <label className="text-xs font-semibold mb-1.5 block">Payout Account</label>
                 <Input value={settings?.payout_account ?? ""} onChange={(e) => set({ payout_account: e.target.value })}
-                  placeholder="payouts@geflow.io / IBAN" className="h-11" />
+                  placeholder="payouts@geflowai.com / IBAN" className="h-11" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

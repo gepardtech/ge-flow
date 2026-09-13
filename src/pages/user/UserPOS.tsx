@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, Search, ScanLine, Trash2, Package, Plus, Minus,
-  Banknote, CreditCard, Zap, Loader2, X,
+  Banknote, CreditCard, Zap, Loader2, X, Sparkles, Scale, Pill, Droplets,
+  Layers, ChevronRight, User, Phone, FileText, Barcode, Check, RotateCcw,
+  FlaskConical, UserPlus, Globe, Clock, PauseCircle,
+  Smartphone, Building2, ArrowRightLeft,
 } from "lucide-react";
+import { getBusinessPaymentMethods, BusinessPaymentMethod } from "@/lib/paymentMethods";
 import UserPanelGate from "@/components/UserPanelGate";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { useProductCategories } from "@/hooks/useProductCategories";
@@ -12,14 +16,59 @@ import { useMoney } from "@/lib/currency";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import SaleReceiptDialog, { ReceiptData } from "@/components/pos/SaleReceiptDialog";
+import {
+  SmartUOMCalculatorModal,
+  SmartUOMProductInfo,
+  AppliedFractionalSelection,
+} from "@/components/pos/SmartUOMCalculatorModal";
+import {
+  HeldOrdersModal,
+  HeldOrderRecord,
+} from "@/components/pos/HeldOrdersModal";
+import {
+  fetchHeldOrders,
+  saveHeldOrder,
+  deleteHeldOrder,
+} from "@/lib/heldOrdersService";
+import {
+  fetchSyncedProducts,
+  recordSyncedSale,
+  getSyncedHeldOrders,
+  saveSyncedHeldOrder,
+  deleteSyncedHeldOrder,
+  isDemoProduct,
+} from "@/lib/businessSync";
+import { recordStockMovement } from "@/lib/stockMovementService";
+import { parseProductUOM, computeProductStock } from "@/lib/uomRegistry";
+import { COUNTRIES, detectDefaultCountry } from "@/lib/countries";
+import { generateProfessionalReceiptNo } from "@/lib/receiptUtils";
 
-interface POSProduct {
-  id: string; name: string; internal_sku: string | null; barcode: string | null;
-  category_id: string | null; retail_price: number; discount_price: number | null;
-  purchase_cost: number; stock_units: number; min_stock_alert: number;
+export interface POSProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  internal_sku: string | null;
+  barcode: string | null;
+  category_id: string | null;
+  retail_price: number;
+  discount_price: number | null;
+  purchase_cost: number;
+  stock_units: number;
+  min_stock_alert: number;
+  uom?: string | null;
+  units_per_uom?: number | null;
+  base_unit?: string | null;
 }
 
-interface CartLine extends POSProduct { qty: number; unit: number; }
+export interface CartLine extends POSProduct {
+  lineId: string;
+  qty: number;
+  unit: number;
+  fractionOfPack: number;
+  stockUnitsDeducted: number; // Base units deducted per 1 unit of this line (e.g. 12 for 1 box, 1 for 1 tablet)
+  displayUnitLabel: string;
+  proportionalCost: number;
+}
 
 const UserPOS = () => {
   const { active, industryType, categoryName, loading: bizLoading } = useActiveBusiness();
@@ -35,26 +84,263 @@ const UserPOS = () => {
   const [scanMode, setScanMode] = useState(false);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discountPct, setDiscountPct] = useState("0");
-  const [payMethod, setPayMethod] = useState<"cash" | "card">("cash");
+  const [payMethod, setPayMethod] = useState<string>("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [processing, setProcessing] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [cashierName, setCashierName] = useState("Cashier");
 
+  // Dynamic Country / Business Payment Methods & Split Pay
+  const [paymentMethods, setPaymentMethods] = useState<BusinessPaymentMethod[]>([]);
+  const [isSplitPayment, setIsSplitPayment] = useState(false);
+  const [splitMethod1, setSplitMethod1] = useState("cash");
+  const [splitAmount1, setSplitAmount1] = useState("");
+  const [splitMethod2, setSplitMethod2] = useState("card");
+  const [splitAmount2, setSplitAmount2] = useState("");
 
-  const taxRate = Number(active?.default_tax ?? 0);
-  const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "General";
+  const refreshPaymentMethods = useCallback(() => {
+    if (active) {
+      const all = getBusinessPaymentMethods(active).filter((m) => m.enabled);
+      setPaymentMethods(all);
+      if (all.length > 0) {
+        setPayMethod((prev) => {
+          if (all.some((m) => m.id === prev)) return prev;
+          const def = all.find((m) => m.isDefault) || all[0];
+          return def.id;
+        });
+        if (all.length >= 2) {
+          setSplitMethod1(all[0].id);
+          setSplitMethod2(all[1].id);
+        }
+      }
+    }
+  }, [active]);
+
+  useEffect(() => {
+    refreshPaymentMethods();
+    const handleUpdate = () => refreshPaymentMethods();
+    window.addEventListener("geflow:payment-methods-updated", handleUpdate);
+    return () => window.removeEventListener("geflow:payment-methods-updated", handleUpdate);
+  }, [refreshPaymentMethods]);
+
+  // Customer / Patient Info on POS Receipt
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPhoneCode, setCustomerPhoneCode] = useState<string>("");
+  const [customerNote, setCustomerNote] = useState("");
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+
+  // Auto-detect business country and dial code
+  const detectedCountry = useMemo(() => {
+    return detectDefaultCountry({
+      country: (active as any)?.extended?.location?.country,
+      address: active?.business_address,
+      currency: active?.currency,
+    });
+  }, [active]);
+
+  // Set default dial code when active business is loaded
+  useEffect(() => {
+    if (detectedCountry && !customerPhoneCode) {
+      setCustomerPhoneCode(detectedCountry.phoneCode);
+    }
+  }, [detectedCountry, customerPhoneCode]);
+
+  const fullCustomerPhone = useMemo(() => {
+    const p = customerPhone.trim();
+    if (!p) return undefined;
+    if (p.startsWith("+")) return p;
+    const code = customerPhoneCode || detectedCountry.phoneCode || "+1";
+    return `${code} ${p}`;
+  }, [customerPhone, customerPhoneCode, detectedCountry]);
+
+  // Barcode Test Simulator State
+  const [showBarcodeSimulator, setShowBarcodeSimulator] = useState(false);
+
+  // UOM Smart Calculator Modal state
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [selectedProductForCalc, setSelectedProductForCalc] = useState<SmartUOMProductInfo | null>(null);
+  const [calcInitialFraction, setCalcInitialFraction] = useState<number>(1);
+  const [editingCartLineId, setEditingCartLineId] = useState<string | null>(null);
+
+  // Held Orders State
+  const [heldOrdersModalOpen, setHeldOrdersModalOpen] = useState(false);
+  const [heldOrders, setHeldOrders] = useState<HeldOrderRecord[]>([]);
+  const [activeHeldOrderId, setActiveHeldOrderId] = useState<string | null>(null);
+
+  const refreshHeldOrders = useCallback(async () => {
+    if (!active?.id) {
+      setHeldOrders([]);
+      return;
+    }
+    let list = await fetchHeldOrders(active.id);
+    if (!list || list.length === 0) {
+      list = await getSyncedHeldOrders(active.id);
+    }
+    setHeldOrders(list || []);
+  }, [active?.id]);
+
+  useEffect(() => {
+    refreshHeldOrders();
+  }, [refreshHeldOrders]);
+
+  const catName = useCallback(
+    (id: string | null) => categories.find((c) => c.id === id)?.name ?? "General",
+    [categories]
+  );
+
+  // Load POS settings reactively so any changes from Settings apply immediately
+  const [posConfig, setPosConfig] = useState<any>(() => {
+    try {
+      const key = active?.id ? `geflow_settings_${active.id}` : "geflow_settings_global";
+      const saved = localStorage.getItem(key) || localStorage.getItem("geflow_settings_global");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const reloadSettings = useCallback(async () => {
+    try {
+      const key = active?.id ? `geflow_settings_${active.id}` : "geflow_settings_global";
+      const saved = localStorage.getItem(key) || localStorage.getItem("geflow_settings_global");
+      if (saved) {
+        setPosConfig(JSON.parse(saved));
+      }
+
+      // Sync settings from server if active business is set (keeps employee and owner POS in 100% sync)
+      if (active?.id) {
+        try {
+          const res = await fetch(`/api/sync/settings?businessId=${encodeURIComponent(active.id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.settings && Object.keys(data.settings).length > 0) {
+              setPosConfig((prev: any) => ({ ...prev, ...data.settings }));
+              localStorage.setItem(key, JSON.stringify(data.settings));
+            }
+          }
+        } catch {
+          // ignore network glitches
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to reload POS config", e);
+    }
+  }, [active?.id]);
+
+  useEffect(() => {
+    reloadSettings();
+  }, [reloadSettings]);
+
+  useEffect(() => {
+    const onSettingsChanged = (e: any) => {
+      if (e?.detail) {
+        setPosConfig(e.detail);
+      } else {
+        reloadSettings();
+      }
+    };
+    const onBizUpdated = () => reloadSettings();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith("geflow_settings")) reloadSettings();
+    };
+
+    window.addEventListener("geflow:settings-changed", onSettingsChanged);
+    window.addEventListener("geflow:business-updated", onBizUpdated);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("geflow:settings-changed", onSettingsChanged);
+      window.removeEventListener("geflow:business-updated", onBizUpdated);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [reloadSettings]);
+
+  // Tax and pricing configuration
+  // User Requirement:
+  // 1. Tax Breakdown: turning off turns off tax calculating from pos cart & invoice
+  // 2. Automated tax engine: turning off disables tax calculating from pos cart & invoice
+  // 3. Price Tax Inclusivity: functional support for inclusive vs exclusive pricing
+  const isTaxEngineActive = posConfig.enableTaxCalculation !== false && posConfig.enableTaxCalculation !== "false";
+  const isTaxBreakdownActive = posConfig.showTaxBreakdown !== false && posConfig.showTaxBreakdown !== "false";
+  const isTaxEnabled = isTaxEngineActive && isTaxBreakdownActive;
+
+  const rawTaxRate = Number(
+    posConfig.defaultTaxRate !== undefined
+      ? posConfig.defaultTaxRate
+      : (active?.default_tax ?? 0)
+  );
+  const effectiveTaxRate = isTaxEnabled ? rawTaxRate : 0;
+  const taxRate = effectiveTaxRate;
+
+  const enableSecondaryTax = isTaxEnabled && Boolean(posConfig.enableSecondaryTax);
+  const secondaryTaxRate = enableSecondaryTax ? (Number(posConfig.secondaryTaxRate) || 0) : 0;
+  const taxPricingMode: "exclusive" | "inclusive" = posConfig.taxPricingMode === "inclusive" ? "inclusive" : "exclusive";
+  const isTaxInclusive = taxPricingMode === "inclusive";
+  const showTaxBreakdown = isTaxEnabled;
+
+  const quickCashOptions = useMemo(() => {
+    const raw = posConfig.quickAmounts || "10, 20, 50, 100";
+    return raw.split(",").map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n) && n > 0);
+  }, [posConfig.quickAmounts]);
 
   const load = useCallback(async () => {
     if (!active) { setLoading(false); return; }
     setLoading(true);
-    const { data } = await supabase
+    let data: any[] | null = null;
+
+    // 1. Direct Supabase fetch for all users (real database)
+    const { data: initialData, error } = await supabase
       .from("products")
-      .select("id, name, internal_sku, barcode, category_id, retail_price, discount_price, purchase_cost, stock_units, min_stock_alert")
+      .select("id, name, description, internal_sku, barcode, category_id, retail_price, discount_price, purchase_cost, stock_units, min_stock_alert, uom, units_per_uom, base_unit")
       .eq("business_id", active.id)
       .eq("status", "active")
       .order("name");
-    setProducts((data as POSProduct[]) ?? []);
+
+    data = initialData;
+    if (error || !data || data.length === 0) {
+      const fallback = await supabase
+        .from("products")
+        .select("id, name, description, internal_sku, barcode, category_id, retail_price, discount_price, purchase_cost, stock_units, min_stock_alert")
+        .eq("business_id", active.id)
+        .eq("status", "active")
+        .order("name");
+      if (fallback.data && fallback.data.length > 0) {
+        data = fallback.data as any;
+      }
+    }
+
+    // 2. Fetch from Business Sync engine (ensures employee POS receives 100% of business listed inventory)
+    if (!data || data.length === 0 || active.is_staff) {
+      const synced = await fetchSyncedProducts(active.id, {
+        role: active.staff_role || "cashier",
+        isStaff: Boolean(active.is_staff),
+        ownerUserId: active.owner_user_id,
+        statusOnly: "active",
+      });
+      if (synced && synced.length > 0) {
+        data = synced as any;
+      }
+    }
+
+    const cleanProducts = ((data as POSProduct[]) ?? []).filter((p) => !isDemoProduct(p));
+
+    // If owner, sync to central sync engine so employees always have the latest catalog
+    if (!active.is_staff && data && Array.isArray(data)) {
+      fetch("/api/sync/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: active.id,
+          businessName: active.name,
+          ownerUserId: active.owner_user_id,
+          products: cleanProducts,
+          replace: true,
+        }),
+      }).catch(() => {});
+    }
+
+    setProducts(cleanProducts);
     setLoading(false);
   }, [active]);
 
@@ -62,6 +348,7 @@ const UserPOS = () => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id ?? "");
+      setCashierName(user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Cashier");
     })();
   }, []);
 
@@ -72,8 +359,22 @@ const UserPOS = () => {
     const ch = supabase.channel(`pos-${active.id}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `business_id=eq.${active.id}` }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [active, load]);
+
+    const onUpdate = () => {
+      load();
+      refreshHeldOrders();
+    };
+    window.addEventListener("geflow:products-updated", onUpdate);
+    window.addEventListener("geflow:stock-updated", onUpdate);
+    window.addEventListener("geflow:sales-updated", onUpdate);
+
+    return () => {
+      supabase.removeChannel(ch);
+      window.removeEventListener("geflow:products-updated", onUpdate);
+      window.removeEventListener("geflow:stock-updated", onUpdate);
+      window.removeEventListener("geflow:sales-updated", onUpdate);
+    };
+  }, [active, load, refreshHeldOrders]);
 
   const unitPrice = (p: POSProduct) => Number(p.discount_price ?? p.retail_price) || 0;
 
@@ -84,34 +385,217 @@ const UserPOS = () => {
       p.name.toLowerCase().includes(q) ||
       (p.internal_sku ?? "").toLowerCase().includes(q) ||
       (p.barcode ?? "").toLowerCase().includes(q) ||
+      (p.description ?? "").toLowerCase().includes(q) ||
       catName(p.category_id).toLowerCase().includes(q),
     );
-  }, [products, search, categories]);
+  }, [products, search, catName]);
 
   const addToCart = (p: POSProduct) => {
-    if (p.stock_units <= 0) { toast({ title: "Out of stock", description: p.name, variant: "destructive" }); return; }
+    const stockInfo = computeProductStock(p.stock_units, p.name, p.description, p.uom, p.units_per_uom, p.base_unit);
+    if (stockInfo.totalSubUnits <= 0) {
+      toast({ title: "Out of stock", description: p.name, variant: "destructive" });
+      return;
+    }
+
+    // If stock remaining is less than 1 full pack, open the Smart UoM calculator to sell loose units!
+    if (stockInfo.totalSubUnits < stockInfo.packSize && stockInfo.packSize > 1) {
+      toast({
+        title: "Loose stock only",
+        description: `Only ${stockInfo.displayText} left. Opening Dose & UOM Calculator to sell loose ${stockInfo.subUnitName.toLowerCase()}s.`,
+      });
+      openUOMCalculatorForProduct(p);
+      return;
+    }
+
+    const price = unitPrice(p);
+    const parsed = parseProductUOM(p.name, p.description || "", p.uom, p.units_per_uom, p.base_unit);
+
     setCart((prev) => {
-      const existing = prev.find((l) => l.id === p.id);
+      // Find full-pack line if exists
+      const existing = prev.find((l) => l.id === p.id && l.fractionOfPack === 1);
       if (existing) {
-        if (existing.qty >= p.stock_units) { toast({ title: "Stock limit reached", description: `Only ${p.stock_units} in stock.`, variant: "destructive" }); return prev; }
-        return prev.map((l) => l.id === p.id ? { ...l, qty: l.qty + 1 } : l);
+        const totalBaseRequired = (existing.qty + 1) * stockInfo.packSize;
+        const otherLinesBaseUnits = prev
+          .filter((l) => l.id === p.id && l.lineId !== existing.lineId)
+          .reduce((s, l) => s + (l.qty * l.stockUnitsDeducted), 0);
+
+        if (totalBaseRequired + otherLinesBaseUnits > stockInfo.totalSubUnits) {
+          toast({ title: "Stock limit reached", description: `Only ${stockInfo.displayText} in stock.`, variant: "destructive" });
+          return prev;
+        }
+        return prev.map((l) => (l.lineId === existing.lineId ? { ...l, qty: l.qty + 1 } : l));
       }
-      return [...prev, { ...p, qty: 1, unit: unitPrice(p) }];
+
+      // Check if other lines of same product already exceed stock
+      const otherLinesBaseUnits = prev
+        .filter((l) => l.id === p.id)
+        .reduce((s, l) => s + (l.qty * l.stockUnitsDeducted), 0);
+
+      if (stockInfo.packSize + otherLinesBaseUnits > stockInfo.totalSubUnits) {
+        toast({ title: "Stock limit reached", description: `Only ${stockInfo.displayText} in stock.`, variant: "destructive" });
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          ...p,
+          lineId: `${p.id}_full_${Date.now()}`,
+          qty: 1,
+          unit: price,
+          fractionOfPack: 1,
+          stockUnitsDeducted: stockInfo.packSize, // Base units deducted per 1 full box (e.g. 12 tablets)
+          displayUnitLabel: `Full ${parsed.uomLabel}`,
+          proportionalCost: Number(p.purchase_cost) || 0,
+        },
+      ];
     });
   };
 
-  const changeQty = (id: string, delta: number) => {
-    setCart((prev) => prev.flatMap((l) => {
-      if (l.id !== id) return [l];
-      const next = l.qty + delta;
-      if (next <= 0) return [];
-      if (next > l.stock_units) { toast({ title: "Stock limit reached", variant: "destructive" }); return [l]; }
-      return [{ ...l, qty: next }];
-    }));
+  const openUOMCalculatorForProduct = (p: POSProduct, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedProductForCalc({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      internal_sku: p.internal_sku,
+      barcode: p.barcode,
+      retail_price: p.retail_price,
+      discount_price: p.discount_price,
+      purchase_cost: p.purchase_cost,
+      stock_units: p.stock_units,
+      uom: p.uom,
+      units_per_uom: p.units_per_uom,
+      base_unit: p.base_unit,
+    });
+    setCalcInitialFraction(1);
+    setEditingCartLineId(null);
+    setCalculatorOpen(true);
   };
 
-  const removeLine = (id: string) => setCart((prev) => prev.filter((l) => l.id !== id));
-  const clearCart = () => { setCart([]); setDiscountPct("0"); setCashGiven(""); };
+  const openUOMCalculatorForCartLine = (line: CartLine) => {
+    setSelectedProductForCalc({
+      id: line.id,
+      name: line.name,
+      description: line.description,
+      internal_sku: line.internal_sku,
+      barcode: line.barcode,
+      retail_price: line.retail_price,
+      discount_price: line.discount_price,
+      purchase_cost: line.purchase_cost,
+      stock_units: line.stock_units,
+      uom: line.uom,
+      units_per_uom: line.units_per_uom,
+      base_unit: line.base_unit,
+    });
+    setCalcInitialFraction(line.fractionOfPack);
+    setEditingCartLineId(line.lineId);
+    setCalculatorOpen(true);
+  };
+
+  const handleApplyFractional = (selection: AppliedFractionalSelection) => {
+    const p = products.find((x) => x.id === selection.productId);
+    if (!p) return;
+    const stockInfo = computeProductStock(p.stock_units, p.name, p.description, p.uom, p.units_per_uom, p.base_unit);
+    // Base units per single item: e.g. 1 for 1 tablet, 2 for 2 tablets, 12 for 1 box
+    const baseUnitsPerQty = selection.subQuantity > 0
+      ? selection.subQuantity
+      : Math.max(1, Math.round(selection.fractionOfPack * stockInfo.packSize));
+
+    if (editingCartLineId) {
+      // Update existing cart line
+      setCart((prev) =>
+        prev.map((l) =>
+          l.lineId === editingCartLineId
+            ? {
+                ...l,
+                unit: selection.unitPrice,
+                proportionalCost: selection.purchaseCost,
+                fractionOfPack: selection.fractionOfPack,
+                stockUnitsDeducted: baseUnitsPerQty,
+                displayUnitLabel: selection.displayUnitLabel,
+              }
+            : l
+        )
+      );
+      toast({
+        title: "Cart Line Updated",
+        description: `${p.name} updated to ${selection.displayUnitLabel} @ ${fmt(selection.unitPrice)}`,
+      });
+    } else {
+      // Add new fractional line
+      setCart((prev) => [
+        ...prev,
+        {
+          ...p,
+          lineId: `${p.id}_frac_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          qty: 1,
+          unit: selection.unitPrice,
+          proportionalCost: selection.purchaseCost,
+          fractionOfPack: selection.fractionOfPack,
+          stockUnitsDeducted: baseUnitsPerQty,
+          displayUnitLabel: selection.displayUnitLabel,
+        },
+      ]);
+      toast({
+        title: "Sub-Unit Added to Cart",
+        description: `${p.name} (${selection.displayUnitLabel}) added @ ${fmt(selection.unitPrice)}`,
+      });
+    }
+  };
+
+  const changeQty = (lineId: string, delta: number) => {
+    setCart((prev) =>
+      prev.flatMap((l) => {
+        if (l.lineId !== lineId) return [l];
+        const next = l.qty + delta;
+        if (next <= 0) return [];
+        const stockInfo = computeProductStock(l.stock_units, l.name, l.description, l.uom, l.units_per_uom, l.base_unit);
+        const otherLinesBaseUnits = prev
+          .filter((other) => other.id === l.id && other.lineId !== lineId)
+          .reduce((sum, other) => sum + (other.qty * other.stockUnitsDeducted), 0);
+        const thisLineBaseUnits = next * l.stockUnitsDeducted;
+
+        if (otherLinesBaseUnits + thisLineBaseUnits > stockInfo.totalSubUnits) {
+          toast({ title: "Stock limit reached", description: `Only ${stockInfo.displayText} in stock.`, variant: "destructive" });
+          return [l];
+        }
+        return [{ ...l, qty: next }];
+      })
+    );
+  };
+
+  const removeLine = (lineId: string) => setCart((prev) => prev.filter((l) => l.lineId !== lineId));
+  const clearCart = () => {
+    setCart([]);
+    setDiscountPct("0");
+    setCashGiven("");
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerPhoneCode(detectedCountry.phoneCode);
+    setCustomerNote("");
+  };
+
+  const handleSimulateScan = (codeToScan: string) => {
+    const code = codeToScan.trim().toLowerCase();
+    if (!code) return;
+    const hit = products.find(
+      (p) => (p.barcode ?? "").toLowerCase() === code || (p.internal_sku ?? "").toLowerCase() === code
+    );
+    if (hit) {
+      addToCart(hit);
+      toast({
+        title: "Barcode Scanned ⚡",
+        description: `${hit.name} (Code: ${hit.barcode || hit.internal_sku}) added to cart`,
+      });
+    } else {
+      toast({
+        title: "Barcode Not Found",
+        description: `No active product matched code "${codeToScan}"`,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Scan-mode: on Enter, match a barcode/SKU exactly and add it.
   const handleScanEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -123,9 +607,7 @@ const UserPOS = () => {
     else toast({ title: "No match", description: `No product for "${search}"`, variant: "destructive" });
   };
 
-  // Hardware barcode scanner support: USB/Bluetooth scanners emit keystrokes
-  // very fast and finish with Enter. We buffer rapid input globally and match
-  // it against a product barcode/SKU regardless of which field is focused.
+  // Hardware barcode scanner support
   const productsRef = useRef<POSProduct[]>([]);
   const addRef = useRef<(p: POSProduct) => void>(() => {});
   productsRef.current = products;
@@ -158,146 +640,453 @@ const UserPOS = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-
   const subtotal = cart.reduce((s, l) => s + l.unit * l.qty, 0);
   const discountValue = Math.min(subtotal * (Number(discountPct) || 0) / 100, subtotal);
   const taxed = subtotal - discountValue;
-  const gst = taxed * (taxRate / 100);
-  const grandTotal = taxed + gst;
+
+  let gst = 0;
+  let secondaryGst = 0;
+  let grandTotal = taxed;
+
+  if (isTaxEnabled && (effectiveTaxRate > 0 || secondaryTaxRate > 0)) {
+    if (isTaxInclusive) {
+      // Prices ALREADY include tax - total does NOT increase
+      const combinedRate = effectiveTaxRate + secondaryTaxRate;
+      const base = taxed / (1 + combinedRate / 100);
+      gst = Math.round((base * (effectiveTaxRate / 100)) * 100) / 100;
+      secondaryGst = Math.round((base * (secondaryTaxRate / 100)) * 100) / 100;
+      grandTotal = taxed;
+    } else {
+      // Tax Exclusive - added on top of taxed subtotal
+      gst = Math.round((taxed * (effectiveTaxRate / 100)) * 100) / 100;
+      secondaryGst = Math.round((taxed * (secondaryTaxRate / 100)) * 100) / 100;
+      grandTotal = taxed + gst + secondaryGst;
+    }
+  } else {
+    gst = 0;
+    secondaryGst = 0;
+    grandTotal = taxed;
+  }
+
   const cashNum = Number(cashGiven) || 0;
-  const changeDue = payMethod === "cash" ? Math.max(cashNum - grandTotal, 0) : 0;
+  const activeMethodObj = paymentMethods.find((m) => m.id === payMethod);
+  const isCashLike = !isSplitPayment && (payMethod === "cash" || activeMethodObj?.type === "cash");
+  const changeDue = isCashLike ? Math.max(cashNum - grandTotal, 0) : 0;
 
   const completeTransaction = async () => {
     if (!active || !userId || cart.length === 0) return;
-    if (payMethod === "cash" && cashNum < grandTotal) {
-      toast({ title: "Insufficient cash", description: "Amount paid is less than the grand total.", variant: "destructive" });
-      return;
+
+    let finalPayMethodName = activeMethodObj?.name || (payMethod === "card" ? "Card / POS" : "Cash");
+    let tenderAmount = isCashLike ? cashNum : grandTotal;
+
+    if (isSplitPayment) {
+      const s1 = Number(splitAmount1) || 0;
+      const s2 = Number(splitAmount2) || 0;
+      if (s1 + s2 < grandTotal - 0.01) {
+        toast({
+          title: "Incomplete split payment",
+          description: `Total split amount (${fmt(s1 + s2)}) is less than Grand Total (${fmt(grandTotal)}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+      const m1Name = paymentMethods.find((m) => m.id === splitMethod1)?.name || splitMethod1;
+      const m2Name = paymentMethods.find((m) => m.id === splitMethod2)?.name || splitMethod2;
+      finalPayMethodName = `Split: ${m1Name} (${fmt(s1)}) + ${m2Name} (${fmt(s2)})`;
+      tenderAmount = s1 + s2;
+    } else {
+      if (isCashLike && cashNum < grandTotal) {
+        toast({ title: "Insufficient cash", description: "Amount paid is less than the grand total.", variant: "destructive" });
+        return;
+      }
     }
+
     setProcessing(true);
-    const profit = cart.reduce((s, l) => s + (l.unit - Number(l.purchase_cost)) * l.qty, 0) - discountValue;
+    const profit = cart.reduce((s, l) => s + (l.unit - Number(l.proportionalCost)) * l.qty, 0) - discountValue;
+    const professionalReceiptNo = generateProfessionalReceiptNo(active.business_name);
 
-    const { data: sale, error: saleErr } = await supabase
-      .from("sales")
-      .insert({ business_id: active.id, owner_user_id: userId, processed_by: userId, total: grandTotal, profit, status: "completed" })
-      .select("id")
-      .single();
-
-    if (saleErr || !sale) { setProcessing(false); toast({ title: "Transaction failed", description: saleErr?.message, variant: "destructive" }); return; }
-
-    const items = cart.map((l) => ({
-      sale_id: sale.id, owner_user_id: userId, product_id: l.id, product_name: l.name,
-      quantity: l.qty, unit_price: l.unit, unit_cost: Number(l.purchase_cost),
+    const saleItems = cart.map((l) => ({
+      product_id: l.id,
+      product_name: l.fractionOfPack !== 1 ? `${l.name} [${l.displayUnitLabel}]` : l.name,
+      quantity: l.qty,
+      unit_price: l.unit,
+      unit_cost: Number(l.proportionalCost),
+      deductionUnits: (l.stockUnitsDeducted || 1) * l.qty,
+      barcode: l.barcode || null,
+      batch_number: l.batch_number || null,
+      internal_sku: l.internal_sku || null,
     }));
-    await supabase.from("sale_items").insert(items);
 
-    // Decrement stock + log movements.
+    // Post to unified sync engine
+    const syncRes = await recordSyncedSale(active.id, {
+      sale: {
+        invoice_no: professionalReceiptNo,
+        receipt_no: professionalReceiptNo,
+        customer_name: customerName.trim() || undefined,
+        customer_phone: fullCustomerPhone || undefined,
+        total: grandTotal,
+        profit,
+        status: "completed",
+        processed_by: cashierName || "Cashier",
+        owner_user_id: active.owner_user_id || userId,
+      },
+      items: saleItems,
+      cashierName: cashierName || "Cashier",
+      userId,
+      isStaff: Boolean(active.is_staff),
+    });
+
+    const saleId = syncRes?.sale?.id || `sale_${Date.now()}`;
+
+    // Group stock deductions in BASE UNITS per product to ensure accurate atomic updates
+    const productDeductions: Record<string, { product: POSProduct; totalBaseUnitsDeducted: number; summaryLabels: string[] }> = {};
     for (const l of cart) {
-      await supabase.from("products").update({ stock_units: Math.max(l.stock_units - l.qty, 0) }).eq("id", l.id);
-      await supabase.from("stock_movements").insert({
-        business_id: active.id, owner_user_id: userId, product_id: l.id,
-        quantity: -l.qty, type: "sale", reason: "POS sale", note: `Sale ${sale.id.slice(0, 8)}`,
-      });
+      const deduction = (l.stockUnitsDeducted || 1) * l.qty;
+      if (!productDeductions[l.id]) {
+        productDeductions[l.id] = { product: l, totalBaseUnitsDeducted: 0, summaryLabels: [] };
+      }
+      productDeductions[l.id].totalBaseUnitsDeducted += deduction;
+      productDeductions[l.id].summaryLabels.push(`${l.qty}x ${l.displayUnitLabel}`);
+    }
+
+    for (const pid of Object.keys(productDeductions)) {
+      const { product: p, totalBaseUnitsDeducted, summaryLabels } = productDeductions[pid];
+      const stockInfo = computeProductStock(p.stock_units, p.name, p.description, p.uom, p.units_per_uom, p.base_unit);
+      const newBaseStock = Math.max(Math.round(stockInfo.totalSubUnits - totalBaseUnitsDeducted), 0);
+
+      const updatePayload: { stock_units: number; description?: string } = {
+        stock_units: newBaseStock,
+      };
+
+      if (p.description) {
+        let updatedDesc = p.description;
+        const newPackQty = stockInfo.packSize > 0 ? +(newBaseStock / stockInfo.packSize).toFixed(2) : newBaseStock;
+        if (updatedDesc.includes("[PACK_QTY:")) {
+          updatedDesc = updatedDesc.replace(/\[PACK_QTY:\s*[^\]]+\]/i, `[PACK_QTY: ${newPackQty}]`);
+        }
+        if (updatedDesc.includes("[BASE_QTY:")) {
+          updatedDesc = updatedDesc.replace(/\[BASE_QTY:\s*[^\]]+\]/i, `[BASE_QTY: ${newBaseStock}]`);
+        }
+        updatePayload.description = updatedDesc;
+      }
+
+      try {
+        await supabase.from("products").update(updatePayload).eq("id", pid);
+        await recordStockMovement({
+          business_id: active.id,
+          owner_user_id: userId,
+          product_id: pid,
+          quantity: -totalBaseUnitsDeducted,
+          type: "out",
+          reason: "POS sale (UOM accurate)",
+          note: `Sale ${saleId.slice(0, 8)} · Sold: ${summaryLabels.join(", ")} (-${totalBaseUnitsDeducted} ${stockInfo.subUnitName.toLowerCase()}s)`,
+          reference_id: saleId,
+          reference_type: "pos_sale",
+          created_by: userId,
+        });
+      } catch {
+        /* ignore supabase errors */
+      }
+    }
+
+    if (activeHeldOrderId) {
+      await deleteHeldOrder(activeHeldOrderId, active.id);
+      await deleteSyncedHeldOrder(active.id, activeHeldOrderId);
+      setActiveHeldOrderId(null);
+      refreshHeldOrders();
     }
 
     setProcessing(false);
 
-    // Build the printable receipt from the finalized cart before clearing.
-    const invoiceNo = makeInvoiceNo(sale.id);
+    // Build the printable receipt from finalized cart with professional receipt/invoice ID
+    const invoiceNo = professionalReceiptNo;
     setReceipt({
       invoiceNo,
       date: new Date(),
       businessName: active.business_name,
-      lines: cart.map((l) => ({ name: l.name, qty: l.qty, unit: l.unit, total: l.unit * l.qty })),
+      businessAddress: posConfig.businessAddress || active.business_address || "",
+      businessPhone: posConfig.businessPhone || "",
+      logoUrl: posConfig.logoUrl || null,
+      receiptHeader: posConfig.receiptHeader || active.business_name,
+      receiptSubheader: posConfig.receiptSubheader || "Official Store Receipt & Fiscal Log",
+      receiptFooter: posConfig.receiptFooter || "Thank you for choosing us! Returns accepted within 14 days.",
+      cashierName: cashierName || "Cashier",
+      customerName: customerName.trim() || undefined,
+      customerPhone: fullCustomerPhone,
+      patientNote: customerNote.trim() || undefined,
+      showLogoOnReceipt: posConfig.showLogoOnReceipt !== false,
+      showTaxBreakdown: posConfig.showTaxBreakdown !== false,
+      showCashierName: posConfig.showCashierName !== false,
+      showBarcodeOnReceipt: posConfig.showBarcodeOnReceipt !== false,
+      autoPrintReceipt: Boolean(posConfig.autoPrintReceipt),
+      lines: cart.map((l) => ({
+        name: l.fractionOfPack !== 1 ? `${l.name} (${l.displayUnitLabel})` : l.name,
+        qty: l.qty,
+        unit: l.unit,
+        total: l.unit * l.qty,
+      })),
       subtotal,
       discount: discountValue,
-      taxRate,
+      taxRate: effectiveTaxRate,
       tax: gst,
+      secondaryTax: secondaryGst,
+      secondaryTaxRate,
+      secondaryTaxLabel: posConfig.secondaryTaxLabel || "Secondary Tax",
+      taxLabel: posConfig.taxLabel || "Tax",
+      taxPricingMode,
+      taxRegistrationNumber: posConfig.taxRegistrationNumber || "",
       total: grandTotal,
-      payMethod,
-      cashGiven: cashNum,
+      payMethod: finalPayMethodName,
+      cashGiven: tenderAmount,
       changeDue,
       symbol,
     });
     setReceiptOpen(true);
 
-    toast({ title: "Transaction complete", description: `${cart.length} item(s) · ${fmt(grandTotal)}${payMethod === "cash" ? ` · change ${fmt(changeDue)}` : ""}` });
+    toast({
+      title: "Transaction complete 🧾",
+      description: `${cart.length} item(s) · ${fmt(grandTotal)} via ${finalPayMethodName}${isCashLike ? ` · change ${fmt(changeDue)}` : ""}`,
+    });
     clearCart();
     load();
   };
 
+  const handleHoldCart = async () => {
+    if (!active?.id || cart.length === 0) return;
+    try {
+      const heldData = {
+        business_id: active.id,
+        owner_user_id: active.owner_user_id,
+        customer_name: customerName.trim() || null,
+        customer_phone: fullCustomerPhone || null,
+        customer_note: customerNote.trim() || null,
+        cart_data: cart,
+        total_amount: grandTotal,
+        item_count: cart.reduce((sum, item) => sum + item.qty, 0),
+      };
+      await saveHeldOrder(heldData);
+      await saveSyncedHeldOrder(active.id, heldData);
+
+      toast({
+        title: "Order placed on hold",
+        description: `Saved ${cart.length} item(s) to Held Orders. You can resume anytime.`,
+      });
+
+      clearCart();
+      setActiveHeldOrderId(null);
+      refreshHeldOrders();
+    } catch {
+      toast({
+        title: "Failed to hold order",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResumeHeldOrder = (order: HeldOrderRecord) => {
+    if (cart.length > 0) {
+      if (!window.confirm("Resuming this order will replace your current cart. Continue?")) {
+        return;
+      }
+    }
+
+    setCart(order.cart_data || []);
+    if (order.customer_name) setCustomerName(order.customer_name);
+    if (order.customer_phone) setCustomerPhone(order.customer_phone);
+    if (order.customer_note) setCustomerNote(order.customer_note);
+    setActiveHeldOrderId(order.id);
+    setHeldOrdersModalOpen(false);
+
+    toast({
+      title: "Held order resumed",
+      description: `Loaded ${order.item_count || order.cart_data?.length || 0} item(s) back into cart.`,
+    });
+  };
+
+  const handleDeleteHeldOrder = async (orderId: string) => {
+    if (!active?.id) return;
+    await deleteHeldOrder(orderId, active.id);
+    if (activeHeldOrderId === orderId) {
+      setActiveHeldOrderId(null);
+    }
+    refreshHeldOrders();
+    toast({
+      title: "Held order removed",
+      description: "Order has been removed from the queue.",
+    });
+  };
 
   return (
     <UserPanelGate pageTitle="POS Terminal" module="pos">
-      <div className="flex flex-col xl:flex-row gap-6 xl:h-[calc(100vh-11rem)]">
+      <div className="flex flex-col xl:flex-row items-start gap-4 sm:gap-6 min-w-0 pb-16">
         {/* Product selection */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* Search / Scan bar */}
-          <div className="flex items-center gap-2 bg-card border border-border rounded-2xl p-2 mb-5">
-            <div className="relative flex-1">
+        <div className="flex-1 min-w-0 w-full flex flex-col">
+          {/* Search / Scan / Image bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-card border border-border rounded-2xl p-2 mb-3 sm:mb-4 min-w-0">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleScanEnter}
-                placeholder={scanMode ? "Scan or type barcode / SKU, then Enter..." : "Search product name, SKU or category..."}
-                className="w-full h-10 pl-10 pr-3 bg-transparent text-sm focus:outline-none"
+                placeholder={scanMode ? "Scan or type barcode / SKU, then Enter..." : "Search product name, SKU, UOM or category..."}
+                className="w-full h-10 pl-10 pr-3 bg-transparent text-xs sm:text-sm focus:outline-none"
               />
             </div>
-            <button
-              onClick={() => setScanMode((v) => !v)}
-              className={`h-10 px-4 rounded-xl text-xs font-bold tracking-wider inline-flex items-center gap-2 transition-all ${
-                scanMode ? "bg-sky-400 text-white" : "bg-muted/60 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <ScanLine className="h-4 w-4" /> SCAN MODE
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setScanMode((v) => !v)}
+                className={`h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl text-xs font-bold tracking-wider inline-flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                  scanMode ? "bg-sky-500 text-white shadow-xs" : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <ScanLine className="h-3.5 w-3.5" /> SCAN
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/returns")}
+                className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl text-xs font-bold tracking-wider inline-flex items-center justify-center gap-1.5 bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0 cursor-pointer"
+                title="Process Customer Returns & Refunds"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> RETURNS
+              </button>
+            </div>
           </div>
 
+          {/* Barcode Testing / Hardware Scanner Assist */}
+          {scanMode && (
+            <div className="bg-sky-500/10 border border-sky-500/25 rounded-2xl p-3 mb-4 text-xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                <div className="flex items-center gap-2">
+                  <Barcode className="h-4 w-4 text-sky-500 shrink-0" />
+                  <span className="font-bold text-sky-700 dark:text-sky-300">
+                    Live Barcode Scanner Mode Active
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  Type barcode + Enter &bull; Or click any code below to simulate instant scan
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase shrink-0">Click to test scan:</span>
+                {products.filter((p) => (p.barcode || p.internal_sku) && p.stock_units > 0).slice(0, 5).map((p) => {
+                  const code = p.barcode || p.internal_sku || "";
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSimulateScan(code)}
+                      className="px-2 py-0.5 rounded-lg bg-card border border-border text-[11px] font-mono hover:border-sky-400 hover:text-sky-500 transition shadow-2xs flex items-center gap-1"
+                      title={`Click to simulate scanning ${p.name}`}
+                    >
+                      <Zap className="h-2.5 w-2.5 text-sky-500" />
+                      <span>{code}</span>
+                      <span className="text-muted-foreground text-[10px]">({p.name.slice(0, 10)})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Grid */}
-          <div className="flex-1 xl:overflow-y-auto pr-1">
+          <div className="flex-1 xl:overflow-y-auto pr-1 min-w-0">
             {bizLoading || loading ? (
               <div className="p-12 text-center text-muted-foreground">Loading catalog...</div>
             ) : !active ? (
-              <div className="bg-card border border-border rounded-2xl p-12 text-center">
+              <div className="bg-card border border-border rounded-2xl p-8 sm:p-12 text-center">
                 <Package className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                 <p className="font-bold">No business selected</p>
                 <p className="text-sm text-muted-foreground mt-1">Create or select a business to start selling.</p>
                 <Button onClick={() => navigate("/dashboard/businesses")} className="mt-4">Go to Businesses</Button>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-12 text-center">
+              <div className="bg-card border border-border rounded-2xl p-8 sm:p-12 text-center">
                 <Package className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                 <p className="font-bold">{search ? "No matching products" : "No products yet"}</p>
                 <p className="text-sm text-muted-foreground mt-1">{search ? "Try a different search." : "Add products in Inventory to sell them here."}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 min-w-0">
                 {filtered.map((p) => {
-                  const out = p.stock_units <= 0;
-                  const low = !out && p.stock_units <= p.min_stock_alert;
+                  const stockInfo = computeProductStock(p.stock_units, p.name, p.description, p.uom, p.units_per_uom, p.base_unit);
+                  const out = stockInfo.totalSubUnits <= 0;
+                  const low = !out && stockInfo.listingStock <= p.min_stock_alert;
+                  const parsed = parseProductUOM(p.name, p.description || "", p.uom, p.units_per_uom, p.base_unit);
+                  const hasSubUnits = parsed.packSize > 1 || parsed.isBulkWeight || parsed.isLiquidVolume || parsed.isPharmaPack;
+                  const subUnitPrice = parsed.packSize > 1 ? unitPrice(p) / parsed.packSize : null;
+
                   return (
-                    <button
+                    <div
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      disabled={out}
-                      className={`text-left bg-card border border-border rounded-2xl p-4 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-400/40 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none flex flex-col`}
+                      className={`text-left bg-card border border-border/80 rounded-2xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-400/40 cursor-pointer flex flex-col justify-between min-w-0 overflow-hidden relative group ${
+                        out ? "opacity-60 pointer-events-none" : ""
+                      }`}
                     >
-                      <div className="h-10 w-10 rounded-xl bg-sky-400/15 text-sky-500 flex items-center justify-center mb-6">
-                        <Package className="h-5 w-5" />
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="h-9 w-9 rounded-xl bg-sky-400/15 text-sky-500 flex items-center justify-center shrink-0">
+                            {parsed.isLiquidVolume ? (
+                              <Droplets className="h-4 w-4 sm:h-5 sm:w-5" />
+                            ) : parsed.isPharmaPack ? (
+                              <Pill className="h-4 w-4 sm:h-5 sm:w-5" />
+                            ) : parsed.isBulkWeight ? (
+                              <Scale className="h-4 w-4 sm:h-5 sm:w-5" />
+                            ) : (
+                              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+                            )}
+                          </div>
+
+                          {/* UOM & Stock Badges */}
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border uppercase">
+                              {parsed.packSize > 1 ? `${parsed.packSize} ${parsed.subUnitName}s/${parsed.uomLabel}` : parsed.uomLabel}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                              out ? "bg-rose-500/15 text-rose-500" : low ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500"
+                            }`}>
+                              {out
+                                ? "OUT OF STOCK"
+                                : stockInfo.displayText}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="font-bold text-sm leading-tight text-foreground line-clamp-2">{p.name}</p>
+                        <p className="text-[10px] font-bold tracking-wider text-muted-foreground mt-1 uppercase truncate">
+                          {catName(p.category_id)} · {p.internal_sku || p.barcode || "—"}
+                        </p>
                       </div>
-                      <p className="font-bold text-sm leading-tight line-clamp-2">{p.name}</p>
-                      <p className="text-[10px] font-bold tracking-wider text-muted-foreground mt-1 uppercase">
-                        {catName(p.category_id)} · {p.internal_sku || p.barcode || "—"}
-                      </p>
-                      <div className="flex items-end justify-between mt-3">
-                        <p className="text-xl font-extrabold text-sky-500">{fmt(unitPrice(p))}</p>
-                        <span className={`text-[10px] font-bold tracking-wider px-2 py-1 rounded-md ${
-                          out ? "bg-rose-500/15 text-rose-500" : low ? "bg-amber-500/15 text-amber-500" : "bg-emerald-500/15 text-emerald-500"
-                        }`}>
-                          {p.stock_units} UNITS
-                        </span>
+
+                      <div className="mt-4 pt-2.5 border-t border-border/60">
+                        <div className="flex items-end justify-between gap-2">
+                          <div>
+                            <p className="text-lg sm:text-xl font-extrabold text-sky-500 leading-none">
+                              {fmt(unitPrice(p))}
+                            </p>
+                            {subUnitPrice !== null && (
+                              <p className="text-[10px] font-semibold text-muted-foreground mt-1">
+                                ~{fmt(subUnitPrice)} / {parsed.subUnitName}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Trigger Smart Fractional/Dose modal for any product */}
+                          <button
+                            type="button"
+                            onClick={(e) => openUOMCalculatorForProduct(p, e)}
+                            className="h-8 px-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500 hover:text-white text-sky-600 dark:text-sky-400 text-[10px] font-bold tracking-wide border border-sky-500/25 transition flex items-center gap-1.5 shrink-0 z-10 shadow-2xs group/btn"
+                            title="Calculate fractional dose or sub-unit (e.g. 1 Tablet, Strip, 0.5kg, 250ml)"
+                          >
+                            <Sparkles className="w-3 h-3 text-sky-500 group-hover/btn:text-white transition-colors" />
+                            <span>Smart UOM</span>
+                          </button>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -306,116 +1095,472 @@ const UserPOS = () => {
         </div>
 
         {/* Cart panel */}
-        <div className="w-full xl:w-96 flex-shrink-0 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
+        <div className="w-full xl:w-[400px] 2xl:w-[440px] flex-shrink-0 bg-card border border-border rounded-2xl flex flex-col overflow-hidden shadow-xl min-w-0 xl:sticky xl:top-4 h-auto xl:h-[calc(100vh-6rem)]">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center justify-between p-3.5 border-b border-border flex-shrink-0 bg-card">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-sky-400 text-white flex items-center justify-center"><ShoppingCart className="h-5 w-5" /></div>
+              <div className="h-9 w-9 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+                <ShoppingCart className="h-5 w-5" />
+              </div>
               <div>
-                <p className="font-extrabold leading-tight">Order Items</p>
+                <p className="font-extrabold text-sm leading-tight text-foreground">Order Cart</p>
                 <p className="text-[10px] font-bold tracking-widest text-muted-foreground">REGISTER TERMINAL #01</p>
               </div>
             </div>
-            <button onClick={clearCart} disabled={cart.length === 0} className="h-9 w-9 rounded-xl hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500 disabled:opacity-40 transition">
-              <Trash2 className="h-4 w-4" />
-            </button>
+
+            <div className="flex items-center gap-1.5">
+              {/* Held Orders Queue Button */}
+              <button
+                type="button"
+                id="pos-held-orders-queue-btn"
+                onClick={() => setHeldOrdersModalOpen(true)}
+                className="relative h-8 px-2.5 rounded-xl border border-border/80 bg-muted/30 hover:bg-muted/70 text-xs font-bold flex items-center gap-1.5 text-foreground transition cursor-pointer"
+                title="View Held Orders Queue"
+              >
+                <Clock className="h-3.5 w-3.5 text-amber-500" />
+                <span className="hidden sm:inline">Held</span>
+                {heldOrders.length > 0 && (
+                  <span className="h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[9px] font-extrabold flex items-center justify-center">
+                    {heldOrders.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Hold Current Cart Button */}
+              <button
+                type="button"
+                id="pos-hold-cart-btn"
+                disabled={cart.length === 0}
+                onClick={handleHoldCart}
+                className="h-8 px-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition cursor-pointer"
+                title="Hold current cart & customer"
+              >
+                <PauseCircle className="h-3.5 w-3.5" />
+                <span>Hold</span>
+              </button>
+
+              {/* Clear Cart */}
+              <button
+                onClick={clearCart}
+                disabled={cart.length === 0}
+                className="h-8 w-8 rounded-xl hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500 disabled:opacity-40 transition cursor-pointer"
+                title="Clear Cart & Reset Customer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Items / empty state */}
-          <div className="flex-1 overflow-y-auto min-h-[140px]">
+          {/* Resumed Order Banner */}
+          {activeHeldOrderId && (
+            <div className="px-3 py-1.5 bg-amber-500/15 border-b border-amber-500/25 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-200 font-bold">
+                <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+                <span>Resumed Held Order (Auto-clears on sale)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveHeldOrderId(null)}
+                className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+              >
+                Detach
+              </button>
+            </div>
+          )}
+
+          {/* Customer / Patient Quick Details Header */}
+          <div className="p-3 border-b border-border bg-muted/20 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-7 w-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                  <User className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold truncate text-foreground">
+                    {customerName ? customerName : "Walk-in Customer"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-mono truncate">
+                    {fullCustomerPhone ? `Tel: ${fullCustomerPhone}` : "No phone number added"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomerForm((v) => !v)}
+                className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline px-2 py-1 rounded-md hover:bg-sky-500/10 transition cursor-pointer"
+              >
+                {showCustomerForm ? "Done" : customerName || customerPhone ? "Edit Details" : "+ Add Buyer / Rx"}
+              </button>
+            </div>
+
+            {showCustomerForm && (
+              <div className="mt-2.5 pt-2.5 border-t border-border/60 space-y-2 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">
+                    Buyer / Patient Name
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="e.g. Alex Morgan / Sarah Jenkins"
+                    className="w-full h-8 px-2.5 rounded-lg bg-background border border-border text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">
+                        Phone / WhatsApp
+                      </label>
+                      <span className="text-[9px] text-sky-600 dark:text-sky-400 font-semibold">
+                        {detectedCountry.flag} {detectedCountry.name}
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={customerPhoneCode || detectedCountry.phoneCode}
+                        onChange={(e) => setCustomerPhoneCode(e.target.value)}
+                        className="h-8 px-1.5 rounded-lg bg-background border border-border text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-sky-500 shrink-0 w-[94px] cursor-pointer"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.phoneCode}>
+                            {c.flag} {c.phoneCode}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="Phone number"
+                        className="w-full h-8 px-2.5 rounded-lg bg-background border border-border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">
+                      Rx / Doctor Note
+                    </label>
+                    <input
+                      type="text"
+                      value={customerNote}
+                      onChange={(e) => setCustomerNote(e.target.value)}
+                      placeholder="e.g. Dr. Roberts / Rx #8402"
+                      className="w-full h-8 px-2.5 rounded-lg bg-background border border-border text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Items scrollable list */}
+          <div className="flex-1 overflow-y-auto min-h-[140px] max-h-[300px] xl:max-h-none">
             {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center py-12 text-muted-foreground/60">
-                <ShoppingCart className="h-14 w-14 mb-3" strokeWidth={1.2} />
-                <p className="text-xs font-bold tracking-widest">CART IS EMPTY</p>
+              <div className="h-full flex flex-col items-center justify-center py-10 text-muted-foreground/60">
+                <ShoppingCart className="h-12 w-12 mb-2" strokeWidth={1.2} />
+                <p className="text-xs font-bold tracking-widest uppercase">Cart is Empty</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Select items from catalog to start sale</p>
               </div>
             ) : (
               <ul className="p-3 space-y-2">
                 {cart.map((l) => (
-                  <li key={l.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
-                    <div className="h-9 w-9 rounded-lg bg-sky-400/15 text-sky-500 flex items-center justify-center flex-shrink-0"><Package className="h-4 w-4" /></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{l.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{fmt(l.unit)} each</p>
+                  <li key={l.lineId} className="flex flex-col gap-2 rounded-xl border border-border p-2.5 bg-card hover:border-sky-500/30 transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate leading-tight text-foreground">{l.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => openUOMCalculatorForCartLine(l)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 text-[10px] font-bold border border-sky-500/20 transition cursor-pointer"
+                            title="Edit sub-unit or dose"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>{l.displayUnitLabel}</span>
+                          </button>
+                          <span className="text-[11px] text-muted-foreground">
+                            {fmt(l.unit)} each
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeLine(l.lineId)}
+                        className="h-6 w-6 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500 shrink-0 cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => changeQty(l.id, -1)} className="h-6 w-6 rounded-md bg-muted hover:bg-muted/70 flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                      <span className="w-6 text-center text-sm font-bold">{l.qty}</span>
-                      <button onClick={() => changeQty(l.id, 1)} className="h-6 w-6 rounded-md bg-muted hover:bg-muted/70 flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+
+                    <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => changeQty(l.lineId, -1)}
+                          className="h-6 w-6 rounded-md bg-muted hover:bg-muted/70 flex items-center justify-center cursor-pointer"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center text-sm font-bold">{l.qty}</span>
+                        <button
+                          onClick={() => changeQty(l.lineId, 1)}
+                          className="h-6 w-6 rounded-md bg-muted hover:bg-muted/70 flex items-center justify-center cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <p className="text-right text-sm font-bold text-sky-500">{fmt(l.unit * l.qty)}</p>
                     </div>
-                    <p className="w-16 text-right text-sm font-bold">{fmt(l.unit * l.qty)}</p>
-                    <button onClick={() => removeLine(l.id)} className="h-6 w-6 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
-          {/* Financial summary + payment */}
-          <div className="border-t border-border p-4 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
+          {/* Financial summary + payment (Always pinned footer) */}
+          <div className="border-t border-border p-3.5 space-y-2.5 flex-shrink-0 bg-card shadow-2xl z-20 mt-auto">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Subtotal ({cart.length} items)</span>
               <span className="font-bold">{fmt(subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">GST ({taxRate}%)</span>
-              <span className="font-bold">{fmt(gst)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">% Discount</span>
+            {discountValue > 0 && (
+              <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                <span className="font-medium">Discount ({discountPct}%)</span>
+                <span className="font-bold">−{fmt(discountValue)}</span>
+              </div>
+            )}
+            {showTaxBreakdown && isTaxEnabled && effectiveTaxRate > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {isTaxInclusive ? "Includes " : ""}{posConfig.taxLabel || "Tax"} ({effectiveTaxRate}%)
+                </span>
+                <span className="font-bold">{isTaxInclusive ? "" : "+"}{fmt(gst)}</span>
+              </div>
+            )}
+            {showTaxBreakdown && isTaxEnabled && enableSecondaryTax && secondaryTaxRate > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {isTaxInclusive ? "Includes " : ""}{posConfig.secondaryTaxLabel || "Surcharge"} ({secondaryTaxRate}%)
+                </span>
+                <span className="font-bold">{isTaxInclusive ? "" : "+"}{fmt(secondaryGst)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Discount %</span>
               <input
-                type="number" min="0" max="100" value={discountPct}
+                type="number"
+                min="0"
+                max="100"
+                value={discountPct}
                 onChange={(e) => setDiscountPct(e.target.value)}
-                className="w-20 h-8 px-2 text-right bg-muted/50 border border-border rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-16 h-7 px-2 text-right bg-muted/50 border border-border rounded-lg text-xs font-bold focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-border">
-              <span className="text-lg font-extrabold">Grand Total</span>
-              <span className="text-2xl font-extrabold text-sky-500">{fmt(grandTotal)}</span>
+              <span className="text-sm font-extrabold text-foreground">Grand Total</span>
+              <span className="text-xl font-black text-sky-500">{fmt(grandTotal)}</span>
             </div>
 
-            {/* Payment toggle */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={() => setPayMethod("cash")}
-                className={`h-11 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition ${payMethod === "cash" ? "bg-foreground text-background" : "bg-muted/60 text-muted-foreground hover:text-foreground"}`}
-              >
-                <Banknote className="h-4 w-4" /> Cash
-              </button>
-              <button
-                onClick={() => setPayMethod("card")}
-                className={`h-11 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition ${payMethod === "card" ? "bg-foreground text-background" : "bg-muted/60 text-muted-foreground hover:text-foreground"}`}
-              >
-                <CreditCard className="h-4 w-4" /> Card
-              </button>
-            </div>
-
-            {payMethod === "cash" && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold tracking-widest text-muted-foreground">AMOUNT PAID</span>
-                  <span className="text-[10px] font-bold tracking-widest text-muted-foreground">RETURN: {fmt(changeDue)}</span>
-                </div>
-                <input
-                  type="number" min="0" value={cashGiven}
-                  onChange={(e) => setCashGiven(e.target.value)}
-                  placeholder="Enter customer cash..."
-                  className="w-full h-11 px-3 bg-muted/50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+            {/* Payment Methods & Split Pay */}
+            <div className="space-y-2 pt-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  Payment Method
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsSplitPayment(!isSplitPayment)}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition cursor-pointer flex items-center gap-1 ${
+                    isSplitPayment
+                      ? "bg-sky-500 text-white shadow-xs"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ArrowRightLeft className="w-3 h-3" />
+                  Split Pay
+                </button>
               </div>
-            )}
 
+              {!isSplitPayment ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {paymentMethods.map((pm) => (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => setPayMethod(pm.id)}
+                        className={`h-9 px-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer truncate ${
+                          payMethod === pm.id
+                            ? "bg-foreground text-background shadow-xs"
+                            : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {pm.type === "cash" ? (
+                          <Banknote className="h-3.5 w-3.5 shrink-0" />
+                        ) : pm.type === "card" ? (
+                          <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                        ) : pm.type === "wallet" || pm.type === "digital" ? (
+                          <Smartphone className="h-3.5 w-3.5 shrink-0" />
+                        ) : (
+                          <Building2 className="h-3.5 w-3.5 shrink-0" />
+                        )}
+                        <span className="truncate">{pm.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {isCashLike && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-muted-foreground">
+                        <span>CASH RECEIVED</span>
+                        <span className={changeDue > 0 ? "text-emerald-500 font-extrabold" : ""}>
+                          CHANGE: {fmt(changeDue)}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={cashGiven}
+                        onChange={(e) => setCashGiven(e.target.value)}
+                        placeholder="Enter cash received..."
+                        className="w-full h-8 px-2.5 bg-muted/50 border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                      {quickCashOptions.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setCashGiven(grandTotal.toFixed(2))}
+                            className="px-2 py-0.5 rounded-lg bg-muted text-[10px] font-bold hover:bg-muted/80 text-foreground transition cursor-pointer"
+                          >
+                            Exact
+                          </button>
+                          {quickCashOptions.map((amt) => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => setCashGiven(amt.toString())}
+                              className="px-2 py-0.5 rounded-lg bg-muted text-[10px] font-bold hover:bg-muted/80 text-foreground transition cursor-pointer"
+                            >
+                              {fmt(amt)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-muted/40 border border-border space-y-2">
+                  <div className="text-[11px] font-bold text-foreground flex items-center justify-between">
+                    <span>Split Tender</span>
+                    <span className="text-[10px] text-muted-foreground">Total: {fmt(grandTotal)}</span>
+                  </div>
+
+                  {/* Split Line 1 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={splitMethod1}
+                      onChange={(e) => setSplitMethod1(e.target.value)}
+                      className="h-8 px-2 rounded-lg bg-card border border-border text-xs font-bold text-foreground focus:outline-none"
+                    >
+                      {paymentMethods.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      value={splitAmount1}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSplitAmount1(val);
+                        const num = Number(val) || 0;
+                        const remainder = Math.max(0, grandTotal - num);
+                        setSplitAmount2(remainder > 0 ? remainder.toFixed(2) : "0");
+                      }}
+                      placeholder="Amount 1"
+                      className="h-8 px-2 rounded-lg bg-card border border-border text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  {/* Split Line 2 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={splitMethod2}
+                      onChange={(e) => setSplitMethod2(e.target.value)}
+                      className="h-8 px-2 rounded-lg bg-card border border-border text-xs font-bold text-foreground focus:outline-none"
+                    >
+                      {paymentMethods.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      value={splitAmount2}
+                      onChange={(e) => setSplitAmount2(e.target.value)}
+                      placeholder="Amount 2"
+                      className="h-8 px-2 rounded-lg bg-card border border-border text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-[10px] font-bold">
+                    <span className="text-muted-foreground">
+                      Allocated: {fmt((Number(splitAmount1) || 0) + (Number(splitAmount2) || 0))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const half = (grandTotal / 2).toFixed(2);
+                        setSplitAmount1(half);
+                        setSplitAmount2((grandTotal - Number(half)).toFixed(2));
+                      }}
+                      className="text-sky-500 hover:underline cursor-pointer"
+                    >
+                      50 / 50 Split
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Complete Transaction CTA Button - ALWAYS VISIBLE */}
             <Button
+              id="pos-complete-sale-cta"
               onClick={completeTransaction}
               disabled={cart.length === 0 || processing}
-              className="w-full h-12 rounded-xl bg-sky-400 hover:bg-sky-500 text-white font-bold text-base disabled:opacity-50"
+              className="w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-extrabold text-sm disabled:opacity-40 shadow-lg shadow-sky-500/25 transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
             >
-              {processing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-              Complete Transaction
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Complete Sale &bull; {fmt(grandTotal)}
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Smart UOM & Dose Calculator Modal */}
+      <SmartUOMCalculatorModal
+        open={calculatorOpen}
+        onOpenChange={setCalculatorOpen}
+        product={selectedProductForCalc}
+        initialFraction={calcInitialFraction}
+        onApply={handleApplyFractional}
+      />
+
+      {/* Held Orders Modal */}
+      <HeldOrdersModal
+        open={heldOrdersModalOpen}
+        onOpenChange={setHeldOrdersModalOpen}
+        orders={heldOrders}
+        onResume={handleResumeHeldOrder}
+        onDelete={handleDeleteHeldOrder}
+        formatMoney={fmt}
+      />
 
       <SaleReceiptDialog
         open={receiptOpen}
@@ -424,7 +1569,6 @@ const UserPOS = () => {
         onNewCustomer={() => setReceiptOpen(false)}
       />
     </UserPanelGate>
-
   );
 };
 

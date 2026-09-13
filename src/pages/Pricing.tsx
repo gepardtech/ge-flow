@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus, Tag } from "lucide-react";
 import { useMoney } from "@/lib/currency";
 import { usePricingPlans } from "@/hooks/usePricingPlans";
+import { getPendingCoupon } from "@/lib/couponHelper";
 import {
   Accordion,
   AccordionContent,
@@ -49,15 +50,33 @@ const Cell = ({ value }: { value: string | boolean }) => {
 };
 
 const Pricing = () => {
+  const [searchParams] = useSearchParams();
   const { price } = useMoney({ scope: "platform" });
-  const { priceOf, featuresOf, byKey, badgeOf } = usePricingPlans();
+  const { priceOf, featuresOf, byKey, badgeOf, isPopular, badgePositionOf, nameOf, taglineOf } = usePricingPlans();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
+
+  const urlCoupon = searchParams.get("coupon") || searchParams.get("code") || searchParams.get("promo");
+  const activePromoCode = (urlCoupon || getPendingCoupon() || "").trim().toUpperCase();
+
+  const getCheckoutUrl = (plan: string, period: string) => {
+    let url = `/checkout?plan=${encodeURIComponent(plan)}&period=${encodeURIComponent(period)}`;
+    if (activePromoCode) {
+      url += `&coupon=${encodeURIComponent(activePromoCode)}`;
+    }
+    return url;
+  };
 
   return (
     <Layout>
       {/* Header */}
       <section className="pt-20 pb-10">
         <div className="container mx-auto px-4 text-center">
+          {activePromoCode && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-4 animate-in fade-in">
+              <Tag className="w-3.5 h-3.5" />
+              <span>Promo Code {activePromoCode} Active — Discount applied at checkout</span>
+            </div>
+          )}
           <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
             Choose the Right <span className="text-gradient">Plan</span>
             <br />
@@ -89,69 +108,116 @@ const Pricing = () => {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {/* Free */}
-            <div className="premium-card p-7 flex flex-col">
-              <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
-              <h3 className="text-xl font-bold mb-1">Free</h3>
-              <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <p className="text-4xl font-bold mb-6">{price(priceOf("free", billingPeriod))}</p>
-              <ul className="space-y-3 mb-8 flex-1">
-                {featuresOf("free", freeFeatures).map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">GET STARTED</Link>
-              </Button>
-              <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-3">NO CARD NEEDED</p>
-            </div>
+            {(() => {
+              const badge = badgeOf("free", billingPeriod);
+              const pos = badgePositionOf("free");
+              const pop = isPopular("free");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-primary shadow-2xl shadow-primary/20" : ""}`}>
+                  {badge && pos === "top" ? (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("free", "Free")}</h3>
+                  <p className="text-sm text-muted-foreground mb-5">{taglineOf("free", "Professional solution.")}</p>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <p className="text-4xl font-bold">{price(priceOf("free", billingPeriod))}</p>
+                    <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {featuresOf("free", freeFeatures).map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {badge && pos === "bottom" && (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full text-center mb-3 tracking-wider">
+                      {badge}
+                    </span>
+                  )}
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to="/signup">GET STARTED</Link>
+                  </Button>
+                  <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-3">NO CARD NEEDED</p>
+                </div>
+              );
+            })()}
 
             {/* Standard */}
-            <div className={`premium-card p-7 flex flex-col ${billingPeriod === "monthly" ? "ring-2 ring-primary shadow-2xl shadow-primary/20" : ""}`}>
-              {billingPeriod === "monthly" ? (
-                <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">MOST POPULAR</span>
-              ) : <div className="h-7 mb-4" />}
-              <h3 className="text-xl font-bold mb-1">Standard</h3>
-              <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">{price(priceOf("standard", billingPeriod))}</p>
-                <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-1">
-                {featuresOf("standard", standardFeatures).map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to={`/checkout?plan=standard&period=${billingPeriod}`}>CHOOSE PLAN</Link>
-              </Button>
-            </div>
+            {(() => {
+              const badge = badgeOf("standard", billingPeriod);
+              const pos = badgePositionOf("standard");
+              const pop = isPopular("standard");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-primary shadow-2xl shadow-primary/20" : ""}`}>
+                  {badge && pos === "top" ? (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("standard", "Standard")}</h3>
+                  <p className="text-sm text-muted-foreground mb-5">{taglineOf("standard", "Professional solution.")}</p>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <p className="text-4xl font-bold">{price(priceOf("standard", billingPeriod))}</p>
+                    <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {featuresOf("standard", standardFeatures).map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {badge && pos === "bottom" && (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full text-center mb-3 tracking-wider">
+                      {badge}
+                    </span>
+                  )}
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to={getCheckoutUrl("standard", billingPeriod)}>CHOOSE PLAN</Link>
+                  </Button>
+                </div>
+              );
+            })()}
 
             {/* Premium */}
-            <div className={`premium-card p-7 flex flex-col ${billingPeriod === "yearly" ? "ring-2 ring-secondary shadow-2xl shadow-secondary/20" : ""}`}>
-              {billingPeriod === "yearly" ? (
-                <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">20% OFF</span>
-              ) : <div className="h-7 mb-4" />}
-              <h3 className="text-xl font-bold mb-1">Premium</h3>
-              <p className="text-sm text-muted-foreground mb-5">Professional solution.</p>
-              <div className="flex items-baseline gap-1 mb-6">
-                <p className="text-4xl font-bold">{price(priceOf("premium", billingPeriod))}</p>
-                <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-1">
-                {featuresOf("premium", premiumFeatures).map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to={`/checkout?plan=premium&period=${billingPeriod}`}>CHOOSE PLAN</Link>
-              </Button>
-            </div>
+            {(() => {
+              const badge = badgeOf("premium", billingPeriod);
+              const pos = badgePositionOf("premium");
+              const pop = isPopular("premium");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-secondary shadow-2xl shadow-secondary/20" : ""}`}>
+                  {badge && pos === "top" ? (
+                    <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("premium", "Premium")}</h3>
+                  <p className="text-sm text-muted-foreground mb-5">{taglineOf("premium", "Professional solution.")}</p>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <p className="text-4xl font-bold">{price(priceOf("premium", billingPeriod))}</p>
+                    <span className="text-sm text-muted-foreground">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {featuresOf("premium", premiumFeatures).map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {badge && pos === "bottom" && (
+                    <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full text-center mb-3 tracking-wider">
+                      {badge}
+                    </span>
+                  )}
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to={getCheckoutUrl("premium", billingPeriod)}>CHOOSE PLAN</Link>
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </section>
@@ -166,65 +232,95 @@ const Pricing = () => {
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {/* Free Lifetime */}
-            <div className="premium-card p-7 flex flex-col">
-              <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">FOREVER FREE</span>
-              <h3 className="text-xl font-bold mb-1">Free Lifetime</h3>
-              <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{price(priceOf("free", "lifetime"))}</p>
-                <span className="text-sm text-muted-foreground">one-time</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-1">
-                {freeLifetime.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/signup">GET STARTED</Link>
-              </Button>
-              <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-3">NO CARD NEEDED</p>
-            </div>
+            {(() => {
+              const badge = badgeOf("free", "lifetime");
+              const pop = isPopular("free");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-primary shadow-2xl shadow-primary/20" : ""}`}>
+                  {badge ? (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("free", "Free")} Lifetime</h3>
+                  <div className="flex items-baseline gap-1 mb-6 mt-3">
+                    <p className="text-4xl font-bold">{price(priceOf("free", "lifetime"))}</p>
+                    <span className="text-sm text-muted-foreground">one-time</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {freeLifetime.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to="/signup">GET STARTED</Link>
+                  </Button>
+                  <p className="text-center text-[10px] font-bold tracking-wider text-muted-foreground mt-3">NO CARD NEEDED</p>
+                </div>
+              );
+            })()}
 
             {/* Standard Lifetime */}
-            <div className="premium-card p-7 flex flex-col ring-2 ring-primary shadow-2xl shadow-primary/20">
-              <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">MOST POPULAR</span>
-              <h3 className="text-xl font-bold mb-1">Standard Lifetime</h3>
-              <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{price(priceOf("standard", "lifetime"))}</p>
-                <span className="text-sm text-muted-foreground">one-time</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-1">
-                {standardLifetime.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/checkout?plan=standard&period=lifetime">UNLOCK LIFETIME</Link>
-              </Button>
-            </div>
+            {(() => {
+              const badge = badgeOf("standard", "lifetime");
+              const pop = isPopular("standard");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-primary shadow-2xl shadow-primary/20" : ""}`}>
+                  {badge ? (
+                    <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("standard", "Standard")} Lifetime</h3>
+                  <div className="flex items-baseline gap-1 mb-6 mt-3">
+                    <p className="text-4xl font-bold">{price(priceOf("standard", "lifetime"))}</p>
+                    <span className="text-sm text-muted-foreground">one-time</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {standardLifetime.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to={getCheckoutUrl("standard", "lifetime")}>UNLOCK LIFETIME</Link>
+                  </Button>
+                </div>
+              );
+            })()}
 
             {/* Premium Lifetime */}
-            <div className="premium-card p-7 flex flex-col">
-              <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">BEST VALUE</span>
-              <h3 className="text-xl font-bold mb-1">Premium Lifetime</h3>
-              <div className="flex items-baseline gap-1 mb-6 mt-3">
-                <p className="text-4xl font-bold">{price(priceOf("premium", "lifetime"))}</p>
-                <span className="text-sm text-muted-foreground">one-time</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-1">
-                {premiumLifetime.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button className="cta-btn w-full rounded-full" asChild>
-                <Link to="/checkout?plan=premium&period=lifetime">UNLOCK LIFETIME</Link>
-              </Button>
-            </div>
+            {(() => {
+              const badge = badgeOf("premium", "lifetime");
+              const pop = isPopular("premium");
+              return (
+                <div className={`premium-card p-7 flex flex-col ${pop ? "ring-2 ring-secondary shadow-2xl shadow-secondary/20" : ""}`}>
+                  {badge ? (
+                    <span className="inline-block text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full self-start mb-4 tracking-wider">
+                      {badge}
+                    </span>
+                  ) : <div className="h-7 mb-4" />}
+                  <h3 className="text-xl font-bold mb-1">{nameOf("premium", "Premium")} Lifetime</h3>
+                  <div className="flex items-baseline gap-1 mb-6 mt-3">
+                    <p className="text-4xl font-bold">{price(priceOf("premium", "lifetime"))}</p>
+                    <span className="text-sm text-muted-foreground">one-time</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {premiumLifetime.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="cta-btn w-full rounded-full" asChild>
+                    <Link to={getCheckoutUrl("premium", "lifetime")}>UNLOCK LIFETIME</Link>
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </section>

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface PlanRow {
@@ -42,7 +43,7 @@ const AdminBillingPricing = () => {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("admin_pricing_rt").on("postgres_changes", { event: "*", schema: "public", table: "pricing_plans" }, load).subscribe();
+    const ch = supabase.channel(`admin_pricing_rt_${Math.random().toString(36).slice(2)}`).on("postgres_changes", { event: "*", schema: "public", table: "pricing_plans" }, load).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
@@ -167,14 +168,28 @@ const AdminBillingPricing = () => {
               <div className="grid grid-cols-3 gap-3">
                 <Field label="BADGE TEXT"><input value={form.badge_text} onChange={(e) => setForm((f) => ({ ...f, badge_text: e.target.value }))} placeholder="e.g. SAVE 20%" className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Field>
                 <Field label="POSITION">
-                  <select value={form.badge_position} onChange={(e) => setForm((f) => ({ ...f, badge_position: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
-                    <option value="top">Top</option><option value="bottom">Bottom</option>
-                  </select>
+                  <Select value={form.badge_position} onValueChange={(val) => setForm((f) => ({ ...f, badge_position: val }))}>
+                    <SelectTrigger className="h-10 w-full rounded-xl bg-card border border-border text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Top</SelectItem>
+                      <SelectItem value="bottom">Bottom</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field label="APPLIES TO">
-                  <select value={form.badge_cycle} onChange={(e) => setForm((f) => ({ ...f, badge_cycle: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm">
-                    <option value="all">All cycles</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="lifetime">Lifetime</option>
-                  </select>
+                  <Select value={form.badge_cycle} onValueChange={(val) => setForm((f) => ({ ...f, badge_cycle: val }))}>
+                    <SelectTrigger className="h-10 w-full rounded-xl bg-card border border-border text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All cycles</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                      <SelectItem value="lifetime">Lifetime</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
             </div>

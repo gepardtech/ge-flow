@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllContactSubmissions, markLocalContactSubmissionRead, deleteLocalContactSubmission, ContactSubmissionRecord } from "@/lib/contactService";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
+import { SupportNewsletterTab } from "@/components/admin/SupportNewsletterTab";
 import {
   Search, MessageSquareReply, Megaphone, BookOpen, Users, Bot,
-  LifeBuoy, Eye, Send, Plus, Pencil, Trash2, Loader2, X, Sparkles, Activity, Shield, Clock,
+  LifeBuoy, Eye, Send, Plus, Pencil, Trash2, Loader2, X, Sparkles, Activity, Shield, Clock, Mail, CheckCircle2,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -17,6 +20,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
+import {
+  getLiveAnnouncements,
+  saveLiveAnnouncement,
+  toggleLiveAnnouncementActive,
+  deleteLiveAnnouncement,
+  getLiveCoupons,
+  AnnouncementItem,
+} from "@/lib/promotionsClient";
 
 type Ticket = {
   id: string; ticket_number: string; owner_user_id: string; subject: string;
@@ -55,17 +66,24 @@ const statusClass = (s: string) => ({
 
 const AdminSupport = () => {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") || "tickets";
 
   // ---------- TICKETS ----------
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [contactSubmissions, setContactSubmissions] = useState<ContactSubmissionRecord[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [search, setSearch] = useState("");
   const [statusF, setStatusF] = useState("all");
   const [priorityF, setPriorityF] = useState("all");
 
   const loadTickets = useCallback(async () => {
-    const { data } = await supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
-    const list = (data ?? []) as any[];
+    const [tktRes, contactMsgs] = await Promise.all([
+      supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
+      fetchAllContactSubmissions(),
+    ]);
+    setContactSubmissions(contactMsgs || []);
+    const list = (tktRes.data ?? []) as any[];
     if (list.length === 0) { setTickets([]); setLoadingTickets(false); return; }
     const ids = Array.from(new Set(list.map((t) => t.owner_user_id)));
     const { data: profs } = await supabase.from("profiles").select("user_id, full_name, email, plan").in("user_id", ids);
@@ -82,10 +100,14 @@ const AdminSupport = () => {
   }, []);
 
   // ---------- ANNOUNCEMENTS ----------
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const loadAnnouncements = useCallback(async () => {
-    const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
-    setAnnouncements((data as Announcement[]) ?? []);
+    try {
+      const data = await getLiveAnnouncements();
+      setAnnouncements(data);
+    } catch (err) {
+      console.warn("Failed to load announcements:", err);
+    }
   }, []);
 
   // ---------- KB ----------
@@ -116,8 +138,15 @@ const AdminSupport = () => {
 
   useEffect(() => {
     loadTickets(); loadTemplates(); loadAnnouncements(); loadKb(); loadTeam(); loadAutomation();
-    const ch = supabase.channel("admin_support_rt")
+    const onSubChange = () => loadTickets();
+    const onAnnChange = () => loadAnnouncements();
+    window.addEventListener("geflow:contact-submission-added", onSubChange);
+    window.addEventListener("geflow:contact-submission-updated", onSubChange);
+    window.addEventListener("geflow:contact-submission-deleted", onSubChange);
+    window.addEventListener("geflow:announcements-updated", onAnnChange);
+    const ch = supabase.channel(`admin_support_rt_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets" }, loadTickets)
+      .on("postgres_changes", { event: "*", schema: "public", table: "contact_submissions" }, loadTickets)
       .on("postgres_changes", { event: "*", schema: "public", table: "ticket_messages" }, loadTickets)
       .on("postgres_changes", { event: "*", schema: "public", table: "reply_templates" }, loadTemplates)
       .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, loadAnnouncements)
@@ -125,7 +154,13 @@ const AdminSupport = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "support_team_members" }, loadTeam)
       .on("postgres_changes", { event: "*", schema: "public", table: "support_automation_settings" }, loadAutomation)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      window.removeEventListener("geflow:contact-submission-added", onSubChange);
+      window.removeEventListener("geflow:contact-submission-updated", onSubChange);
+      window.removeEventListener("geflow:contact-submission-deleted", onSubChange);
+      window.removeEventListener("geflow:announcements-updated", onAnnChange);
+      supabase.removeChannel(ch);
+    };
   }, [loadTickets, loadTemplates, loadAnnouncements, loadKb, loadTeam, loadAutomation]);
 
   // KPIs
@@ -157,6 +192,7 @@ const AdminSupport = () => {
 
   // Ticket detail / reply dialog
   const [openTicket, setOpenTicket] = useState<Ticket | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactSubmissionRecord | null>(null);
   const [delTicket, setDelTicket] = useState<Ticket | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -230,9 +266,11 @@ const AdminSupport = () => {
         </button>
       </div>
 
-      <Tabs defaultValue="tickets">
+      <Tabs value={currentTab} onValueChange={(val) => setSearchParams({ tab: val })}>
         <TabsList className="bg-card border border-border rounded-xl p-1.5 inline-flex flex-wrap h-auto gap-1">
           <TabsTrigger value="tickets" className="data-[state=active]:bg-sky-400/15 data-[state=active]:text-sky-500 rounded-lg gap-2 font-bold"><LifeBuoy className="h-4 w-4" /> User Tickets</TabsTrigger>
+          <TabsTrigger value="contacts" className="data-[state=active]:bg-sky-400/15 data-[state=active]:text-sky-500 rounded-lg gap-2 font-bold"><Mail className="h-4 w-4" /> Contact Messages ({contactSubmissions.filter(c => !c.is_read).length})</TabsTrigger>
+          <TabsTrigger value="newsletter" className="data-[state=active]:bg-sky-400/15 data-[state=active]:text-sky-500 rounded-lg gap-2 font-bold"><Mail className="h-4 w-4" /> Newsletter</TabsTrigger>
           <TabsTrigger value="ann" className="rounded-lg gap-2 font-bold"><Megaphone className="h-4 w-4" /> Announcements</TabsTrigger>
           <TabsTrigger value="kb" className="rounded-lg gap-2 font-bold"><BookOpen className="h-4 w-4" /> Knowledge Base</TabsTrigger>
           <TabsTrigger value="team" className="rounded-lg gap-2 font-bold"><Users className="h-4 w-4" /> Support Team</TabsTrigger>
@@ -325,6 +363,96 @@ const AdminSupport = () => {
           </div>
         </TabsContent>
 
+        {/* CONTACT MESSAGES */}
+        <TabsContent value="contacts" className="mt-6">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[10px] font-bold tracking-widest text-muted-foreground border-b border-border bg-muted/20">
+                    <th className="text-left px-6 py-4">SENDER</th>
+                    <th className="text-left px-4 py-4">MESSAGE PREVIEW</th>
+                    <th className="text-center px-4 py-4">STATUS</th>
+                    <th className="text-center px-4 py-4">RECEIVED</th>
+                    <th className="text-right px-6 py-4">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contactSubmissions.length === 0 ? (
+                    <tr><td colSpan={5} className="p-12 text-center text-muted-foreground">No contact messages received yet.</td></tr>
+                  ) : contactSubmissions.filter((c) => {
+                    if (!search) return true;
+                    const q = search.toLowerCase();
+                    return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.message.toLowerCase().includes(q);
+                  }).map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-sky-400/15 text-sky-500 flex items-center justify-center font-bold text-xs">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold flex items-center gap-1.5">
+                              {c.name}
+                              {!c.is_read && <span className="h-2 w-2 rounded-full bg-sky-500 inline-block" />}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{c.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 max-w-md">
+                        <p className="text-sm line-clamp-2 text-foreground font-medium">{c.message}</p>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${
+                          c.is_read ? "bg-muted text-muted-foreground" : "bg-sky-500 text-white"
+                        }`}>
+                          {c.is_read ? "Read" : "New"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-center text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(c.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedContact(c);
+                              markLocalContactSubmissionRead(c.id, true);
+                              supabase.from("contact_submissions").update({ is_read: true }).eq("id", c.id);
+                              loadTickets();
+                            }}
+                            className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-sky-400/15 text-sky-500 hover:bg-sky-400/25"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Read
+                          </button>
+                          <button
+                            onClick={async () => {
+                              deleteLocalContactSubmission(c.id);
+                              await supabase.from("contact_submissions").delete().eq("id", c.id);
+                              toast({ title: "Message removed" });
+                              loadTickets();
+                            }}
+                            title="Delete message"
+                            className="h-8 w-8 rounded-lg hover:bg-rose-500/10 text-rose-500 inline-flex items-center justify-center"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* NEWSLETTER */}
+        <TabsContent value="newsletter" className="mt-6">
+          <SupportNewsletterTab />
+        </TabsContent>
+
         {/* ANNOUNCEMENTS */}
         <TabsContent value="ann" className="mt-6">
           <AnnouncementsManager items={announcements} onChange={loadAnnouncements} openCreate={() => setAnnOpen(true)} />
@@ -386,6 +514,48 @@ const AdminSupport = () => {
       <TemplatesDialog open={tplOpen} onOpenChange={setTplOpen} templates={templates} onChange={loadTemplates} />
       <AnnouncementDialog open={annOpen} onOpenChange={setAnnOpen} onSaved={loadAnnouncements} />
       <TicketDialog open={!!openTicket} ticket={openTicket} templates={templates} onOpenChange={(o) => !o && setOpenTicket(null)} onUpdated={loadTickets} />
+
+      <Dialog open={!!selectedContact} onOpenChange={(o) => !o && setSelectedContact(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-sky-400" />
+              Contact Message from {selectedContact?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Received on {selectedContact?.created_at ? new Date(selectedContact.created_at).toLocaleString() : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 bg-muted/40 rounded-xl border border-border flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Sender Email</p>
+                <p className="font-semibold text-sm">{selectedContact?.email}</p>
+              </div>
+              <a
+                href={`mailto:${selectedContact?.email}?subject=Regarding your message to GEFLOW`}
+                className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold inline-flex items-center gap-1.5"
+              >
+                <Mail className="h-3.5 w-3.5" /> Reply by Email
+              </a>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Message Content</p>
+              <div className="p-4 rounded-xl bg-card border border-border text-sm leading-relaxed whitespace-pre-wrap">
+                {selectedContact?.message}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setSelectedContact(null)}
+              className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-semibold"
+            >
+              Close
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!delTicket} onOpenChange={(o) => !o && setDelTicket(null)}>
         <AlertDialogContent>
@@ -500,55 +670,314 @@ const TemplatesDialog = ({ open, onOpenChange, templates, onChange }: any) => {
 // ---------- ANNOUNCEMENT DIALOG ----------
 const AnnouncementDialog = ({ open, onOpenChange, onSaved, edit }: any) => {
   const { toast } = useToast();
-  const [form, setForm] = useState<any>({ title: "", body: "", audience: "all", position: "top", variant: "info", link_url: "", link_label: "", starts_at: new Date().toISOString().slice(0, 16), ends_at: "", is_active: true });
+  const [form, setForm] = useState<any>({
+    title: "",
+    body: "",
+    audience: "all",
+    position: "top",
+    variant: "info",
+    link_url: "",
+    link_label: "",
+    coupon_code: "",
+    starts_at: new Date().toISOString().slice(0, 16),
+    ends_at: "",
+    is_active: true,
+  });
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+
   useEffect(() => {
-    if (edit) setForm({
-      title: edit.title, body: edit.body, audience: edit.audience, position: edit.position, variant: edit.variant,
-      link_url: edit.link_url ?? "", link_label: edit.link_label ?? "",
-      starts_at: edit.starts_at?.slice(0, 16) ?? "", ends_at: edit.ends_at?.slice(0, 16) ?? "", is_active: edit.is_active,
+    if (!open) return;
+    getLiveCoupons().then((all) => {
+      const activeCoupons = (all || []).filter((c) => c.active);
+      setAvailableCoupons(activeCoupons);
     });
-    else setForm({ title: "", body: "", audience: "all", position: "top", variant: "info", link_url: "", link_label: "", starts_at: new Date().toISOString().slice(0, 16), ends_at: "", is_active: true });
+  }, [open]);
+
+  useEffect(() => {
+    if (edit) {
+      // Extract coupon code from url or text if available
+      let detectedCoupon = "";
+      if (edit.link_url) {
+        try {
+          const u = new URL(edit.link_url, window.location.origin);
+          detectedCoupon = u.searchParams.get("coupon") || u.searchParams.get("code") || "";
+        } catch {
+          const match = edit.link_url.match(/[?&](?:coupon|code)=([^&#]+)/i);
+          if (match) detectedCoupon = decodeURIComponent(match[1]);
+        }
+      }
+      setForm({
+        title: edit.title,
+        body: edit.body,
+        audience: edit.audience,
+        position: edit.position,
+        variant: edit.variant,
+        link_url: edit.link_url ?? "",
+        link_label: edit.link_label ?? "",
+        coupon_code: detectedCoupon,
+        starts_at: edit.starts_at?.slice(0, 16) ?? "",
+        ends_at: edit.ends_at?.slice(0, 16) ?? "",
+        is_active: edit.is_active,
+      });
+    } else {
+      setForm({
+        title: "",
+        body: "",
+        audience: "all",
+        position: "top",
+        variant: "promo",
+        link_url: "",
+        link_label: "",
+        coupon_code: "",
+        starts_at: new Date().toISOString().slice(0, 16),
+        ends_at: "",
+        is_active: true,
+      });
+    }
   }, [edit, open]);
+
+  const handleApplyCouponToLink = (couponCode: string, targetPlan: string = "premium") => {
+    const cleanCode = couponCode.trim().toUpperCase();
+    const targetUrl = `/checkout?plan=${targetPlan}&coupon=${encodeURIComponent(cleanCode)}`;
+    setForm((f: any) => ({
+      ...f,
+      coupon_code: cleanCode,
+      variant: "promo",
+      link_url: targetUrl,
+      link_label: f.link_label || `Claim ${cleanCode} Discount`,
+      body: f.body || `Special discount! Use code ${cleanCode} at checkout to save instantly.`,
+    }));
+  };
+
   const save = async () => {
-    if (!form.title.trim() || !form.body.trim()) { toast({ title: "Title & body required", variant: "destructive" }); return; }
+    if (!form.title.trim() || !form.body.trim()) {
+      toast({ title: "Title & body required", variant: "destructive" });
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    let finalLinkUrl = form.link_url?.trim() || null;
+    const cleanCoupon = form.coupon_code?.trim().toUpperCase();
+
+    // Ensure coupon parameter is embedded in link_url if coupon code is specified
+    if (finalLinkUrl && cleanCoupon) {
+      try {
+        const hasCoupon = /[?&](?:coupon|code)=/i.test(finalLinkUrl);
+        if (!hasCoupon) {
+          finalLinkUrl += (finalLinkUrl.includes("?") ? "&" : "?") + `coupon=${encodeURIComponent(cleanCoupon)}`;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     const payload = {
-      title: form.title.trim(), body: form.body.trim(), audience: form.audience, position: form.position, variant: form.variant,
-      link_url: form.link_url || null, link_label: form.link_label || null,
+      title: form.title.trim(),
+      body: form.body.trim(),
+      audience: form.audience,
+      position: form.position,
+      variant: form.variant,
+      link_url: finalLinkUrl,
+      link_label: form.link_label?.trim() || null,
       starts_at: new Date(form.starts_at).toISOString(),
       ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-      is_active: form.is_active, created_by_user_id: user.id,
+      is_active: form.is_active,
+      created_by_user_id: user.id,
     };
-    let error;
-    if (edit) ({ error } = await supabase.from("announcements").update(payload).eq("id", edit.id));
-    else ({ error } = await supabase.from("announcements").insert(payload));
-    if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
-    toast({ title: edit ? "Announcement updated" : "Announcement scheduled" });
-    onSaved(); onOpenChange(false);
+
+    const res = await saveLiveAnnouncement(payload, edit?.id);
+    if (res.error) {
+      toast({ title: "Save failed", description: res.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: edit ? "Announcement updated" : "Announcement published" });
+    onSaved();
+    onOpenChange(false);
   };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader><DialogTitle>{edit ? "Edit Announcement" : "New Announcement"}</DialogTitle><DialogDescription>Slide-style banner shown across selected audiences.</DialogDescription></DialogHeader>
-        <div className="space-y-3">
-          <Lab label="TITLE"><input value={form.title} onChange={(e) => setForm((f: any) => ({ ...f, title: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Lab>
-          <Lab label="BODY"><textarea rows={3} value={form.body} onChange={(e) => setForm((f: any) => ({ ...f, body: e.target.value }))} className="w-full p-3 bg-muted/40 rounded-lg text-sm" /></Lab>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{edit ? "Edit Announcement" : "New Announcement"}</DialogTitle>
+          <DialogDescription>
+            Slide-style banner shown across selected audiences with automatic coupon auto-apply at checkout.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3.5">
+          <Lab label="TITLE">
+            <input
+              value={form.title}
+              onChange={(e) => setForm((f: any) => ({ ...f, title: e.target.value }))}
+              placeholder="e.g. Flash Sale: 20% Off All Plans!"
+              className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+            />
+          </Lab>
+
+          <Lab label="BODY / DISCOUNT DESCRIPTION">
+            <textarea
+              rows={3}
+              value={form.body}
+              onChange={(e) => setForm((f: any) => ({ ...f, body: e.target.value }))}
+              placeholder="Describe the promotion or offer. Mention your coupon code here."
+              className="w-full p-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+            />
+          </Lab>
+
+          {/* Dedicated Promo Coupon Integration */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                🎫 Attach Promo Coupon (Auto-Applied on Checkout)
+              </span>
+              {availableCoupons.length > 0 && (
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {availableCoupons.length} Active coupon(s)
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1 font-bold">TYPE OR SELECT COUPON</p>
+                <div className="flex gap-1.5">
+                  <input
+                    value={form.coupon_code}
+                    onChange={(e) => setForm((f: any) => ({ ...f, coupon_code: e.target.value.toUpperCase() }))}
+                    placeholder="e.g. SUMMER50"
+                    className="h-9 w-full px-3 bg-background rounded-lg text-xs font-mono font-bold uppercase border border-border/70"
+                  />
+                  {availableCoupons.length > 0 && (
+                    <Select
+                      onValueChange={(val) => {
+                        handleApplyCouponToLink(val, "premium");
+                      }}
+                    >
+                      <SelectTrigger className="h-9 w-28 bg-background text-xs border border-border/70">
+                        <SelectValue placeholder="Pick..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCoupons.map((c) => (
+                          <SelectItem key={c.id} value={c.code} className="text-xs">
+                            {c.code} ({c.discount_type === "percent" ? `${c.discount_value}%` : `$${c.discount_value}`})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1 font-bold">QUICK TARGET CHECKOUT LINK</p>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[11px] font-bold flex-1 bg-background"
+                    onClick={() => handleApplyCouponToLink(form.coupon_code || "PROMO", "standard")}
+                  >
+                    Standard Plan
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[11px] font-bold flex-1 bg-background"
+                    onClick={() => handleApplyCouponToLink(form.coupon_code || "PROMO", "premium")}
+                  >
+                    Premium Plan
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              When a user clicks this announcement's CTA, they are automatically redirected to checkout and this coupon is auto-filled and validated immediately.
+            </p>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
-            <Lab label="AUDIENCE"><Select value={form.audience} onValueChange={(v) => setForm((f: any) => ({ ...f, audience: v }))}><SelectTrigger className="h-10 bg-muted/40 border-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem><SelectItem value="public">Public Site</SelectItem><SelectItem value="users">User Panel</SelectItem><SelectItem value="admins">Admin Panel</SelectItem></SelectContent></Select></Lab>
-            <Lab label="POSITION"><Select value={form.position} onValueChange={(v) => setForm((f: any) => ({ ...f, position: v }))}><SelectTrigger className="h-10 bg-muted/40 border-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="top">Top</SelectItem><SelectItem value="bottom">Bottom</SelectItem></SelectContent></Select></Lab>
-            <Lab label="VARIANT"><Select value={form.variant} onValueChange={(v) => setForm((f: any) => ({ ...f, variant: v }))}><SelectTrigger className="h-10 bg-muted/40 border-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="info">Info</SelectItem><SelectItem value="success">Success</SelectItem><SelectItem value="warning">Warning</SelectItem><SelectItem value="promo">Promo</SelectItem></SelectContent></Select></Lab>
+            <Lab label="AUDIENCE">
+              <Select value={form.audience} onValueChange={(v) => setForm((f: any) => ({ ...f, audience: v }))}>
+                <SelectTrigger className="h-10 bg-muted/40 border border-border/60"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="public">Public Site</SelectItem>
+                  <SelectItem value="users">User Panel</SelectItem>
+                  <SelectItem value="admins">Admin Panel</SelectItem>
+                </SelectContent>
+              </Select>
+            </Lab>
+            <Lab label="POSITION">
+              <Select value={form.position} onValueChange={(v) => setForm((f: any) => ({ ...f, position: v }))}>
+                <SelectTrigger className="h-10 bg-muted/40 border border-border/60"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="top">Top</SelectItem>
+                  <SelectItem value="bottom">Bottom</SelectItem>
+                </SelectContent>
+              </Select>
+            </Lab>
+            <Lab label="VARIANT">
+              <Select value={form.variant} onValueChange={(v) => setForm((f: any) => ({ ...f, variant: v }))}>
+                <SelectTrigger className="h-10 bg-muted/40 border border-border/60"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="promo">Promo (Discount)</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="success">Success</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                </SelectContent>
+              </Select>
+            </Lab>
           </div>
+
           <div className="grid grid-cols-2 gap-2">
-            <Lab label="LINK URL"><input value={form.link_url} onChange={(e) => setForm((f: any) => ({ ...f, link_url: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Lab>
-            <Lab label="LINK LABEL"><input value={form.link_label} onChange={(e) => setForm((f: any) => ({ ...f, link_label: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Lab>
+            <Lab label="TARGET LINK URL (with ?coupon=...)">
+              <input
+                value={form.link_url}
+                onChange={(e) => setForm((f: any) => ({ ...f, link_url: e.target.value }))}
+                placeholder="/checkout?plan=premium&coupon=CODE"
+                className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+              />
+            </Lab>
+            <Lab label="CTA BUTTON LABEL">
+              <input
+                value={form.link_label}
+                onChange={(e) => setForm((f: any) => ({ ...f, link_label: e.target.value }))}
+                placeholder="e.g. Claim Discount Now"
+                className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+              />
+            </Lab>
           </div>
+
           <div className="grid grid-cols-2 gap-2">
-            <Lab label="STARTS AT"><input type="datetime-local" value={form.starts_at} onChange={(e) => setForm((f: any) => ({ ...f, starts_at: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Lab>
-            <Lab label="ENDS AT (optional)"><input type="datetime-local" value={form.ends_at} onChange={(e) => setForm((f: any) => ({ ...f, ends_at: e.target.value }))} className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm" /></Lab>
+            <Lab label="STARTS AT">
+              <input
+                type="datetime-local"
+                value={form.starts_at}
+                onChange={(e) => setForm((f: any) => ({ ...f, starts_at: e.target.value }))}
+                className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+              />
+            </Lab>
+            <Lab label="ENDS AT (optional)">
+              <input
+                type="datetime-local"
+                value={form.ends_at}
+                onChange={(e) => setForm((f: any) => ({ ...f, ends_at: e.target.value }))}
+                className="h-10 w-full px-3 bg-muted/40 rounded-lg text-sm border border-border/60"
+              />
+            </Lab>
           </div>
-          <label className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm((f: any) => ({ ...f, is_active: v }))} /><span className="text-xs font-bold">Active</span></label>
-          <Button onClick={save} className="w-full bg-sky-400 hover:bg-sky-500 text-white">{edit ? "Save Changes" : "Schedule Announcement"}</Button>
+
+          <label className="flex items-center gap-2 pt-1 cursor-pointer">
+            <Switch checked={form.is_active} onCheckedChange={(v) => setForm((f: any) => ({ ...f, is_active: v }))} />
+            <span className="text-xs font-bold">Active Announcement</span>
+          </label>
+
+          <Button onClick={save} className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold h-11 rounded-xl">
+            {edit ? "Save Changes" : "Publish Announcement"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -719,17 +1148,27 @@ const Row = ({ k, v }: { k: string; v: string }) => (
 // ---------- ANNOUNCEMENTS MANAGER ----------
 const AnnouncementsManager = ({ items, onChange, openCreate }: any) => {
   const { toast } = useToast();
-  const [edit, setEdit] = useState<Announcement | null>(null);
+  const [edit, setEdit] = useState<AnnouncementItem | null>(null);
   const del = async (id: string) => {
-    const { error } = await supabase.from("announcements").delete().eq("id", id);
-    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
-    onChange(); toast({ title: "Deleted" });
+    const res = await deleteLiveAnnouncement(id);
+    if (res.error) {
+      toast({ title: "Delete failed", description: res.error, variant: "destructive" });
+      return;
+    }
+    onChange();
+    toast({ title: "Announcement deleted", description: "Removed permanently from the site." });
   };
-  const toggle = async (a: Announcement) => {
+  const toggle = async (a: AnnouncementItem) => {
     const next = !a.is_active;
-    const { error } = await supabase.from("announcements").update({ is_active: next }).eq("id", a.id);
-    if (error) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); return; }
-    toast({ title: next ? "Announcement activated" : "Announcement paused" });
+    const res = await toggleLiveAnnouncementActive(a.id, next);
+    if (res.error) {
+      toast({ title: "Update failed", description: res.error, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: next ? "Announcement Activated" : "Announcement Inactivated",
+      description: next ? "Banner is now live on selected pages." : "Banner has been inactivated and hidden from all users.",
+    });
     onChange();
   };
   return (

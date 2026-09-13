@@ -27,21 +27,23 @@ const UserPurchases = () => {
   const [rows, setRows] = useState<PurchaseRecord[]>([]);
   const [products, setProducts] = useState<PurchaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [userId, setUserId] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [architectOpen, setArchitectOpen] = useState(false);
   const [ledger, setLedger] = useState<PurchaseRecord | null>(null);
   const [deleteRow, setDeleteRow] = useState<PurchaseRecord | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!active) { setLoading(false); return; }
     setLoading(true);
-    const [{ data: pr }, { data: pd }] = await Promise.all([
-      supabase.from("purchases").select("*").eq("business_id", active.id).order("created_at", { ascending: false }),
-      supabase.from("products").select("id, name, stock_units, purchase_cost, retail_price").eq("business_id", active.id).eq("status", "active").order("name"),
-    ]);
+    let pdRes = await supabase.from("products").select("id, name, description, stock_units, purchase_cost, retail_price, uom, units_per_uom, base_unit").eq("business_id", active.id).eq("status", "active").order("name");
+    if (pdRes.error) {
+      pdRes = await supabase.from("products").select("id, name, description, stock_units, purchase_cost, retail_price").eq("business_id", active.id).eq("status", "active").order("name");
+    }
+    const { data: pr } = await supabase.from("purchases").select("*").eq("business_id", active.id).order("created_at", { ascending: false });
+    const pd = pdRes.data;
     setRows((pr as PurchaseRecord[]) ?? []);
     setProducts((pd as PurchaseProduct[]) ?? []);
     setLoading(false);
@@ -250,6 +252,7 @@ const UserPurchases = () => {
           onSaved={load}
         />
       )}
+
       <PurchaseLedgerDialog
         purchase={ledger}
         onOpenChange={(v) => !v && setLedger(null)}

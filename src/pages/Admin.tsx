@@ -1,16 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllContactSubmissions, ContactSubmissionRecord } from "@/lib/contactService";
 import { useToast } from "@/hooks/use-toast";
 import PanelLayout from "@/components/PanelLayout";
 import ExportReportDialog from "@/components/ExportReportDialog";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import {
-  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, Building2, CreditCard
+  Activity, Users, Monitor, Zap, MessageSquare, DollarSign, Building2, CreditCard, ScrollText, ShieldCheck
 } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
-interface ContactSubmission { id: string; name: string; email: string; message: string; is_read: boolean; created_at: string; }
+type ContactSubmission = ContactSubmissionRecord;
 interface UserRow { user_id: string; full_name: string | null; email: string | null; plan: string; usage: number; listed_products: number; last_active: string; created_at: string; }
 interface BusinessRow { id: string; business_name: string; owner_user_id: string; listed_products: number; usage: number; created_at: string; }
 
@@ -57,14 +58,62 @@ const Admin = () => {
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    const [{ data: sub }, { data: prof }, { data: biz }] = await Promise.all([
-      supabase.from("contact_submissions").select("*").order("created_at", { ascending: false }),
+    const [sub, { data: prof }, { data: biz }, { data: prodRows }] = await Promise.all([
+      fetchAllContactSubmissions(),
       supabase.from("profiles").select("user_id, full_name, email, plan, usage, listed_products, last_active, created_at").order("created_at", { ascending: false }),
       supabase.from("businesses").select("id, business_name, owner_user_id, listed_products, usage, created_at"),
+      supabase.from("products").select("id, business_id, owner_user_id"),
     ]);
-    setSubmissions((sub as ContactSubmission[]) || []);
-    setUsers((prof as UserRow[]) || []);
-    setBusinesses((biz as BusinessRow[]) || []);
+
+    const bizToOwner: Record<string, string> = {};
+    const ownerBizListedSum: Record<string, number> = {};
+    const bizProdCounts: Record<string, number> = {};
+
+    (biz ?? []).forEach((b: any) => {
+      if (b.owner_user_id) {
+        bizToOwner[b.id] = b.owner_user_id;
+        if (b.listed_products) {
+          ownerBizListedSum[b.owner_user_id] = (ownerBizListedSum[b.owner_user_id] || 0) + Number(b.listed_products);
+        }
+      }
+    });
+
+    const userProductCounts: Record<string, number> = {};
+    (prodRows ?? []).forEach((p: any) => {
+      if (p.business_id) {
+        bizProdCounts[p.business_id] = (bizProdCounts[p.business_id] || 0) + 1;
+      }
+      let ownerId = p.owner_user_id;
+      if (!ownerId && p.business_id && bizToOwner[p.business_id]) {
+        ownerId = bizToOwner[p.business_id];
+      }
+      if (ownerId) {
+        userProductCounts[ownerId] = (userProductCounts[ownerId] || 0) + 1;
+      }
+    });
+
+    const enrichedProf: UserRow[] = ((prof as UserRow[]) || []).map((p) => {
+      const directCount = userProductCounts[p.user_id] || 0;
+      const bizSumCount = ownerBizListedSum[p.user_id] || 0;
+      const profileCount = Number(p.listed_products) || 0;
+      return {
+        ...p,
+        listed_products: Math.max(directCount, bizSumCount, profileCount),
+      };
+    });
+
+    const enrichedBiz: BusinessRow[] = ((biz as BusinessRow[]) || []).map((b) => {
+      const directCount = bizProdCounts[b.id] || 0;
+      const recordedCount = Number(b.listed_products) || 0;
+      return {
+        ...b,
+        listed_products: Math.max(directCount, recordedCount),
+      };
+    });
+
+    setSubmissions(sub || []);
+    setUsers(enrichedProf);
+    setBusinesses(enrichedBiz);
     setLoading(false);
   }, []);
 
@@ -90,14 +139,21 @@ const Admin = () => {
     if (!isAdmin) return;
     const onRefresh = () => loadData();
     window.addEventListener("panel:refresh", onRefresh);
+    window.addEventListener("geflow:contact-submission-added", onRefresh);
+    window.addEventListener("geflow:contact-submission-updated", onRefresh);
+    window.addEventListener("geflow:contact-submission-deleted", onRefresh);
     const channel = supabase
-      .channel("admin_realtime")
+      .channel(`admin_realtime_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadData)
       .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, loadData)
       .on("postgres_changes", { event: "*", schema: "public", table: "contact_submissions" }, loadData)
       .subscribe();
     return () => {
       window.removeEventListener("panel:refresh", onRefresh);
+      window.removeEventListener("geflow:contact-submission-added", onRefresh);
+      window.removeEventListener("geflow:contact-submission-updated", onRefresh);
+      window.removeEventListener("geflow:contact-submission-deleted", onRefresh);
       supabase.removeChannel(channel);
     };
   }, [isAdmin, loadData]);
@@ -317,6 +373,42 @@ const Admin = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Live System & Audit Logs Bar */}
+      <div
+        onClick={() => navigate("/admin/logs")}
+        role="button"
+        tabIndex={0}
+        className="mt-6 bg-gradient-to-r from-sky-500/10 via-primary/5 to-purple-500/10 border border-primary/20 rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/10 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+            <ScrollText className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-sm text-foreground">Real-Time Platform & Security Logs</h3>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                LIVE AUDIT
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Inspect AI inferences, billing & payments, user authentication, security WAF mitigations, and runtime exceptions.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate("/admin/logs");
+          }}
+          className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 flex-shrink-0 bg-background px-3 py-1.5 rounded-xl border border-border shadow-2xs"
+        >
+          Open Logs Console →
+        </button>
       </div>
 
       {!loading && submissions.length > 0 && (
