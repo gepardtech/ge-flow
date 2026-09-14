@@ -5,7 +5,7 @@
  * Prevents cross-tenant leaks of inventory, catalog structures, or AI queries.
  */
 
-import { Request } from "express";
+
 import { AIServiceError } from "./errors.ts";
 
 export interface AuthenticatedUserContext {
