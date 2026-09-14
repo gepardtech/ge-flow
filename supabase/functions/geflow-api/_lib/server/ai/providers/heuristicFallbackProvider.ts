@@ -10,8 +10,8 @@ import {
   AIAnalysisRequest,
   AIVerificationRequest,
   AIProviderResponse,
-} from "../types";
-import { analyzeProductInput } from "@/lib/ai/productIntelligenceEngine";
+} from "../types.ts";
+import { analyzeProductInput } from "../../../client/lib/ai/productIntelligenceEngine.ts";
 
 export class HeuristicFallbackProvider implements AIProviderInterface {
   public readonly name = "heuristic_fallback" as const;

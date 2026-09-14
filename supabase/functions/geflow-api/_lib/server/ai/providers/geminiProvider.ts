@@ -6,14 +6,14 @@
  * Focuses on fast, deep product extraction and categorization.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from "npm:@google/genai@1.29.0";
 import {
   AIProviderInterface,
   AIAnalysisRequest,
   AIVerificationRequest,
   AIProviderResponse,
-} from "../types";
-import { AIServiceError } from "../errors";
+} from "../types.ts";
+import { AIServiceError } from "../errors.ts";
 
 let geminiClient: GoogleGenAI | null = null;
 

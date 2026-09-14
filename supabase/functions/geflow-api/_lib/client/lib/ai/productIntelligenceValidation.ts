@@ -13,13 +13,13 @@ import {
   ValidationResult,
   ValidationError,
   ValidationWarning,
-} from "@/types/aiProductIntelligence";
+} from "../../types/aiProductIntelligence.ts";
 import {
   STANDARD_STOCK_UNITS,
   CONFIDENCE_THRESHOLDS,
   calculateConfidenceLevel,
-} from "./productIntelligenceContract";
-import { evaluateProductSuggestionConfidence } from "./confidenceEvaluator";
+} from "./productIntelligenceContract.ts";
+import { evaluateProductSuggestionConfidence } from "./confidenceEvaluator.ts";
 
 /**
  * Validates and sanitizes a ProductSuggestion against the authoritative business catalog

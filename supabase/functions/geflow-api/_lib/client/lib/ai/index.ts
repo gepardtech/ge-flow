@@ -2,9 +2,9 @@
  * GEFLOW AI — PRODUCT INTELLIGENCE MODULE EXPORTS (PHASE 2)
  */
 
-export * from "@/types/aiProductIntelligence";
-export * from "./productIntelligenceContract";
-export * from "./productIntelligenceValidation";
-export * from "./productIntelligenceNormalization";
-export * from "./confidenceThresholds";
-export * from "./confidenceEvaluator";
+export * from "../../types/aiProductIntelligence.ts";
+export * from "./productIntelligenceContract.ts";
+export * from "./productIntelligenceValidation.ts";
+export * from "./productIntelligenceNormalization.ts";
+export * from "./confidenceThresholds.ts";
+export * from "./confidenceEvaluator.ts";

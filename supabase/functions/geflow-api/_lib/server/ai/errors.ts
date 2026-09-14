@@ -2,7 +2,7 @@
  * GEFLOW AI — ERROR HANDLING & ERROR NORMALIZATION (PHASE 3)
  */
 
-import { AIErrorCode } from "./types";
+import { AIErrorCode } from "./types.ts";
 
 export class AIServiceError extends Error {
   public readonly code: AIErrorCode;

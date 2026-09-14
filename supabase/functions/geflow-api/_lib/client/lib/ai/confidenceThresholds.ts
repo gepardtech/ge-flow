@@ -5,7 +5,7 @@
  * Never hardcoded in UI components or business logic.
  */
 
-import { ConfidenceLevel } from "@/types/aiProductIntelligence";
+import { ConfidenceLevel } from "../../types/aiProductIntelligence.ts";
 
 export const CONFIDENCE_THRESHOLDS = {
   /**

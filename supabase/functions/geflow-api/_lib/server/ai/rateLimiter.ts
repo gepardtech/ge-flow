@@ -4,7 +4,7 @@
  * Sliding-window rate limiter per user and per business to prevent API abuse.
  */
 
-import { AIServiceError } from "./errors";
+import { AIServiceError } from "./errors.ts";
 
 interface RateLimitBucket {
   timestamps: number[];

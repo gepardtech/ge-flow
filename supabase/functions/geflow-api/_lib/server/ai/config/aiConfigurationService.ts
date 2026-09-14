@@ -6,15 +6,15 @@
  * task routing rules, and safe administrative views.
  */
 
-import { AIProviderType, AITaskType } from "../types";
+import { AIProviderType, AITaskType } from "../types.ts";
 import {
   AIProviderRecord,
   AIModelRecord,
   ProviderHealthStatus,
   ProviderConfigurationView,
   TaskRoutingConfig,
-} from "@/types/aiConfiguration";
-import { credentialService } from "./credentialService";
+} from "../../../client/types/aiConfiguration.ts";
+import { credentialService } from "./credentialService.ts";
 
 export class AIConfigurationService {
   private static instance: AIConfigurationService;

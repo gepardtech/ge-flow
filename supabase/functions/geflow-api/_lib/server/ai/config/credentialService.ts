@@ -5,7 +5,7 @@
  * Never leaks raw secrets to client bundles, frontend network calls, or loggers.
  */
 
-import { AIProviderType } from "../types";
+import { AIProviderType } from "../types.ts";
 
 export interface CredentialStatus {
   isConfigured: boolean;

@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "../../kvfs.ts";
+import path from "node:path";
 
 export function isFakeOrDemoProduct(p: any): boolean {
   if (!p) return false;

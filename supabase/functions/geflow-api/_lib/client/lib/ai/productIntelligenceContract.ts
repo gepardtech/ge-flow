@@ -11,7 +11,7 @@ import {
   UOMContract,
   ProductAttributes,
   ConfidenceLevel,
-} from "@/types/aiProductIntelligence";
+} from "../../types/aiProductIntelligence.ts";
 
 /**
  * Baseline Standard UOM catalogs across retail, pharma, FMCG, and general inventory
@@ -44,8 +44,8 @@ export const STANDARD_STOCK_UNITS = [
   "meter",
 ] as const;
 
-export { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds";
-import { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds";
+export { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds.ts";
+import { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds.ts";
 
 /**
  * Map numerical confidence to standard human-readable tier

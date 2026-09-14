@@ -5,8 +5,8 @@
  * Enforces strict multi-tenant isolation and guarantees no credentials or raw sensitive prompts are stored.
  */
 
-import { AITaskType, AIProviderType } from "../types";
-import { APIUsageSummary } from "@/types/aiConfiguration";
+import { AITaskType, AIProviderType } from "../types.ts";
+import { APIUsageSummary } from "../../../client/types/aiConfiguration.ts";
 
 export interface LogRequestParams {
   requestId: string;

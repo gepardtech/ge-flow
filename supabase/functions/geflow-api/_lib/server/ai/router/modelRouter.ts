@@ -14,14 +14,14 @@ import {
   AIProviderResponse,
   AIProviderType,
   AITaskType,
-} from "../types";
-import { GeminiProvider } from "../providers/geminiProvider";
-import { OpenAIProvider } from "../providers/openaiProvider";
-import { OpenRouterProvider } from "../providers/openrouterProvider";
-import { HeuristicFallbackProvider } from "../providers/heuristicFallbackProvider";
-import { aiConfigurationService } from "../config/aiConfigurationService";
-import { usageLogger } from "../usage/usageLogger";
-import { AIServiceError, sanitizeError } from "../errors";
+} from "../types.ts";
+import { GeminiProvider } from "../providers/geminiProvider.ts";
+import { OpenAIProvider } from "../providers/openaiProvider.ts";
+import { OpenRouterProvider } from "../providers/openrouterProvider.ts";
+import { HeuristicFallbackProvider } from "../providers/heuristicFallbackProvider.ts";
+import { aiConfigurationService } from "../config/aiConfigurationService.ts";
+import { usageLogger } from "../usage/usageLogger.ts";
+import { AIServiceError, sanitizeError } from "../errors.ts";
 
 export interface RouterConfig {
   maxRetriesPerProvider?: number;

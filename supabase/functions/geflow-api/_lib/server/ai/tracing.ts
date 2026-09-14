@@ -5,7 +5,7 @@
  * Never logs API keys, user secrets, or raw prompt dumps.
  */
 
-import { TraceRecord, AITaskType } from "./types";
+import { TraceRecord, AITaskType } from "./types.ts";
 
 const memoryTraces: TraceRecord[] = [];
 const MAX_MEMORY_TRACES = 200;

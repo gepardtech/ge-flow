@@ -8,15 +8,15 @@
  * (NEVER saves records to the database!)
  */
 
-import { ProductSuggestion, CategoryValidationContext } from "@/types/aiProductIntelligence";
-import { validateProductSuggestion } from "@/lib/ai/productIntelligenceValidation";
-import { AIAnalysisRequest } from "../types";
-import { ModelRouter } from "../router/modelRouter";
-import { ProductVerifier } from "../verifier/productVerifier";
-import { normalizeProviderOutput } from "../normalizers/responseNormalizer";
-import { AIServiceError } from "../errors";
-import { logTrace } from "../tracing";
-import { enforceRateLimit } from "../rateLimiter";
+import { ProductSuggestion, CategoryValidationContext } from "../../../client/types/aiProductIntelligence.ts";
+import { validateProductSuggestion } from "../../../client/lib/ai/productIntelligenceValidation.ts";
+import { AIAnalysisRequest } from "../types.ts";
+import { ModelRouter } from "../router/modelRouter.ts";
+import { ProductVerifier } from "../verifier/productVerifier.ts";
+import { normalizeProviderOutput } from "../normalizers/responseNormalizer.ts";
+import { AIServiceError } from "../errors.ts";
+import { logTrace } from "../tracing.ts";
+import { enforceRateLimit } from "../rateLimiter.ts";
 
 export class ProductAnalyzer {
   constructor(

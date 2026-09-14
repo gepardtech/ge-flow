@@ -11,8 +11,8 @@ import {
   AIAnalysisRequest,
   AIVerificationRequest,
   AIProviderResponse,
-} from "../types";
-import { AIServiceError } from "../errors";
+} from "../types.ts";
+import { AIServiceError } from "../errors.ts";
 
 export class OpenAIProvider implements AIProviderInterface {
   public readonly name = "openai" as const;

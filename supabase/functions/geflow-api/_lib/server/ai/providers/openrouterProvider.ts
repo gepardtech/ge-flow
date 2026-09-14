@@ -12,8 +12,8 @@ import {
   AIAnalysisRequest,
   AIVerificationRequest,
   AIProviderResponse,
-} from "../types";
-import { AIServiceError } from "../errors";
+} from "../types.ts";
+import { AIServiceError } from "../errors.ts";
 
 function extractJsonFromContent(content: string): any {
   if (!content || typeof content !== "string") {

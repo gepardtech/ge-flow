@@ -5,7 +5,7 @@
  * Strictly guarantees that raw secret API keys are never included in client schemas.
  */
 
-import { AIProviderType, AITaskType, AIErrorCode } from "@/server/ai/types";
+import { AIProviderType, AITaskType, AIErrorCode } from "../../server/ai/types.ts";
 
 export type ProviderTypeEnum = "model_provider" | "model_router";
 

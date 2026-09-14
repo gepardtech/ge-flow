@@ -17,15 +17,15 @@ import {
   ConfidenceLevel,
   FieldVerificationDetail,
   DetailedProductVerification,
-} from "@/types/aiProductIntelligence";
+} from "../../../client/types/aiProductIntelligence.ts";
 import {
   AIVerificationRequest,
   AIVerificationResult,
   BusinessCatalogContext,
-} from "../types";
-import { ModelRouter } from "../router/modelRouter";
-import { logTrace } from "../tracing";
-import { STANDARD_STOCK_UNITS } from "@/lib/ai/productIntelligenceContract";
+} from "../types.ts";
+import { ModelRouter } from "../router/modelRouter.ts";
+import { logTrace } from "../tracing.ts";
+import { STANDARD_STOCK_UNITS } from "../../../client/lib/ai/productIntelligenceContract.ts";
 
 export class ProductVerifier {
   constructor(private modelRouter: ModelRouter) {}

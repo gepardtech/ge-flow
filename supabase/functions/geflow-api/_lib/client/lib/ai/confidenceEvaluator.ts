@@ -18,9 +18,9 @@ import {
   ConfidenceLevel,
   FieldConfidenceDetail,
   FieldSource,
-} from "@/types/aiProductIntelligence";
-import { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds";
-import { STANDARD_STOCK_UNITS } from "./productIntelligenceContract";
+} from "../../types/aiProductIntelligence.ts";
+import { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from "./confidenceThresholds.ts";
+import { STANDARD_STOCK_UNITS } from "./productIntelligenceContract.ts";
 
 export interface ConfidenceEvaluationOptions {
   rawInput?: string;

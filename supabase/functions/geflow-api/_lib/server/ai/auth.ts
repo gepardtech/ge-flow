@@ -6,7 +6,7 @@
  */
 
 import { Request } from "express";
-import { AIServiceError } from "./errors";
+import { AIServiceError } from "./errors.ts";
 
 export interface AuthenticatedUserContext {
   userId: string;

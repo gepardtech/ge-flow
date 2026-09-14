@@ -10,7 +10,7 @@ import {
   ConfidenceLevel,
   FieldVerificationDetail,
   DetailedProductVerification,
-} from "@/types/aiProductIntelligence";
+} from "../../client/types/aiProductIntelligence.ts";
 
 export type AIProviderType = "gemini" | "openai" | "openrouter" | "heuristic_fallback";
 

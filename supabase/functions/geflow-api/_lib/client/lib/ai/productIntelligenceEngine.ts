@@ -10,8 +10,8 @@ import {
   ProductSuggestion,
   CategoryValidationContext,
   ProductUnitType,
-} from "@/types/aiProductIntelligence";
-import { normalizeToProductSuggestion } from "./productIntelligenceNormalization";
+} from "../../types/aiProductIntelligence.ts";
+import { normalizeToProductSuggestion } from "./productIntelligenceNormalization.ts";
 
 interface AnalysisInput {
   rawText: string;

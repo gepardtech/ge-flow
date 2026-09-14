@@ -6,11 +6,11 @@
  * normalizes failure error codes, and safely logs diagnostics without leaking secrets.
  */
 
-import { GoogleGenAI } from "@google/genai";
-import { AIProviderType, AIErrorCode } from "../types";
-import { AIConnectionTestResult, ProviderHealthStatus } from "@/types/aiConfiguration";
-import { credentialService } from "../config/credentialService";
-import { aiConfigurationService } from "../config/aiConfigurationService";
+import { GoogleGenAI } from "npm:@google/genai@1.29.0";
+import { AIProviderType, AIErrorCode } from "../types.ts";
+import { AIConnectionTestResult, ProviderHealthStatus } from "../../../client/types/aiConfiguration.ts";
+import { credentialService } from "../config/credentialService.ts";
+import { aiConfigurationService } from "../config/aiConfigurationService.ts";
 
 export class ProviderConnectionTester {
   /**

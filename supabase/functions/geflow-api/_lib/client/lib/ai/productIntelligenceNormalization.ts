@@ -11,12 +11,12 @@ import {
   CategoryValidationContext,
   FieldSource,
   ConfidenceLevel,
-} from "@/types/aiProductIntelligence";
+} from "../../types/aiProductIntelligence.ts";
 import {
   createEmptyProductSuggestion,
   calculateConfidenceLevel,
-} from "./productIntelligenceContract";
-import { validateProductSuggestion } from "./productIntelligenceValidation";
+} from "./productIntelligenceContract.ts";
+import { validateProductSuggestion } from "./productIntelligenceValidation.ts";
 
 /**
  * Normalizes a raw structured object from any provider into a compliant ProductSuggestion

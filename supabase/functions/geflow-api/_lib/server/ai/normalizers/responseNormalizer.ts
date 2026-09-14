@@ -5,9 +5,9 @@
  * into the provider-neutral Phase 2 ProductSuggestion schema.
  */
 
-import { ProductSuggestion, CategoryValidationContext, ProductUnitType } from "@/types/aiProductIntelligence";
-import { normalizeToProductSuggestion } from "@/lib/ai/productIntelligenceNormalization";
-import { AIProviderResponse } from "../types";
+import { ProductSuggestion, CategoryValidationContext, ProductUnitType } from "../../../client/types/aiProductIntelligence.ts";
+import { normalizeToProductSuggestion } from "../../../client/lib/ai/productIntelligenceNormalization.ts";
+import { AIProviderResponse } from "../types.ts";
 
 export function normalizeProviderOutput(
   providerResponse: AIProviderResponse,
