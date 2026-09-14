@@ -18,7 +18,9 @@ export interface AuthenticatedUserContext {
  * Extracts and verifies user authentication from incoming Express request.
  * Supports Bearer tokens, API session headers, or demo authentication headers.
  */
-export function extractAuthContext(req: Request, requestId: string): AuthenticatedUserContext {
+export interface ReqLike { headers: Record<string, string | undefined> }
+
+export function extractAuthContext(req: ReqLike, requestId: string): AuthenticatedUserContext {
   const authHeader = req.headers.authorization;
   const userHeader = req.headers["x-user-id"] as string;
 
