@@ -653,6 +653,53 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          business_id: string
+          created_at: string
+          error_log: Json
+          failed_count: number
+          id: string
+          imported_count: number
+          owner_user_id: string
+          skipped_count: number
+          total_rows: number
+          updated_count: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          error_log?: Json
+          failed_count?: number
+          id: string
+          imported_count?: number
+          owner_user_id: string
+          skipped_count?: number
+          total_rows?: number
+          updated_count?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          error_log?: Json
+          failed_count?: number
+          id?: string
+          imported_count?: number
+          owner_user_id?: string
+          skipped_count?: number
+          total_rows?: number
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -1954,6 +2001,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          business_id: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          owner_user_id: string
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          owner_user_id: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_user_id?: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_automation_settings: {
         Row: {
