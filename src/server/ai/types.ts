@@ -55,6 +55,8 @@ export interface BusinessCatalogContext {
     slug?: string;
   }>;
   allowedStockUnits?: string[];
+  /** Alias of allowedStockUnits used by the import pipeline. */
+  allowedUOMs?: string[];
 }
 
 export interface AIAnalysisRequest {

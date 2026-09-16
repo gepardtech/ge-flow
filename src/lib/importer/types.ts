@@ -92,6 +92,8 @@ export interface NormalizedProduct {
   };
   ai_normalized?: boolean;
   ai_confidence?: number; // 0 to 1
+  /** Alias of ai_confidence used by review UI. */
+  confidence?: number;
   ai_confidence_level?: "high" | "medium" | "low";
   ai_field_confidence?: Record<string, any>;
   ai_suggestion?: any;
