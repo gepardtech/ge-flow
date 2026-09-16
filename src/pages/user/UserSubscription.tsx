@@ -485,7 +485,7 @@ export const UserSubscription = () => {
 
       const period = selectedCycleForUpgrade === "yearly" ? "yearly" : "monthly";
       const query = new URLSearchParams({ plan: selectedPlanKey, period });
-      if (appliedCouponCode) query.set("coupon", appliedCouponCode);
+      if (couponApplied && couponCode) query.set("coupon", couponCode);
 
       setUpgradeModalOpen(false);
       window.location.href = `/checkout?${query.toString()}`;
