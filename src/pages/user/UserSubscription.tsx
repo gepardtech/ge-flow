@@ -476,82 +476,23 @@ export const UserSubscription = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Execute Upgrade
+  // Execute Upgrade — plan changes must go through the verified payment flow.
   const handleConfirmUpgrade = async () => {
     setUpgradeBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No active session found.");
 
-      const rawPrice = rawUpgradePrice;
-      const finalPrice = finalUpgradePrice;
-
-      // 1. Update Profile Plan
-      await supabase
-        .from("profiles")
-        .update({
-          plan: selectedPlanKey,
-        })
-        .eq("user_id", user.id);
-
-      // 2. Insert into subscriptions table
-      const nextDate = new Date();
-      if (selectedCycleForUpgrade === "yearly") {
-        nextDate.setFullYear(nextDate.getFullYear() + 1);
-      } else {
-        nextDate.setDate(nextDate.getDate() + 30);
-      }
-
-      await supabase.from("subscriptions").insert({
-        owner_user_id: user.id,
-        business_id: activeBusiness?.id || null,
-        tier: selectedPlanKey,
-        cycle: selectedCycleForUpgrade,
-        status: "active",
-        amount: finalPrice,
-        next_billing_date: nextDate.toISOString(),
-      });
-
-      // 3. Generate new official invoice
-      const newInvNumber = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
-      const newInv: InvoiceRecord = {
-        id: `inv-${Date.now()}`,
-        invoice_number: newInvNumber,
-        client_name: fullName || user.email?.split("@")[0] || "Workspace Owner",
-        billing_email: user.email || "owner@geflowai.com",
-        plan: selectedPlanKey.toUpperCase(),
-        payment_method: `${paymentCard.brand} •••• ${paymentCard.last4}`,
-        amount: finalPrice,
-        status: "paid",
-        issue_date: new Date().toISOString().slice(0, 10),
-      };
-
-      await supabase.from("invoices").insert({
-        invoice_number: newInvNumber,
-        client_name: newInv.client_name,
-        billing_email: newInv.billing_email,
-        plan: newInv.plan,
-        payment_method: newInv.payment_method,
-        amount: newInv.amount,
-        status: "paid",
-        issue_date: newInv.issue_date,
-        owner_user_id: user.id,
-        business_id: activeBusiness?.id || null,
-      });
-
-      setInvoices((prev) => [newInv, ...prev]);
-
-      toast({
-        title: "Tier Activated Successfully!",
-        description: `You are now authorized on the ${selectedPlanKey.toUpperCase()} tier.`,
-      });
+      const period = selectedCycleForUpgrade === "yearly" ? "yearly" : "monthly";
+      const query = new URLSearchParams({ plan: selectedPlanKey, period });
+      if (appliedCouponCode) query.set("coupon", appliedCouponCode);
 
       setUpgradeModalOpen(false);
-      await loadSubscriptionData();
+      window.location.href = `/checkout?${query.toString()}`;
     } catch (err: any) {
       toast({
         title: "Upgrade Failed",
-        description: err?.message || "Could not complete transaction.",
+        description: err?.message || "Could not start the upgrade.",
         variant: "destructive",
       });
     } finally {
