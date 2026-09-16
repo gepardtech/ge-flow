@@ -91,38 +91,8 @@ const captureOrder = async (orderId: string, plan: string, cycle: string, amount
   const payerEmail = captureData?.payer?.email_address ?? user?.email ?? "";
   const invoiceNumber = `INV-${(orderId || Date.now().toString()).slice(-8).toUpperCase()}`;
 
-  // Update profile plan in Supabase
-  if (user) {
-    await supabase.from("profiles").update({
-      plan,
-      status: "active",
-      last_active: new Date().toISOString(),
-    } as any).eq("user_id", user.id);
-
-    const next = new Date();
-    if (cycle === "monthly") next.setMonth(next.getMonth() + 1);
-    else if (cycle === "yearly") next.setFullYear(next.getFullYear() + 1);
-
-    await supabase.from("subscriptions").insert({
-      owner_user_id: user.id,
-      tier: plan,
-      cycle,
-      status: "active",
-      amount,
-      next_billing_date: cycle === "lifetime" ? null : next.toISOString(),
-    } as any);
-
-    await supabase.from("invoices").insert({
-      invoice_number: invoiceNumber,
-      owner_user_id: user.id,
-      client_name: (user.user_metadata?.full_name as string) || payerEmail || "Customer",
-      billing_email: user.email || payerEmail,
-      plan,
-      payment_method: "PayPal",
-      amount,
-      status: "paid",
-    } as any);
-  }
+  // Plan activation, subscription and invoice records are created server-side
+  // by the payment function once the capture is verified.
 
   const { count } = user
     ? await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_user_id", user.id)
