@@ -8,3 +8,4 @@
 - [ ] Explain to the user why plans / businesses / products looked out of sync
 - [ ] Clear remaining type errors from the imported source (111 reported)
 - [ ] Verify user panel end-to-end (plans, businesses, products) with a signed-in session
+- [ ] Diagnose live app issues: logo not showing, announcements empty, intermittent login, plan/business/product data not syncing
