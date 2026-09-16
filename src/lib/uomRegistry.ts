@@ -1030,6 +1030,9 @@ export function computeProductStock(
     subUnitName,
     displayText,
     subText,
+    packs: fullPacks,
+    baseUnits: totalSubUnits,
+    baseUnitName: subUnitName,
   };
 }
 
