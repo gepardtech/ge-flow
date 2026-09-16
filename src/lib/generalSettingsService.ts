@@ -31,6 +31,8 @@ export interface AboutPageMember {
   enabled?: boolean;
   social_links?: {
     linkedin?: string;
+    instagram?: string;
+    youtube?: string;
     twitter?: string;
     x?: string;
     github?: string;
@@ -40,6 +42,8 @@ export interface AboutPageMember {
   };
   socialLinks?: {
     linkedin?: string;
+    instagram?: string;
+    youtube?: string;
     twitter?: string;
     x?: string;
     github?: string;

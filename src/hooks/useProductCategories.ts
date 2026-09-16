@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ProductCategory {
   id: string;
   name: string;
+  slug?: string | null;
   parent_id: string | null;
   industry_assignments: string[];
   inherit_expiry: boolean;

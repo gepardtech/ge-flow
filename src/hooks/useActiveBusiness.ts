@@ -6,6 +6,8 @@ import { getEmployeeBusinesses } from "@/lib/teamInviteService";
 export interface BusinessRow {
   id: string;
   business_name: string;
+  /** Convenience alias used by some views. */
+  name?: string;
   business_address?: string | null;
   status: string;
   currency: string;

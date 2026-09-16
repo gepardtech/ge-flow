@@ -142,6 +142,12 @@ export interface UOMContract {
    * Must NEVER be fabricated by AI. If not explicitly known or verified, must be null.
    */
   pack_size?: number | null;
+
+  /** Alias of stock_unit used by importer pipelines. */
+  base_stock_unit?: string | null;
+
+  /** Base unit beneath the stock unit (e.g. "tablet" under "box"). */
+  base_unit?: string | null;
 }
 
 /**
