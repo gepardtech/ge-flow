@@ -888,6 +888,12 @@ export interface ProductStockBreakdown {
   subUnitName: string; // e.g. "Tablet"
   displayText: string; // e.g. "10 Boxes (120 tablets)" or "10 Boxes + 6 tablets"
   subText: string; // e.g. "120 tablets · 12 per box"
+  /** Alias of fullPacks used by some consumers. */
+  packs?: number;
+  /** Alias of totalSubUnits used by some consumers. */
+  baseUnits?: number;
+  /** Alias of subUnitName used by some consumers. */
+  baseUnitName?: string;
 }
 
 export function getDefaultBaseUnit(uom: string, industryType?: string | null): string {
