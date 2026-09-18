@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { fetchAllContactSubmissions } from "@/lib/contactService";
 import {
   Bell, ChevronLeft, ChevronDown, LogOut, RefreshCw, Search, Sun, Moon,
@@ -133,7 +134,7 @@ const PanelLayout = ({ children, sidebarLabel, navItems, identityName, identityR
         }))
       );
     } else {
-      const { data } = await supabase.auth.getUser();
+      const data = { user: await getCurrentUser() };
       const user = data.user;
       if (user) {
         const notifList: Notification[] = [];

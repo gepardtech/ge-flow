@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { isCoreModule } from "@/lib/panelNav";
 
 const LS_KEY = "geflow.activeBusinessId";
@@ -25,7 +26,7 @@ export const useBusinessModules = (): BusinessModulesState => {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) { setModules(null); setFeatures([]); setLoading(false); return; }
 
     const saved = localStorage.getItem(LS_KEY);

@@ -7,6 +7,7 @@ import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { useProductCategories } from "@/hooks/useProductCategories";
 import { usePlan } from "@/hooks/usePlan";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,7 +78,7 @@ const UserLowStock = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       setUserId(user?.id ?? "");
     })();
   }, []);

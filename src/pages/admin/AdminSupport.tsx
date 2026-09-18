@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { fetchAllContactSubmissions, markLocalContactSubmissionRead, deleteLocalContactSubmission, ContactSubmissionRecord } from "@/lib/contactService";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
@@ -604,7 +605,7 @@ const TemplatesDialog = ({ open, onOpenChange, templates, onChange }: any) => {
 
   const save = async () => {
     if (!form.title.trim() || !form.body.trim()) { toast({ title: "Title & body required", variant: "destructive" }); return; }
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
     const payload = { ...form, created_by_user_id: user.id };
     let error;
@@ -754,7 +755,7 @@ const AnnouncementDialog = ({ open, onOpenChange, onSaved, edit }: any) => {
       toast({ title: "Title & body required", variant: "destructive" });
       return;
     }
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
 
     let finalLinkUrl = form.link_url?.trim() || null;
@@ -1004,7 +1005,7 @@ const TicketDialog = ({ open, ticket, templates, onOpenChange, onUpdated }: any)
 
   const send = async () => {
     if (!reply.trim() || !ticket) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return;
     await supabase.from("ticket_messages").insert({ ticket_id: ticket.id, author_user_id: user.id, is_admin: true, body: reply.trim() });
     const updates: any = { status, priority };
@@ -1208,7 +1209,7 @@ const KBManager = ({ items, onChange }: any) => {
   }, [edit, open]);
   const save = async () => {
     if (!form.question.trim() || !form.answer.trim()) { toast({ title: "Question & answer required", variant: "destructive" }); return; }
-    const { data: { user } } = await supabase.auth.getUser(); if (!user) return;
+    const user = await getCurrentUser(); if (!user) return;
     const payload = {
       question: form.question.trim(), answer: form.answer.trim(), category: form.category,
       page_assignments: form.page_assignments.split(",").map((s: string) => s.trim()).filter(Boolean),
@@ -1271,7 +1272,7 @@ const TeamManager = ({ items, onChange }: any) => {
   useEffect(() => { (async () => { const { data } = await supabase.from("profiles").select("user_id, full_name, email").order("full_name"); setUsers(data ?? []); })(); }, [open]);
   const add = async () => {
     if (!pickUser) return;
-    const { data: { user } } = await supabase.auth.getUser(); if (!user) return;
+    const user = await getCurrentUser(); if (!user) return;
     const { error } = await supabase.from("support_team_members").insert({ user_id: pickUser, role, appointed_by_user_id: user.id });
     if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Member appointed" }); onChange(); setOpen(false); setPickUser("");

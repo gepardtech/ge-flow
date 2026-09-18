@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 export interface ContactSubmissionRecord {
   id: string;
@@ -101,7 +102,7 @@ export async function submitContactMessage(params: { name: string; email: string
 
       // Attempt optional support_ticket creation if user is signed in
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getCurrentUser();
         if (user) {
           await supabase.from("support_tickets").insert({
             owner_user_id: user.id,

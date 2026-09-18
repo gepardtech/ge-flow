@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 export interface StockMovementInput {
   product_id: string;
@@ -45,7 +46,7 @@ export async function recordStockMovement(movement: StockMovementInput): Promise
 
   let ownerId = movement.owner_user_id;
   if (!ownerId) {
-    const { data: authData } = await supabase.auth.getUser();
+    const authData = { user: await getCurrentUser() };
     ownerId = authData?.user?.id || "";
   }
 

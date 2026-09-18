@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { CURRENCY_SYMBOLS } from "@/lib/currencies";
 
 export { CURRENCY_SYMBOLS };
@@ -85,7 +86,7 @@ const emit = () => subs.forEach((fn) => fn());
 
 const loadBusinessMoney = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) { cache = { currency: null, baseCurrency: null, taxRate: null }; emit(); return; }
     
     const userMeta = user.user_metadata || {};

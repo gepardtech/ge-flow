@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, Lock, ShieldCheck, Wallet, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { getAuthRedirectUrl } from "@/lib/appUrl";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceDialog, { InvoiceData } from "@/components/InvoiceDialog";
@@ -71,7 +72,7 @@ const Checkout = () => {
   // Sync with current authenticated Supabase session on mount
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (user) {
         setCurrentUser(user);
         setEmail(user.email ?? "");
@@ -297,7 +298,7 @@ const Checkout = () => {
    * created, so the transaction is always tied to a real user record.
    */
   const ensureAuth = async (): Promise<boolean> => {
-    const { data: { user: current } } = await supabase.auth.getUser();
+    const current = await getCurrentUser();
     if (current && current.email?.toLowerCase() === email.trim().toLowerCase()) {
       const name = (current.user_metadata?.full_name as string) || fullName || email.split("@")[0];
       setResolvedName(name);
@@ -357,7 +358,7 @@ const Checkout = () => {
   };
 
   const handleSuccess = async (result: CaptureResult) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const activeUser = user || currentUser;
     let userHasBusiness = !!result.hasBusiness;
 

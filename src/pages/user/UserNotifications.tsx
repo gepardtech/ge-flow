@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import UserPanelGate from "@/components/UserPanelGate";
 import {
   Bell, Loader2, Megaphone, LifeBuoy, PackageX, Search, Filter, ExternalLink, Sparkles, Truck, Trash2, CheckCheck,
@@ -49,7 +50,7 @@ const UserNotifications = () => {
       dismissedIds = [];
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     const [anns, tickets, lowStock, businesses, pendingInvites] = await Promise.all([
       supabase.from("announcements").select("id, title, body, audience, link_url, link_label, created_at").order("created_at", { ascending: false }).limit(30),
@@ -239,7 +240,7 @@ const UserNotifications = () => {
     
     // Also try to record clearance in user metadata
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (user) {
         await supabase.auth.updateUser({
           data: { notifications_cleared_at: now }

@@ -37,6 +37,7 @@ import {
 } from "@/lib/returnsService";
 import { ReturnReceiptModal } from "@/components/returns/ReturnReceiptModal";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 interface ItemReturnState {
   productId?: string | null;
@@ -257,7 +258,7 @@ export default function UserReturns() {
 
     setIsProcessing(true);
     try {
-      const { data: authData } = await supabase.auth.getUser();
+      const authData = { user: await getCurrentUser() };
       const currentUserId = authData.user?.id;
 
       // Filter only items with returnQty > 0

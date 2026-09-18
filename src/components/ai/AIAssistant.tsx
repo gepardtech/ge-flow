@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { usePlan } from "@/hooks/usePlan";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +124,7 @@ const AIAssistant: React.FC<Props> = ({ open, onOpenChange }) => {
 
   // Fetch current user and load conversation history
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    getCurrentUser().then((user) => {
       if (user) {
         setCurrentUserId(user.id);
         const stored = loadStoredAIConversation(activeId, user.id);

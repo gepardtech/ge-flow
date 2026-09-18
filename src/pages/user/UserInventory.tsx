@@ -11,6 +11,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { useProductCategories } from "@/hooks/useProductCategories";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -142,7 +143,7 @@ const UserInventory = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       setUserId(user?.id ?? "");
     })();
   }, []);

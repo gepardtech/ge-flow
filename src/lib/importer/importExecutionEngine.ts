@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { ImportResultSummary, NormalizedProduct } from "./types";
 import { recordStockMovement } from "@/lib/stockMovementService";
 import { parseProductUOM } from "@/lib/uomRegistry";
@@ -51,7 +52,7 @@ export const executeProductImport = async ({
   // Resolve current user if ownerUserId is missing
   let resolvedUserId = ownerUserId;
   if (!resolvedUserId) {
-    const { data: authData } = await supabase.auth.getUser();
+    const authData = { user: await getCurrentUser() };
     resolvedUserId = authData?.user?.id || "";
   }
 
