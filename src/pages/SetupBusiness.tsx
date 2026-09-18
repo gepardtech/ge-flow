@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ const SetupBusiness = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: { user: u } } = await supabase.auth.getUser();
+      const u = await getCurrentUser();
       if (!u) { navigate("/login"); return; }
       const [{ data: p }, { data: cats }, { count }] = await Promise.all([
         supabase.from("profiles").select("full_name, email, plan").eq("user_id", u.id).maybeSingle(),

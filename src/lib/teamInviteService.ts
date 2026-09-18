@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 export interface PendingInvitation {
   id: string;
@@ -414,7 +415,7 @@ export async function acceptInvitation(
   role?: string
 ): Promise<{ success: boolean; business?: EmployeeBusiness; error?: string }> {
   try {
-    const { data: authData } = await supabase.auth.getUser();
+    const authData = { user: await getCurrentUser() };
     const user = authData.user;
     const userEmail = user?.email || "";
     const userId = user?.id || "";
@@ -482,7 +483,7 @@ export async function declineInvitation(
   invitationId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data: authData } = await supabase.auth.getUser();
+    const authData = { user: await getCurrentUser() };
     const userEmail = authData.user?.email || "";
     const userId = authData.user?.id || "";
 

@@ -298,7 +298,7 @@ const Checkout = () => {
    * created, so the transaction is always tied to a real user record.
    */
   const ensureAuth = async (): Promise<boolean> => {
-    const { data: { user: current } } = await supabase.auth.getUser();
+    const current = await getCurrentUser();
     if (current && current.email?.toLowerCase() === email.trim().toLowerCase()) {
       const name = (current.user_metadata?.full_name as string) || fullName || email.split("@")[0];
       setResolvedName(name);

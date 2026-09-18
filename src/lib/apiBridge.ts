@@ -3,7 +3,7 @@
  * The app previously talked to a local Node server; the same routes are now
  * served by the `geflow-api` cloud function.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { ensureFreshSession } from "@/lib/authSession";
 
 const BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/geflow-api`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
