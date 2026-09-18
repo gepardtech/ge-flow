@@ -2257,6 +2257,14 @@ export type Database = {
         Args: { _business_id: string }
         Returns: undefined
       }
+      is_business_owner: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_business_staff: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
       validate_coupon: {
         Args: { _code: string; _plan: string; _subtotal: number }
         Returns: {
