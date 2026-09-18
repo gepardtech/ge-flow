@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { fetchAllContactSubmissions, ContactSubmissionRecord } from "@/lib/contactService";
 import { useToast } from "@/hooks/use-toast";
 import PanelLayout from "@/components/PanelLayout";
@@ -119,7 +120,7 @@ const Admin = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) { navigate("/login"); return; }
       const { data: roles } = await supabase
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin");

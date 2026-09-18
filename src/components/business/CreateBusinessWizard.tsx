@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/usePlan";
 import { useNavigate } from "react-router-dom";
@@ -300,9 +301,7 @@ export const CreateBusinessWizard = ({
   const handleCreateBusiness = async () => {
     setSubmitting(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
 
       if (!user) {
         toast({

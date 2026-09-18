@@ -6,6 +6,7 @@ import {
 import UserPanelGate from "@/components/UserPanelGate";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useMoney } from "@/lib/currency";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ const UserPurchases = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       setUserId(user?.id ?? "");
     })();
   }, []);

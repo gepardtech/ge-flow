@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { getEmployeeBusinesses } from "@/lib/teamInviteService";
 
@@ -106,9 +107,7 @@ export const useStaffRole = (): StaffRoleState => {
 
   const fetchRole = useCallback(async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
 
       if (!user) {
         setRole("owner");

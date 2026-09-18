@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { getPlan, normalizePlan, PlanId, PlanDefinition } from "@/lib/plans";
 
 export interface PlanState {
@@ -86,7 +87,7 @@ export const usePlan = (): PlanState => {
 
   const fetchCurrentPlan = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) {
         setLoading(false);
         return;
@@ -185,7 +186,7 @@ export const usePlan = (): PlanState => {
     window.addEventListener("geflow:plan-changed", handlePlanChanged);
 
     // Setup realtime postgres listeners
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    getCurrentUser().then((user) => {
       if (!user || !active) return;
 
       profilesChannel = supabase

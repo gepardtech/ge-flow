@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { CategorySettings } from "@/lib/settingsHierarchy";
 import { getEmployeeBusinesses } from "@/lib/teamInviteService";
 
@@ -96,9 +97,7 @@ async function fetchBusinessData(): Promise<void> {
   isFetching = true;
   fetchPromise = (async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
 
       if (!user) {
         store.owned = [];

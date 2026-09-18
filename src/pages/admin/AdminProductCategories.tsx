@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import { useToast } from "@/hooks/use-toast";
@@ -98,7 +99,7 @@ const AdminProductCategories = () => {
     let error;
     if (editing) ({ error } = await supabase.from("product_categories").update(payload).eq("id", editing.id));
     else {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       ({ error } = await supabase.from("product_categories").insert({ ...payload, created_by_user_id: user!.id }));
     }
     setBusy(false);

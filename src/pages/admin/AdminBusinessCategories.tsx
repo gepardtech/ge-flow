@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import PanelLayout from "@/components/PanelLayout";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
 import { useToast } from "@/hooks/use-toast";
@@ -171,7 +172,7 @@ const AdminBusinessCategories = () => {
     if (editing) {
       ({ error } = await supabase.from("business_categories").update(payload).eq("id", editing.id));
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       const res = await supabase
         .from("business_categories")
         .insert({ ...payload, created_by_user_id: user!.id })

@@ -25,6 +25,7 @@ import UserPanelGate from "@/components/UserPanelGate";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -197,9 +198,7 @@ export const UserTeam = () => {
   // Load real team data (merging Supabase records + backend team storage)
   const loadRealTeam = useCallback(async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
 
       if (user) {
         setCurrentUser(user);

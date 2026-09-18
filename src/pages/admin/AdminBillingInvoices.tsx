@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import PanelLayout from "@/components/PanelLayout";
 import BillingTabs from "@/components/BillingTabs";
 import { ADMIN_NAV, ADMIN_IDENTITY } from "@/lib/panelNav";
@@ -111,7 +112,7 @@ const AdminBillingInvoices = () => {
     setBusy(true);
     const prefix = (settings?.invoice_prefix?.trim() || "INV").replace(/-+$/, "");
     const num = `${prefix}-${Date.now().toString().slice(-6)}`;
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const { error, data } = await supabase.from("invoices").insert({
       invoice_number: num, owner_user_id: user?.id ?? null,
       client_name: form.client_name.trim(), billing_email: form.billing_email.trim(),

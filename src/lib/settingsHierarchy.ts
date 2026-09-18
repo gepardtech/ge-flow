@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { BusinessRow } from "@/hooks/useActiveBusiness";
 
 export interface CategorySettings {
@@ -178,7 +179,7 @@ export function resolveSettingsHierarchy(params: {
  * Save user-level setting overrides to Supabase user metadata and local cache.
  */
 export async function saveUserSettingsOverrides(overrides: UserSettingsMetadata) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (user) {
     setCachedUserMetadata(user.id, overrides);
     try {

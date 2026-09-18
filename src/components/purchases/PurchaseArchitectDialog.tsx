@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Truck, Package, Plus, Trash2, ArrowRight, Loader2, Scale, Layers, Sparkles, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useToast } from "@/hooks/use-toast";
 import { useMoney } from "@/lib/currency";
 import { ALL_STANDARD_UOMS, parseProductUOM, computeProductStock } from "@/lib/uomRegistry";
@@ -290,7 +291,7 @@ const PurchaseArchitectDialog = ({
     const retail = Number(newProdRetail) || (cost > 0 ? cost * 1.25 : 0);
     const scaleNum = Number(newProdScale) || 1;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const effectiveUserId = user?.id || userId;
 
     const descTags = [`[UOM: ${newProdUom}]`];
@@ -409,7 +410,7 @@ const PurchaseArchitectDialog = ({
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const effectiveUserId = user?.id || userId;
     if (!effectiveUserId) {
       toast({ title: "Authentication required", description: "Please sign in to record purchases.", variant: "destructive" });

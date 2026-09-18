@@ -10,6 +10,7 @@ import {
 import { ArrowRight, ShieldCheck, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useToast } from "@/hooks/use-toast";
 
 export interface CaptureResult {
@@ -87,7 +88,7 @@ const captureOrder = async (orderId: string, plan: string, cycle: string, amount
     captureData = await actions.order.capture();
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const payerEmail = captureData?.payer?.email_address ?? user?.email ?? "";
   const invoiceNumber = `INV-${(orderId || Date.now().toString()).slice(-8).toUpperCase()}`;
 

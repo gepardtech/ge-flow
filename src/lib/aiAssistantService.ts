@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { resolveSettingsHierarchy, getCachedUserMetadata } from "./settingsHierarchy";
 import { currencySymbol } from "./currency";
 import { PlanId } from "./plans";
@@ -122,7 +123,7 @@ export async function fetchLiveBusinessAnalytics(businessId: string): Promise<Bu
   if (!businessId) return null;
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     // 1. Fetch business record & category
     const { data: biz } = await supabase

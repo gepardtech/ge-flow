@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import UserPanelGate from "@/components/UserPanelGate";
 import { usePlan } from "@/hooks/usePlan";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
@@ -102,9 +103,7 @@ const Dashboard = () => {
   const { format: money } = useMoney();
 
   const load = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) {
       navigate("/login");
       return;

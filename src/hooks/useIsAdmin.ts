@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 /** Returns whether the current user has the admin role. */
 export const useIsAdmin = () => {
@@ -10,7 +11,7 @@ export const useIsAdmin = () => {
     let active = true;
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getCurrentUser();
         if (!user) { if (active) { setIsAdmin(false); setLoading(false); } return; }
         const { data } = await supabase
           .from("user_roles")

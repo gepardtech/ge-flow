@@ -26,6 +26,7 @@ import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 import { usePlatformSettings } from "@/components/PlatformSettingsProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -151,7 +152,7 @@ export const UserSubscription = () => {
   // Load real subscription & invoice records from Supabase
   const loadSubscriptionData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) return;
 
       // 1. Fetch user's subscription record
@@ -480,7 +481,7 @@ export const UserSubscription = () => {
   const handleConfirmUpgrade = async () => {
     setUpgradeBusy(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) throw new Error("No active session found.");
 
       const period = selectedCycleForUpgrade === "yearly" ? "yearly" : "monthly";
@@ -554,7 +555,7 @@ export const UserSubscription = () => {
   // Cancel subscription
   const handleCancelSub = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) return;
 
       await supabase

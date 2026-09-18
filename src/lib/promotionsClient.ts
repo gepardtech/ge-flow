@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 
 export interface AnnouncementItem {
   id: string;
@@ -167,7 +168,7 @@ export async function saveLiveAnnouncement(
 
   // 2. Sync to Supabase
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const sbPayload: any = {
       title: payload.title,
       body: payload.body,

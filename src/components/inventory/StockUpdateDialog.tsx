@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/authSession";
 import { useToast } from "@/hooks/use-toast";
 import type { ProductRecord } from "./ProductDialog";
 import { Loader2, Boxes, Scale } from "lucide-react";
@@ -68,7 +69,7 @@ const StockUpdateDialog = ({ open, onOpenChange, product, onSaved }: Props) => {
     }
 
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     const updatePayload: { stock_units: number; description?: string } = {
       stock_units: projectedBaseUnits,
