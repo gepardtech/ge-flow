@@ -24,7 +24,7 @@ const AdminGuard = ({ children }: Props) => {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) {
         cachedAdminUserId = null;
         cachedIsAdmin = false;
