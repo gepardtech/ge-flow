@@ -845,15 +845,18 @@ export const StepReview = ({
 
                       {/* Confidence */}
                       <td className="py-3 px-3">
-                        {(p.confidence?.overall !== undefined || (p as any).ai_confidence !== undefined) ? (
-                          <AIConfidenceBadge
-                            score={p.confidence?.overall ?? (p as any).ai_confidence ?? 0.88}
-                            size="sm"
-                            showPercentage
-                          />
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground">N/A</span>
-                        )}
+                        {(() => {
+                          const c = typeof p.confidence === "number" ? p.confidence : (p.confidence as any)?.overall;
+                          return c !== undefined || (p as any).ai_confidence !== undefined ? (
+                            <AIConfidenceBadge
+                              score={c ?? (p as any).ai_confidence ?? 0.88}
+                              size="sm"
+                              showPercentage
+                            />
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">N/A</span>
+                          );
+                        })()}
                       </td>
 
                       {/* Status */}
@@ -962,13 +965,16 @@ export const StepReview = ({
 
                 <div className="flex items-center justify-between pt-1">
                   <div>
-                    {(p.confidence?.overall !== undefined || (p as any).ai_confidence !== undefined) && (
-                      <AIConfidenceBadge
-                        score={p.confidence?.overall ?? (p as any).ai_confidence ?? 0.88}
-                        size="sm"
-                        showPercentage
-                      />
-                    )}
+                    {(() => {
+                      const c = typeof p.confidence === "number" ? p.confidence : (p.confidence as any)?.overall;
+                      return (c !== undefined || (p as any).ai_confidence !== undefined) ? (
+                        <AIConfidenceBadge
+                          score={c ?? (p as any).ai_confidence ?? 0.88}
+                          size="sm"
+                          showPercentage
+                        />
+                      ) : null;
+                    })()}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
