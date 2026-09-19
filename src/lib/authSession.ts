@@ -38,11 +38,18 @@ function attachListener() {
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_OUT") {
       cachedSession = null;
-    } else if (session) {
-      cachedSession = session;
+      hydrated = true;
+      notify();
+      return;
     }
-    hydrated = true;
-    notify();
+    if (session) {
+      cachedSession = session;
+      hydrated = true;
+      notify();
+    }
+    // A null session on any other event (e.g. INITIAL_SESSION before storage
+    // has been read) is not proof of a sign-out — never broadcast it, or
+    // guarded pages would bounce signed-in users to /login on first paint.
   });
 
   if (typeof window !== "undefined") {
