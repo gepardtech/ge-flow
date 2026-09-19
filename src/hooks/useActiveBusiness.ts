@@ -130,7 +130,7 @@ async function fetchBusinessData(): Promise<void> {
         console.warn("Error fetching owned businesses:", ownedErr);
       }
 
-      const ownedRows: BusinessRow[] = (ownedData ?? []) as BusinessRow[];
+      let ownedRows: BusinessRow[] = (ownedData ?? []) as BusinessRow[];
 
       // 2. Fetch businesses where user is invited as staff member
       // Find direct support_team_members for user.id

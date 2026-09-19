@@ -35,7 +35,8 @@ export type AIErrorCode =
   | "AI_TENANT_ACCESS_DENIED"
   | "AI_RATE_LIMITED"
   | "AI_INVALID_CONFIGURATION"
-  | "AI_INTERNAL_ERROR";
+  | "AI_INTERNAL_ERROR"
+  | "AI_NETWORK_ERROR";
 
 export interface BusinessCatalogContext {
   businessId: string;

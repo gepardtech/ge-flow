@@ -165,6 +165,11 @@ export interface ProductIdentification {
   brand: string | null;
 
   /**
+   * Alias of brand for legacy/import compatibility.
+   */
+  brand_name?: string | null;
+
+  /**
    * Product nature/type (e.g., "Analgesic", "Carbonated Beverage", "Cable"); null when uncertain
    */
   product_type: string | null;
@@ -320,6 +325,14 @@ export interface ProductSuggestion {
    * Unit of Measure specification
    */
   uom: UOMContract;
+
+  /**
+   * Optional packaging information (legacy/import compatibility).
+   */
+  packaging?: {
+    package_type?: string | null;
+    units_per_package?: number | null;
+  };
 
   /**
    * Structured physical attributes and metadata
