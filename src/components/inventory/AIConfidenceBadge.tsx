@@ -9,11 +9,15 @@ interface AIConfidenceBadgeProps {
   score?: number;
   source?: FieldSource;
   reason?: string;
+  id?: string;
+  field?: string;
   detail?: FieldConfidenceDetail;
   showScore?: boolean;
+  showPercentage?: boolean;
   showIcon?: boolean;
   compact?: boolean;
   className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 export const AIConfidenceBadge: React.FC<AIConfidenceBadgeProps> = ({
@@ -21,12 +25,20 @@ export const AIConfidenceBadge: React.FC<AIConfidenceBadgeProps> = ({
   score,
   source,
   reason,
+  id,
+  field,
   detail,
   showScore = false,
+  showPercentage = false,
   showIcon = true,
   compact = false,
   className = "",
+  size = "sm",
 }) => {
+  const sizeClasses =
+    size === "lg" ? "h-6 px-2 gap-1.5 text-xs" : size === "md" ? "h-5.5 px-2 gap-1 text-[11px]" : "h-5 px-1.5 gap-1 text-[10px]";
+  const iconSizeClass = size === "lg" ? "w-3 h-3 shrink-0" : "w-2.5 h-2.5 shrink-0";
+
   const effLevel: ConfidenceLevel = detail?.confidence_level || level || "medium";
   const effScore = detail?.confidence_score ?? score;
   const effSource = detail?.source || source || "ai";
@@ -38,10 +50,10 @@ export const AIConfidenceBadge: React.FC<AIConfidenceBadgeProps> = ({
     return (
       <Badge
         variant="outline"
-        className={`h-5 px-1.5 gap-1 text-[10px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 ${className}`}
+        className={`${sizeClasses} font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 ${className}`}
         title={effReason || "User Provided Value (Authoritative)"}
       >
-        {showIcon && <UserCheck className="w-2.5 h-2.5 shrink-0" />}
+        {showIcon && <UserCheck className={iconSizeClass} />}
         <span>User Defined</span>
       </Badge>
     );
@@ -52,20 +64,20 @@ export const AIConfidenceBadge: React.FC<AIConfidenceBadgeProps> = ({
       case "high":
         return {
           bg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-          icon: <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />,
+          icon: <CheckCircle2 className={iconSizeClass} />,
           label: compact ? "High" : "✓ High Confidence",
         };
       case "medium":
         return {
           bg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-          icon: <AlertTriangle className="w-2.5 h-2.5 shrink-0" />,
+          icon: <AlertTriangle className={iconSizeClass} />,
           label: compact ? "Review" : "⚠ Review Recommended",
         };
       case "low":
       default:
         return {
           bg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
-          icon: <AlertCircle className="w-2.5 h-2.5 shrink-0" />,
+          icon: <AlertCircle className={iconSizeClass} />,
           label: compact ? "Low" : "⚠ Low Confidence",
         };
     }
@@ -73,12 +85,12 @@ export const AIConfidenceBadge: React.FC<AIConfidenceBadgeProps> = ({
 
   const style = getStyleAndIcon();
 
-  const scoreText = showScore && effScore !== undefined ? ` (${Math.round(effScore * 100)}%)` : "";
+  const scoreText = (showScore || showPercentage) && effScore !== undefined ? ` (${Math.round(effScore * 100)}%)` : "";
 
   return (
     <Badge
       variant="outline"
-      className={`h-5 px-1.5 gap-1 text-[10px] font-semibold ${style.bg} ${className}`}
+      className={`${sizeClasses} font-semibold ${style.bg} ${className}`}
       title={effReason ? `Reliability Signal: ${effReason}` : display.description}
     >
       {showIcon && style.icon}
