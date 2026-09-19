@@ -74,6 +74,7 @@ export interface ProductRecord {
   uom?: string | null;
   units_per_uom?: number | null;
   base_unit?: string | null;
+  business_id?: string;
 }
 
 interface Props {

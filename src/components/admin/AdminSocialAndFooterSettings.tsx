@@ -429,7 +429,7 @@ export const AdminSocialAndFooterSettings = () => {
             </p>
           </div>
           <Button
-            onClick={handleSaveAll}
+            onClick={() => handleSaveAll()}
             disabled={saving}
             className="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-10 px-5 gap-2"
           >
@@ -561,7 +561,7 @@ export const AdminSocialAndFooterSettings = () => {
             </p>
           </div>
           <Button
-            onClick={handleSaveAll}
+            onClick={() => handleSaveAll()}
             disabled={saving}
             className="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-10 px-5 gap-2"
           >

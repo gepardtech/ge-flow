@@ -73,11 +73,13 @@ export interface NormalizedProduct {
     category_name: string | null;
     subcategory_id: string | null;
     subcategory_name: string | null;
-    stock_unit: string | null;
-    package_type: string | null;
-    pack_size: number | null;
-    strength: string | null;
-    brand: string | null;
+    stock_unit?: string | null;
+    package_type?: string | null;
+    pack_size?: number | null;
+    units_per_package?: number | null;
+    strength?: string | null;
+    brand?: string | null;
+    brand_name?: string | null;
     purchase_cost: number;
     retail_price: number;
     discount_price: number | null;
@@ -94,6 +96,12 @@ export interface NormalizedProduct {
   ai_confidence?: number; // 0 to 1
   /** Alias of ai_confidence used by review UI. */
   confidence?: number;
+  /** Optional detailed confidence breakdown (overall/level/fieldScores). */
+  confidenceBreakdown?: {
+    overall: number;
+    level: "high" | "medium" | "low";
+    fieldScores: Record<string, any>;
+  };
   ai_confidence_level?: "high" | "medium" | "low";
   ai_field_confidence?: Record<string, any>;
   ai_suggestion?: any;
