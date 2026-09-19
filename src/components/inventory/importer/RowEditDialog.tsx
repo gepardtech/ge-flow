@@ -205,9 +205,12 @@ export const RowEditDialog = ({
               <div>
                 <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
                   Review Row #{product.rowIndex}
-                  {product.confidence?.overall !== undefined && (
-                    <AIConfidenceBadge score={product.confidence.overall} size="sm" showPercentage />
-                  )}
+                  {(() => {
+                    const c = typeof product.confidence === "number" ? product.confidence : (product.confidence as any)?.overall;
+                    return c !== undefined ? (
+                      <AIConfidenceBadge score={c} size="sm" showPercentage />
+                    ) : null;
+                  })()}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
                   Inspect provenance, field-level origin, and verify candidate product values before import.

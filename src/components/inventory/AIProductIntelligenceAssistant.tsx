@@ -96,6 +96,7 @@ export const AIProductIntelligenceAssistant = forwardRef<AIProductIntelligenceAs
       strength: string;
       purchase_cost: string;
       retail_price: string;
+      stock_units: string;
       description: string;
     }>({
       product_name: "",
@@ -107,6 +108,7 @@ export const AIProductIntelligenceAssistant = forwardRef<AIProductIntelligenceAs
       strength: "",
       purchase_cost: "",
       retail_price: "",
+      stock_units: "",
       description: "",
     });
 
