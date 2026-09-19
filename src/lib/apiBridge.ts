@@ -27,12 +27,12 @@ export function installApiBridge() {
       headers.set("apikey", ANON);
       if (!headers.has("Content-Type") && init?.body) headers.set("Content-Type", "application/json");
 
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      headers.set("Authorization", `Bearer ${token || ANON}`);
-      if (data.session?.user?.id) {
-        headers.set("x-user-id", data.session.user.id);
-        if (data.session.user.email) headers.set("x-user-email", data.session.user.email);
+      // Always send a valid, non-expired token so backend calls never fail silently.
+      const session = await ensureFreshSession();
+      headers.set("Authorization", `Bearer ${session?.access_token || ANON}`);
+      if (session?.user?.id) {
+        headers.set("x-user-id", session.user.id);
+        if (session.user.email) headers.set("x-user-email", session.user.email);
       }
 
       return original(target, {

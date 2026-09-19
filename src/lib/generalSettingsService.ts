@@ -6,6 +6,7 @@ export interface SocialMediaLink {
   label: string;
   url: string;
   enabled: boolean;
+  order?: number;
 }
 
 export interface CopyrightWordUrl {
@@ -14,6 +15,8 @@ export interface CopyrightWordUrl {
   url: string;
   openInNewTab: boolean;
 }
+
+export type WordUrlMapping = CopyrightWordUrl;
 
 export interface FooterCopyrightSettings {
   text: string;

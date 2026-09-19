@@ -112,7 +112,7 @@ const ToastDescription = React.forwardRef<
 ));
 ToastDescription.displayName = "ToastDescription";
 
-type ToastActionElement = React.ReactElement<typeof ToastAction>;
+export type ToastActionElement = React.ReactElement<typeof ToastAction>;
 
 export {
   ToastProvider,

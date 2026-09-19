@@ -174,15 +174,17 @@ export const PayPalCardSection = ({ plan, cycle, amount, couponCode, ensureAuth,
           if (!ok) throw new Error("Account details are required");
           return createOrder(plan, cycle, amount, couponCode);
         }}
-        onApprove={async (data, actions) => {
-          try {
-            const result = await captureOrder(data.orderID, plan, cycle, amount, actions);
-            onSuccess(result);
-          } catch (e) {
-            toast({ title: "Payment failed", description: (e as Error).message, variant: "destructive" });
-          } finally {
-            setBusy(false);
-          }
+        onApprove={(data, actions) => {
+          void (async () => {
+            try {
+              const result = await captureOrder(data.orderID, plan, cycle, amount, actions);
+              onSuccess(result);
+            } catch (e) {
+              toast({ title: "Payment failed", description: (e as Error).message, variant: "destructive" });
+            } finally {
+              setBusy(false);
+            }
+          })();
         }}
         onError={(err) => {
           setBusy(false);
